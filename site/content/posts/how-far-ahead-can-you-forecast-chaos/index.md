@@ -2,7 +2,7 @@
 title: "How Far Ahead Can You Forecast Chaos?"
 date: 2026-08-04
 slug: "how-far-ahead-can-you-forecast-chaos"
-draft: false
+draft: true
 description: "A reproducible benchmark on Lorenz-63, and why the interpretable model is only 0.21 Lyapunov times behind the black box"
 author: "Jongha Jeon"
 tags: ["reservoir-computing", "time-series", "explainable-ai", "machine-learning", "quantitative-finance"]
@@ -136,7 +136,7 @@ version first, because it is cheaper, easier to reason about, and often close."
 NG-RC reaches 7.76 Lyapunov times against the ESN's
 7.97, using 55 features instead of 1204 — a
 factor of 22 fewer — and it fits in
-0.01s against 2.63s.
+0.01s against 3.41s.
 
 And here is the part I did not expect. One step ahead the ESN is not marginally
 better — it is **6.4 times** better, RMSE 1.97e-06 against
@@ -289,6 +289,6 @@ closed-loop predictability there at all, or does persistence win?
 - **largest Lyapunov exponent (Benettin, analytic Jacobian)**: 0.9064 (literature value 0.9056)
 - **Kaplan-Yorke dimension**: 2.062 (literature value 2.062)
 - **rollout origins**: 8
-- **fit time**: ESN 2.63s, NG-RC 0.01s
+- **fit time**: ESN 3.41s, NG-RC 0.01s
 
 Code: <https://github.com/jonghajeon/quantpost>

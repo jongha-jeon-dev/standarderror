@@ -25,7 +25,28 @@ def _load_dotenv(path: Path) -> None:
         os.environ.setdefault(key, val)
 
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+def _find_repo_root() -> Path:
+    """Locate the working repo: from the CWD upwards, then the package's parent.
+
+    Deriving this from `__file__` alone breaks in two ordinary situations: a
+    non-editable install puts the package in site-packages (so `build/`, `site/`
+    and `experiments/` would resolve there), and with two clones of the repo the
+    CLI silently writes into whichever one happens to be installed. Walking up
+    from the CWD first means `quantpost run ...` acts on the repo you are standing
+    in, which is what every other repo-scoped tool does.
+
+    The marker is an `experiments/` directory beside a `quantpost/` package —
+    specific enough not to match an unrelated parent directory.
+    """
+    for candidate in (Path.cwd(), *Path.cwd().parents):
+        if (candidate / "experiments").is_dir() and \
+           (candidate / "quantpost" / "__init__.py").is_file():
+            return candidate
+    return Path(__file__).resolve().parent.parent
+
+
+REPO_ROOT = Path(os.environ["QUANTPOST_ROOT"]).resolve() \
+    if os.environ.get("QUANTPOST_ROOT") else _find_repo_root()
 _load_dotenv(REPO_ROOT / ".env")
 
 

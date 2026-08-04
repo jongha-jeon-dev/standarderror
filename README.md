@@ -11,11 +11,16 @@ post whose figures have no alt text or whose forecasting claim never mentions
 persistence.
 
 ```bash
-pip install -e ".[dev]"
-cp .env.example .env          # optional keys; most sources need none
-quantpost doctor              # what works, what needs a key
-quantpost run exp001_chaos_horizon --publish --medium
+./scripts/setup_github.sh --check    # verify prerequisites, change nothing
+./scripts/setup_github.sh            # repo, theme, Pages, first push
+quantpost run exp001_chaos_horizon --publish          # writes a DRAFT
+make serve                                            # preview at :1313
+quantpost run exp001_chaos_horizon --publish --live    # publish for real
 ```
+
+Posts default to `draft: true`, so their source can sit in a public repo without
+reaching readers; `--live` is the only thing that publishes. Full walkthrough in
+[docs/SETUP.md](docs/SETUP.md).
 
 ## Layout
 
@@ -29,6 +34,8 @@ quantpost run exp001_chaos_horizon --publish --medium
 | `quantpost.render` | `Post` → Hugo page, Medium crosspost, Notion page |
 | `experiments/` | One file per post: `build() -> Post` |
 | `site/` | Hugo scaffold and the GitHub Pages workflow |
+| `scripts/` | `setup_github.sh` — idempotent one-time setup |
+| `docs/` | `SETUP.md` (setup + writing loop), `CONTENT_BACKLOG.md` (16 planned posts) |
 
 ## Data sources
 
@@ -85,8 +92,9 @@ Own your archive, then syndicate:
    a canonical note. Import it at `medium.com/p/import`, which sets
    `rel="canonical"` back to your site, so search engines credit your domain.
 
-`medium_bundle` refuses to run without a canonical URL. That is the whole point of
-owning the site.
+`medium_bundle` refuses to run without a canonical URL, and refuses to run on a
+draft at all — Medium's importer fetches images from the live site, so building the
+bundle early hands you URLs that 404.
 
 ## Testing
 

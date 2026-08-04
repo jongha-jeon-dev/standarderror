@@ -56,17 +56,21 @@ else
   echo "        Without it, create the repo by hand — see docs/SETUP.md step 3."
 fi
 
+HUGO_MIN="0.112.0"       # floor for PaperMod v8.0, the tag pinned below
 if command -v hugo >/dev/null; then
-  HUGO_VER=$(hugo version | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+  HUGO_VER=$(hugo version | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
   ok "hugo $HUGO_VER"
+  if [[ "$(printf '%s\n%s\n' "$HUGO_MIN" "$HUGO_VER" | sort -V | head -1)" \
+        != "$HUGO_MIN" ]]; then
+    warn "hugo $HUGO_VER is older than $HUGO_MIN, which PaperMod v8.0 needs."
+  fi
   hugo version | grep -q extended || warn \
-    "this is not hugo-extended. PaperMod needs extended for SCSS — install the
-        extended build (brew install hugo installs it; on apt use the .deb from
-        gohugo.io/releases). CI already uses extended, so the site will still
-        deploy; only local preview breaks."
+    "this is not hugo-extended, which PaperMod needs for SCSS. CI uses extended,
+        so deploys still work — only local preview breaks. brew install hugo
+        gives you extended; on apt, 'hugo' in Ubuntu 24.04+ is extended."
 else
   warn "hugo not found — needed only for local preview (make serve). CI builds
-        the site regardless. Install: brew install hugo / snap install hugo"
+        the site regardless. Install: brew install hugo / apt install hugo"
 fi
 
 # ---------------------------------------------------------------- 2. identity
@@ -126,15 +130,25 @@ fi
 
 # ---------------------------------------------------------------- 4. theme
 
-step "4. Hugo theme (PaperMod as a submodule)"
+step "4. Hugo theme (PaperMod, pinned)"
+# Pinned to a tag, not master. PaperMod's master branch has already raised its
+# minimum Hugo to 0.146, which is newer than what most distributions package —
+# tracking it means the site can stop building because of a commit you never
+# made. v8.0 builds on Hugo 0.112+ and was verified against 0.123.7.
+PAPERMOD_TAG="v8.0"
 if [[ -f site/themes/PaperMod/theme.toml ]]; then
-  skip "PaperMod already present"
+  HAVE=$(git -C site/themes/PaperMod describe --tags --always 2>/dev/null || echo "?")
+  skip "PaperMod already present at $HAVE"
 elif [[ -e site/themes/PaperMod ]]; then
-  warn "site/themes/PaperMod exists but looks empty — run: git submodule update --init --recursive"
+  warn "site/themes/PaperMod exists but is empty — run:
+        git submodule update --init --recursive"
 else
-  run "git submodule add --depth=1 \
+  run "git submodule add -q \
         https://github.com/adityatelange/hugo-PaperMod.git site/themes/PaperMod"
-  ok "PaperMod added as a submodule (the Pages workflow checks out submodules)"
+  run "git -C site/themes/PaperMod checkout -q $PAPERMOD_TAG"
+  ok "PaperMod pinned at $PAPERMOD_TAG (the Pages workflow checks out submodules)"
+  echo "        To move it later:  git -C site/themes/PaperMod fetch --tags &&"
+  echo "                            git -C site/themes/PaperMod checkout vX.0"
 fi
 
 # ---------------------------------------------------------------- 5. python
