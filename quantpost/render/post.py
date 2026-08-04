@@ -49,6 +49,11 @@ class Post:
     author: str = ""
     reproducibility: dict = field(default_factory=dict)
     canonical_url: str = ""
+    # Drafts are the default. In a single public repo the source of an unfinished
+    # post is visible on GitHub but `draft: true` keeps it off the built site, so
+    # the only way a half-written post reaches readers is if you deliberately
+    # flip this. Default-live would make an accidental push a publication.
+    draft: bool = True
 
     # ---------- assembly ----------
 
@@ -104,7 +109,7 @@ class Post:
                  f'title: "{esc(self.title)}"',
                  f"date: {self.date.isoformat()}",
                  f"slug: \"{self.slug}\"",
-                 "draft: false"]
+                 f"draft: {'true' if self.draft else 'false'}"]
         if self.subtitle:
             lines.append(f'description: "{esc(self.subtitle or self.summary)}"')
         elif self.summary:

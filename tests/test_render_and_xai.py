@@ -99,14 +99,29 @@ class TestRendering:
         assert "(f1.png)" in text
         assert str(tmp_path) not in text
 
+    def test_drafts_are_the_default(self, tmp_path):
+        post = good_post(tmp_path)
+        assert post.draft is True
+        assert "draft: true" in post.front_matter()
+        post.draft = False
+        assert "draft: false" in post.front_matter()
+
+    def test_medium_bundle_refuses_a_draft(self, tmp_path):
+        post = good_post(tmp_path)
+        with pytest.raises(ValueError, match="still a draft"):
+            publish.medium_bundle(post, out_dir=tmp_path / "m",
+                                  base_url="https://example.com")
+
     def test_medium_bundle_requires_a_canonical_url(self, tmp_path):
         post = good_post(tmp_path)
+        post.draft = False
         with pytest.raises(ValueError, match="canonical"):
             publish.medium_bundle(post, out_dir=tmp_path / "m",
                                   base_url="not-a-url")
 
     def test_medium_bundle_uses_absolute_image_urls(self, tmp_path):
         post = good_post(tmp_path)
+        post.draft = False
         path = publish.medium_bundle(post, out_dir=tmp_path / "m",
                                      base_url="https://example.com/blog")
         text = path.read_text(encoding="utf-8")
@@ -117,6 +132,7 @@ class TestRendering:
     def test_medium_meta_caps_tags_at_five(self, tmp_path):
         import json
         post = good_post(tmp_path)
+        post.draft = False
         post.tags = list("abcdefg")
         publish.medium_bundle(post, out_dir=tmp_path / "m",
                               base_url="https://example.com")

@@ -49,6 +49,11 @@ def medium_bundle(post: Post, *, out_dir: Path | None = None,
                   section: str = "posts") -> Path:
     """Markdown with absolute image URLs and a canonical note, ready to paste
     into Medium's import-a-story flow."""
+    if post.draft:
+        raise ValueError(
+            "this post is still a draft. Medium's importer fetches the images "
+            "from your live site, so publish there first (--live, push, wait for "
+            "Pages) and then build the crosspost.")
     base = (base_url or SETTINGS.site_base_url).rstrip("/")
     canonical = post.canonical_url or f"{base}/{section}/{post.slug}/"
     if not canonical.startswith("http"):
@@ -173,6 +178,7 @@ def write_manifest(post: Post, *, out_dir: Path | None = None) -> Path:
     path = out / f"{post.slug}.manifest.json"
     path.write_text(json.dumps({
         "title": post.title, "slug": post.slug, "date": post.date.isoformat(),
+        "draft": post.draft,
         "tags": post.tags, "word_count": post.word_count(),
         "figures": [asdict(f) for f in post.figures],
         "data_sources": post.data_sources,

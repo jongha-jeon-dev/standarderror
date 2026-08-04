@@ -98,11 +98,14 @@ def cmd_run(args) -> int:
         print(f"{name} must define build() -> Post", file=sys.stderr)
         return 2
     post = mod.build()
+    if args.live:
+        post.draft = False
     from .render import publish
     problems = post.audit()
     manifest = publish.write_manifest(post)
+    state = "DRAFT" if post.draft else "LIVE"
     print(f"\n{post.title}\n  {post.word_count()} words, "
-          f"{len(post.figures)} figures\n  manifest: {manifest}")
+          f"{len(post.figures)} figures, {state}\n  manifest: {manifest}")
     if problems:
         print("\naudit FAILED:")
         for p in problems:
@@ -112,8 +115,18 @@ def cmd_run(args) -> int:
     if args.publish:
         page = publish.hugo_page_bundle(post)
         print(f"  hugo: {page}")
+        if post.draft:
+            print("  (draft: true — commit it, preview with `make serve`, then "
+                  "re-run with --live when you are happy)")
         if args.medium:
-            print(f"  medium: {publish.medium_bundle(post)}")
+            if post.draft:
+                # The Medium import fetches images from the live site. Building
+                # the bundle now would hand you absolute URLs that 404.
+                print("  medium: SKIPPED — the post is still a draft, so its "
+                      "image URLs are not live yet. Re-run with --live, push, "
+                      "wait for Pages, then --medium.")
+            else:
+                print(f"  medium: {publish.medium_bundle(post)}")
     return 0
 
 
@@ -151,8 +164,12 @@ def main(argv: list[str] | None = None) -> int:
 
     r = sub.add_parser("run", help="run an experiment and audit its post")
     r.add_argument("experiment")
-    r.add_argument("--publish", action="store_true")
-    r.add_argument("--medium", action="store_true")
+    r.add_argument("--publish", action="store_true",
+                   help="write the Hugo page bundle")
+    r.add_argument("--live", action="store_true",
+                   help="publish for real (draft: false). Omit to stay a draft.")
+    r.add_argument("--medium", action="store_true",
+                   help="also write the Medium crosspost bundle; requires --live")
     r.set_defaults(func=cmd_run)
 
     a = sub.add_parser("audit", help="re-check written manifests")
