@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "quantpost"
+version = "0.1.0"
+description = "Research-grade blog posts on financial ML, from public data to published page"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Jongha Jeon" }]
+keywords = ["reservoir-computing", "time-series", "explainable-ai", "finance"]
+
+dependencies = [
+    "numpy>=1.26",
+    "scipy>=1.11",
+    "pandas>=2.1",
+    "matplotlib>=3.8",
+    "scikit-learn>=1.4",
+    "requests>=2.31",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "pytest-cov", "ruff>=0.5"]
+extras = ["yfinance", "shap", "statsmodels"]
+
+[project.scripts]
+quantpost = "quantpost.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["quantpost*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
+markers = ["network: hits a live public API; skipped unless QUANTPOST_NETWORK_TESTS=1"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B"]
+ignore = [
+    "E501",   # line length: the tables and long docstrings are deliberate
+    "B008",   # function call in default arg: dataclass field(default_factory=...)
+    "B905",   # zip(strict=): every zip here pairs lists built to the same length
+    "E702",   # compound statements: `ax.set_xlabel(x); ax.set_ylabel(y)` reads better
+]
