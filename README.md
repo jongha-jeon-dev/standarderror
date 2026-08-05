@@ -1,7 +1,6 @@
 # quantpost
 
-A pipeline for research-grade blog posts on financial ML: public data in, a
-published page out — with the parts that usually get skipped made mandatory
+A pipeline for research-grade blog posts: public data in, a published page out — with the parts that usually get skipped made mandatory
 rather than optional.
 
 The design bias throughout is **make the honest thing the easy thing**.
@@ -30,6 +29,7 @@ reaching readers; `--live` is the only thing that publishes. Full walkthrough in
 | `quantpost.dynamics` | ODE / PDE / SDE generators with known ground truth, Lyapunov tooling |
 | `quantpost.models` | Echo state networks, NG-RC, and the baselines you are obliged to beat |
 | `quantpost.xai` | Attribution methods + reservoir-specific probes |
+| `quantpost.uq` | Conformal prediction (split, CQR, weighted, adaptive) + SCMs with closed-form causal effects |
 | `quantpost.viz` | One accessibility-validated chart style, light and dark |
 | `quantpost.render` | `Post` → Hugo page, Medium crosspost, Notion page |
 | `experiments/` | One file per post: `build() -> Post` |
@@ -43,6 +43,8 @@ Verified request specs as of August 2026. Most need no key.
 
 | Source | Key | Notes |
 |---|---|---|
+| **World Bank** | none | Demography, macro panels, energy, R&D by country-year. **CC BY 4.0 — you may redistribute the values**, unlike almost everything below. `per_page` defaults to 50 and `format=json` is required (the default is XML). |
+| **Our World in Data** | none | Climate, health, energy, technology. Any chart URL + `.csv`. CC BY, with per-column upstream terms in `.metadata.json`. Pass `useColumnShortNames=true`. |
 | **FRED** | optional | `fred.get()` uses the keyless `fredgraph.csv` endpoint. A key unlocks the documented API and **vintages** (`realtime_start`) — which any honest macro backtest needs. Attribution line is mandatory. |
 | **ECB Data Portal** | none | `data-api.ecb.europa.eu`; the old `sdw-wsrest` host is decommissioned. Yield curves, CISS. |
 | **BIS Data Portal** | none | SDMX v2 at `stats.bis.org/api/v2`. Credit-to-GDP gap, property prices, plus bulk CSVs. |
@@ -99,16 +101,18 @@ bundle early hands you URLs that 404.
 ## Testing
 
 ```bash
-pytest                                     # ~105 tests, no network
+pytest                                     # ~148 tests, no network
 QUANTPOST_NETWORK_TESTS=1 pytest -m network # live API smoke tests
 ```
 
 The tests check physics and statistics, not shapes: the Lyapunov spectrum against
 the exact trace identity, KS against an independent implicit solver, Hawkes
 intensity against `μ/(1−α/β)`, Heston's leverage sign, fBm's Hurst scaling, NG-RC
-recovering the Lorenz right-hand side, and — the one most worth copying — an ESN
-that **must not** beat persistence on white noise. That last test is the leakage
-canary.
+recovering the Lorenz right-hand side, conformal coverage measured by Monte Carlo
+against its nominal level, weighted conformal repairing coverage under a covariate
+shift that breaks the unweighted method, an SCM's collider bias appearing exactly
+where theory says it will, and — the one most worth copying — an ESN that **must
+not** beat persistence on white noise. That last test is the leakage canary.
 
 ## Licence
 

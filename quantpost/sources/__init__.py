@@ -13,11 +13,12 @@ from __future__ import annotations
 
 import pandas as pd
 
-from . import bis, ecb, ecos, fred, hmda, local, market
+from . import bis, ecb, ecos, fred, hmda, local, market, owid, worldbank
 from .base import SourceMeta, merge_sources, tidy
 
 __all__ = [
     "fred", "ecb", "ecos", "bis", "market", "hmda", "local",
+    "worldbank", "owid",
     "SourceMeta", "tidy", "merge_sources", "citations", "licence_warnings",
 ]
 

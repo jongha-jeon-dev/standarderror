@@ -17,7 +17,17 @@ import os
 import pandas as pd
 import pytest
 
-from quantpost.sources import bis, citations, ecb, ecos, fred, licence_warnings, market
+from quantpost.sources import (
+    bis,
+    citations,
+    ecb,
+    ecos,
+    fred,
+    licence_warnings,
+    market,
+    owid,
+    worldbank,
+)
 
 NETWORK = os.environ.get("QUANTPOST_NETWORK_TESTS") == "1"
 needs_network = pytest.mark.skipif(not NETWORK,
@@ -70,7 +80,7 @@ def patched_fetch(monkeypatch):
                 return payload
         raise AssertionError(f"unexpected URL: {url}")
 
-    for mod in (fred, ecb, ecos, bis, market):
+    for mod in (fred, ecb, ecos, bis, market, worldbank, owid):
         monkeypatch.setattr(mod, "fetch", fake)
     return {"calls": calls, "table": table}
 
@@ -252,3 +262,165 @@ class TestMarket:
         patched_fetch["table"]["stooq.com"] = b"No data\n"
         with pytest.raises(RuntimeError, match="no usable CSV"):
             market.stooq("nonsense", accept_terms=True)
+
+
+# --------------------------------------------------------------- World Bank
+
+WB_JSON = json.dumps([
+    {"page": 1, "pages": 1, "per_page": 20000, "total": 3},
+    [
+        {"indicator": {"id": "SP.POP.TOTL", "value": "Population, total"},
+         "country": {"id": "KR", "value": "Korea, Rep."},
+         "countryiso3code": "KOR", "date": "2024", "value": 51712619},
+        {"indicator": {"id": "SP.POP.TOTL", "value": "Population, total"},
+         "country": {"id": "KR", "value": "Korea, Rep."},
+         "countryiso3code": "KOR", "date": "2023", "value": 51712619},
+        {"indicator": {"id": "SP.POP.TOTL", "value": "Population, total"},
+         "country": {"id": "KR", "value": "Korea, Rep."},
+         "countryiso3code": "KOR", "date": "2022", "value": None},
+    ]]).encode()
+
+WB_ERROR = json.dumps(
+    [{"message": [{"id": "120", "key": "Invalid value",
+                   "value": "The provided parameter value is not valid"}]}]).encode()
+
+WB_PAGED_1 = json.dumps([
+    {"page": 1, "pages": 2, "per_page": 1, "total": 2},
+    [{"indicator": {"id": "X", "value": "X"},
+      "country": {"id": "KR", "value": "Korea, Rep."},
+      "countryiso3code": "KOR", "date": "2024", "value": 1.0}]]).encode()
+WB_PAGED_2 = json.dumps([
+    {"page": 2, "pages": 2, "per_page": 1, "total": 2},
+    [{"indicator": {"id": "X", "value": "X"},
+      "country": {"id": "KR", "value": "Korea, Rep."},
+      "countryiso3code": "KOR", "date": "2023", "value": 2.0}]]).encode()
+
+
+class TestWorldBank:
+    def test_url_uses_semicolons_and_requests_json(self, patched_fetch):
+        patched_fetch["table"]["api.worldbank.org"] = WB_JSON
+        worldbank.get("population", ["KOR", "JPN"], start=2000, end=2024)
+        url = patched_fetch["calls"][0]
+        assert "/country/KOR;JPN/indicator/SP.POP.TOTL" in url
+        assert "format=json" in url          # the default is XML
+        assert "date=2000%3A2024" in url or "date=2000:2024" in url
+        assert "per_page=20000" in url       # the default of 50 truncates silently
+
+    def test_curated_alias_resolves(self, patched_fetch):
+        patched_fetch["table"]["api.worldbank.org"] = WB_JSON
+        worldbank.get("gdp_per_capita_ppp", "KOR")
+        assert "NY.GDP.PCAP.PP.KD" in patched_fetch["calls"][0]
+
+    def test_parses_long_frame_with_nulls(self, patched_fetch):
+        patched_fetch["table"]["api.worldbank.org"] = WB_JSON
+        df = worldbank.get("population", "KOR")
+        assert list(df.columns) == ["year", "country", "iso3", "value", "indicator"]
+        assert df["year"].dtype.kind == "i"
+        assert df["value"].isna().sum() == 1
+        assert df["year"].tolist() == [2022, 2023, 2024]   # sorted ascending
+
+    def test_error_payload_raises_readably(self, patched_fetch):
+        patched_fetch["table"]["api.worldbank.org"] = WB_ERROR
+        with pytest.raises(RuntimeError, match="no data block"):
+            worldbank.get("NOT.A.REAL.CODE", "KOR")
+
+    def test_walks_all_pages(self, patched_fetch):
+        seen = {"n": 0}
+
+        def fake(url, *, source, **kw):
+            patched_fetch["calls"].append(url)
+            seen["n"] += 1
+            return WB_PAGED_1 if "page=1" in url else WB_PAGED_2
+
+        import quantpost.sources.worldbank as wb
+        wb.fetch = fake
+        df = wb.get("X", "KOR")
+        assert seen["n"] == 2
+        assert len(df) == 2
+
+    def test_series_returns_a_datetime_indexed_frame(self, patched_fetch):
+        patched_fetch["table"]["api.worldbank.org"] = WB_JSON
+        f = worldbank.series("population", "KOR")
+        assert isinstance(f.index, pd.DatetimeIndex)
+        assert list(f.columns) == ["SP.POP.TOTL"]
+        assert f.index[-1].month == 12          # annual data stamped at year end
+
+    def test_licence_is_redistributable(self, patched_fetch):
+        patched_fetch["table"]["api.worldbank.org"] = WB_JSON
+        df = worldbank.get("population", "KOR")
+        assert df.attrs["quantpost"]["redistributable"] is True
+        assert licence_warnings(df) == []
+
+
+# --------------------------------------------------------------- OWID
+
+OWID_CSV = (b"Entity,Code,Year,life_expectancy_0__sex_all__age_0\n"
+            b"South Korea,KOR,2022,83.5\n"
+            b"South Korea,KOR,2023,84.0\n"
+            b"World,OWID_WRL,2023,73.2\n"
+            b"Africa,,2023,64.1\n")
+
+OWID_DAILY = (b"Entity,Code,Day,new_cases\n"
+              b"South Korea,KOR,2023-01-01,120\n"
+              b"South Korea,KOR,2023-01-02,95\n")
+
+OWID_META = json.dumps({
+    "chart": {"title": "Life expectancy", "citation": "UN WPP (2024)"},
+    "columns": {"life_expectancy_0__sex_all__age_0": {
+        "citationShort": "UN, World Population Prospects (2024)",
+        "unit": "years"}}}).encode()
+
+
+class TestOwid:
+    def test_url_requests_short_column_names(self, patched_fetch):
+        patched_fetch["table"]["grapher/life-expectancy.csv"] = OWID_CSV
+        owid.get("life_expectancy")
+        url = patched_fetch["calls"][0]
+        assert "grapher/life-expectancy.csv" in url
+        assert "useColumnShortNames=true" in url
+        assert "csvType=full" in url
+
+    def test_filtered_when_country_or_time_given(self, patched_fetch):
+        patched_fetch["table"]["grapher/life-expectancy.csv"] = OWID_CSV
+        owid.get("life_expectancy", countries=["KOR", "JPN"], time="2000..2023")
+        url = patched_fetch["calls"][0]
+        assert "csvType=filtered" in url
+        assert "KOR~JPN" in url              # tilde-separated, not comma
+        assert "2000..2023" in url
+
+    def test_adds_a_date_column_from_year(self, patched_fetch):
+        patched_fetch["table"]["grapher/life-expectancy.csv"] = OWID_CSV
+        df = owid.get("life_expectancy")
+        assert "date" in df.columns
+        assert df["date"].iloc[0] == pd.Timestamp("2022-12-31")
+        assert df.attrs["quantpost"]["time_column"] == "Year"
+
+    def test_handles_daily_charts(self, patched_fetch):
+        patched_fetch["table"]["grapher/covid.csv"] = OWID_DAILY
+        df = owid.get("covid")
+        assert df.attrs["quantpost"]["time_column"] == "Day"
+        assert df["date"].iloc[0] == pd.Timestamp("2023-01-01")
+
+    def test_drop_aggregates_removes_world_and_continents(self, patched_fetch):
+        patched_fetch["table"]["grapher/life-expectancy.csv"] = OWID_CSV
+        df = owid.get("life_expectancy")
+        assert len(df) == 4
+        clean = owid.drop_aggregates(df)
+        assert set(clean["Entity"]) == {"South Korea"}
+        assert clean.attrs["quantpost"]["slug"] == "life-expectancy"
+
+    def test_wide_pivots_on_the_detected_value_column(self, patched_fetch):
+        patched_fetch["table"]["grapher/life-expectancy.csv"] = OWID_CSV
+        w = owid.wide(owid.drop_aggregates(owid.get("life_expectancy")))
+        assert list(w.columns) == ["South Korea"]
+        assert w.iloc[-1, 0] == pytest.approx(84.0)
+
+    def test_bad_slug_gives_a_useful_error(self, patched_fetch):
+        patched_fetch["table"]["grapher/nope.csv"] = b"<html>404</html>\n"
+        with pytest.raises(RuntimeError, match="no usable CSV"):
+            owid.get("nope")
+
+    def test_citations_come_from_per_column_metadata(self, patched_fetch):
+        patched_fetch["table"]["life-expectancy.metadata.json"] = OWID_META
+        cites = owid.citations("life_expectancy")
+        assert any("World Population Prospects" in c for c in cites)

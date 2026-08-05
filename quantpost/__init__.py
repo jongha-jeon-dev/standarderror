@@ -6,6 +6,7 @@ Layout:
 * `dynamics`  ODE / PDE / SDE generators with known ground truth
 * `models`    echo state networks, NG-RC, and the baselines you must beat
 * `xai`       attribution methods and reservoir-specific probes
+* `uq`        conformal prediction, and SCMs with a known causal effect
 * `viz`       one validated chart style, light and dark
 * `render`    Post object -> Hugo page, Medium crosspost, Notion page
 
@@ -18,11 +19,11 @@ from __future__ import annotations
 
 __version__ = "0.1.0"
 
-from . import dynamics, models, render, sources, viz, xai  # noqa: E402
+from . import dynamics, models, render, sources, uq, viz, xai  # noqa: E402
 from .config import SETTINGS  # noqa: E402
 from .render import Post, Section  # noqa: E402
 
-__all__ = ["sources", "dynamics", "models", "xai", "viz", "render",
+__all__ = ["sources", "dynamics", "models", "xai", "uq", "viz", "render",
            "Post", "Section", "SETTINGS", "__version__"]
 
 
