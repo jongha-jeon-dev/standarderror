@@ -60,8 +60,10 @@ def lyapunov_from_jacobian(
         J = np.asarray(jac(x[i]), float)
         # Propagate the tangent space with expm(J*dt), not an Euler step.
         # Euler biases the exponent upward by O(dt*||J||^2): on Lorenz-63 with
-        # dt=0.01 that is +0.18 on a true value of 0.906 - a 20% error that
-        # would silently corrupt every Lyapunov-time figure downstream.
+        # dt=0.01 that is +27%, and +54% at dt=0.02 - an error that silently
+        # rescales every Lyapunov-time figure downstream. Both methods converge as
+        # dt -> 0, so a convergence study does not catch it; the spectrum-sums-to-
+        # the-trace identity does, at any dt.
         Q = expm(J * dt) @ Q
         Q, R = np.linalg.qr(Q)
         diag = np.abs(np.diag(R))

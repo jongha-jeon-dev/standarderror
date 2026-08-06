@@ -45,11 +45,38 @@ class TestPostAudit:
         post.sections[0].figures[0].caption = ""
         assert any("caption" in p for p in post.audit())
 
-    def test_no_baseline_mention_fails(self, tmp_path):
+    def test_no_baseline_mention_fails_when_performance_is_claimed(self, tmp_path):
+        post = Post(title="T", slug="s", summary="x",
+                    data_sources=["d"], reproducibility={"seed": 1})
+        post.add("S", " ".join(["word"] * 1400) + " Our model beats the others.",
+                 figures=[good_figure(tmp_path)])
+        assert any("baseline" in p for p in post.audit())
+
+    def test_baseline_not_required_without_a_performance_claim(self, tmp_path):
+        """A debugging or explainer post makes no accuracy claim, so demanding a
+        persistence comparison from it is noise."""
+        post = Post(title="T", slug="s", summary="x",
+                    data_sources=["d"], reproducibility={"seed": 1})
+        post.add("S", " ".join(["word"] * 1400) + " Here is why it exploded.",
+                 figures=[good_figure(tmp_path)])
+        assert not any("baseline" in p for p in post.audit())
+
+    def test_baseline_can_be_forced(self, tmp_path):
         post = Post(title="T", slug="s", summary="x",
                     data_sources=["d"], reproducibility={"seed": 1})
         post.add("S", " ".join(["word"] * 1400), figures=[good_figure(tmp_path)])
-        assert any("baseline" in p for p in post.audit())
+        assert any("baseline" in p for p in post.audit(require_baseline=True))
+
+    def test_pde_notation_is_not_a_placeholder(self, tmp_path):
+        """`u_xxxx` contains "xxx"; a substring search blocked a finished post."""
+        post = good_post(tmp_path)
+        post.sections[0].body += " The equation is u_t = -u*u_x - u_xx - u_xxxx."
+        assert not any("XXX" in p for p in post.audit())
+
+    def test_a_real_xxx_marker_is_still_caught(self, tmp_path):
+        post = good_post(tmp_path)
+        post.sections[0].body += " XXX fix this number before publishing."
+        assert any("XXX" in p for p in post.audit())
 
     def test_leftover_todo_fails(self, tmp_path):
         post = good_post(tmp_path)

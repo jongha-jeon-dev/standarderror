@@ -129,7 +129,7 @@ class Post:
     # ---------- audit ----------
 
     def audit(self, *, min_words: int = 1200, max_words: int = 3000,
-              require_baseline: bool = True) -> list[str]:
+              require_baseline: bool | None = None) -> list[str]:
         """Publication gate. Returns a list of problems; empty means shippable."""
         problems: list[str] = []
         wc = self.word_count()
@@ -151,13 +151,28 @@ class Post:
         if not self.data_sources:
             problems.append("no data citations — every figure needs a source line")
         body = " ".join(s.body for s in self.sections)
-        for marker in ("TODO", "FIXME", "TK", "XXX", "lorem ipsum"):
-            if marker.lower() in body.lower():
+
+        # Word-bounded, because a substring match here is worse than useless: the
+        # Kuramoto-Sivashinsky term `u_xxxx` matched a bare "XXX" search and
+        # blocked a finished post. Case matters for XXX and TK for the same reason.
+        for marker, flags in (("TODO", re.I), ("FIXME", re.I), ("TK", 0),
+                              ("XXX", 0), ("lorem ipsum", re.I)):
+            if re.search(rf"\b{marker}\b", body, flags):
                 problems.append(f"unresolved {marker} left in the body")
-        if require_baseline and not re.search(
+
+        # The baseline rule applies to posts that claim predictive performance, not
+        # to every post. `require_baseline=None` auto-detects from a *comparison*
+        # claim; pass True or False to force it.
+        claims_performance = bool(re.search(
+            r"\b(beats?|beaten|outperform\w*|better than|worse than|"
+            r"lower (?:rmse|mae|error)|accuracy of|r-?squared|MASE|"
+            r"out-of-sample|state of the art)\b", body, re.I))
+        needs_baseline = (claims_performance if require_baseline is None
+                          else require_baseline)
+        if needs_baseline and not re.search(
                 r"persistence|na[iï]ve|baseline|random walk", body, re.I):
             problems.append(
-                "no baseline mentioned — a forecasting claim without a "
+                "no baseline mentioned — a performance claim without a "
                 "persistence/naive comparison is not falsifiable")
         if not self.reproducibility:
             problems.append("no reproducibility block (seed, versions, commit)")

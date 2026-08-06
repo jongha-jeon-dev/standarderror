@@ -66,16 +66,29 @@ def lines(
     title: str = "",
     subtitle: str = "",
     ylabel: str = "",
+    xlabel: str = "",
     source: str = "",
     alt: str = "",
     caption: str = "",
     mode: str = "light",
     direct_labels: bool = True,
     highlight: str | None = None,
+    logy: bool = False,
+    logx: bool = False,
+    ylim: tuple[float, float] | None = None,
+    invert_x: bool = False,
+    decorate=None,
     figsize: tuple[float, float] = (7.2, 4.0),
     path: str | None = None,
 ):
-    """Change over time, one line per column. Never two y-axes."""
+    """Change over time, one line per column. Never two y-axes.
+
+    `decorate(fig, ax)` runs **before** the titles and source note are placed.
+    Anything that changes the axes — a scale, a limit, an axis label, a reference
+    line — has to happen first, because the source note is positioned from the
+    axes' measured tight bounding box. Setting an x-label after the fact puts the
+    label underneath the note.
+    """
     theme.apply(mode, figsize=figsize)
     cols = list(frame.columns)
     colors = theme.series_colors(len(cols), mode)
@@ -92,6 +105,18 @@ def lines(
         ax.margins(x=0.06)
     if ylabel:
         ax.set_ylabel(ylabel)
+    if xlabel:
+        ax.set_xlabel(xlabel)
+    if logy:
+        ax.set_yscale("log")
+    if logx:
+        ax.set_xscale("log")
+    if ylim:
+        ax.set_ylim(*ylim)
+    if invert_x:
+        ax.invert_xaxis()
+    if decorate is not None:
+        decorate(fig, ax)
     theme.finish(ax, title=title, subtitle=subtitle, source=source, mode=mode,
                  legend=not (direct_labels and len(cols) <= 4))
     if path:
@@ -495,6 +520,8 @@ def error_growth(
     caption: str = "",
     mode: str = "light",
     logy: bool = True,
+    ylim: tuple[float, float] | None = None,
+    decorate=None,
     figsize: tuple[float, float] = (7.2, 4.0),
     path: str | None = None,
 ):
@@ -512,7 +539,11 @@ def error_growth(
                     textcoords="offset points", fontsize=8.0, color=m.muted)
     if logy:
         ax.set_yscale("log")
+    if ylim:
+        ax.set_ylim(*ylim)
     ax.set_xlabel(xlabel); ax.set_ylabel(ylabel)
+    if decorate is not None:
+        decorate(fig, ax)
     theme.finish(ax, title=title, subtitle=subtitle, source=source, mode=mode)
     if path:
         theme.save(fig, path, mode=mode, close=False)

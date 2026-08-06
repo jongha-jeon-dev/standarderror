@@ -78,9 +78,12 @@ nonlinear term never constrains it while the linear operator amplifies it from
 roundoff. `rfft` makes those modes unrepresentable. The same integration now runs
 to `t = 20000`, and `test_dynamics.py` pins it.
 
-**The Lyapunov exponent was 20% too high** — 1.087 against the literature's
-0.9056 — because the tangent space was propagated with an Euler step. Using
-`expm(J·dt)` gives 0.8965 and a Kaplan–Yorke dimension of 2.061 against 2.062.
+**The Lyapunov exponent was 27% too high** at dt = 0.01 — 1.154 against the
+literature's 0.9056 — because the tangent space was propagated with an Euler step.
+Using `expm(J·dt)` fixes it, and the discriminating test needs no reference value at
+all: the exponent spectrum must sum to the divergence of the vector field (−13.667
+for Lorenz-63). The exact propagator matches that identity to 0.00%; Euler misses it
+by up to 10.5%.
 Since every forecast horizon in the repo is quoted in Lyapunov times, that error
 would have rescaled every headline number.
 
