@@ -290,3 +290,19 @@ class TestAttribution:
         X = rng.standard_normal((80, 3))
         att = attribution.linear_shapley(np.ones(3), X)
         assert len(att.interpretation_caveat) > 40
+
+
+class TestLengthTargets:
+    def test_light_post_can_set_its_own_floor(self, tmp_path):
+        """A 900-word explainer is a light post, not a failed heavy one."""
+        post = good_post(tmp_path, words=900)
+        post.min_words, post.max_words = 700, 1400
+        assert not any("words" in p for p in post.audit())
+
+    def test_default_floor_still_applies_without_an_override(self, tmp_path):
+        assert any("words" in p for p in good_post(tmp_path, words=900).audit())
+
+    def test_explicit_argument_beats_the_field(self, tmp_path):
+        post = good_post(tmp_path, words=900)
+        post.min_words = 700
+        assert any("words" in p for p in post.audit(min_words=1500))

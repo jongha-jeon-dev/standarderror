@@ -54,6 +54,11 @@ class Post:
     # the only way a half-written post reaches readers is if you deliberately
     # flip this. Default-live would make an accidental push a publication.
     draft: bool = True
+    # Length targets per post. The "two heavy, one light" rhythm needs light posts
+    # to pass the gate, and a light post is 700-1,200 words by definition — with a
+    # single global minimum, every one of them would fail.
+    min_words: int | None = None
+    max_words: int | None = None
 
     # ---------- assembly ----------
 
@@ -128,15 +133,22 @@ class Post:
 
     # ---------- audit ----------
 
-    def audit(self, *, min_words: int = 1200, max_words: int = 3000,
+    def audit(self, *, min_words: int | None = None,
+              max_words: int | None = None,
               require_baseline: bool | None = None) -> list[str]:
-        """Publication gate. Returns a list of problems; empty means shippable."""
+        """Publication gate. Returns a list of problems; empty means shippable.
+
+        Length bounds resolve from the argument, then the post's own fields, then
+        the 1,200-3,000 default for a full-length post.
+        """
         problems: list[str] = []
+        lo = min_words if min_words is not None else (self.min_words or 1200)
+        hi = max_words if max_words is not None else (self.max_words or 3000)
         wc = self.word_count()
-        if wc < min_words:
-            problems.append(f"only {wc} words (target >= {min_words})")
-        if wc > max_words:
-            problems.append(f"{wc} words (target <= {max_words}) — cut or split")
+        if wc < lo:
+            problems.append(f"only {wc} words (target >= {lo})")
+        if wc > hi:
+            problems.append(f"{wc} words (target <= {hi}) — cut or split")
         if not self.slug or not re.fullmatch(r"[a-z0-9-]+", self.slug):
             problems.append(f"slug {self.slug!r} must be lowercase-kebab")
         if not self.summary:
