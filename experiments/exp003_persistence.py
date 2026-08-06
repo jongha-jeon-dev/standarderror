@@ -226,6 +226,31 @@ def figures(res: dict, trap: dict) -> dict:
                  "more accurate than laziness. That is what real skill looks like, "
                  "and R\u00b2 could not tell any of these apart."),
         title="mase")
+
+    # F4 — the same table as an image, for Medium, which strips table markup.
+    order = ["coin-flip random walk", "slow drifting series",
+             "chaotic but deterministic", "pure noise"]
+    rows = [[k, f"{res[k]['r2_level_model']:.4f}", f"{res[k]['vs_naive']:.3f}"]
+            for k in order]
+    fig_meta, _ = charts.table_image(
+        rows,
+        header=["series", "R\u00b2 on the level",
+                "error vs \u201cassume no change\u201d"],
+        # Bold only the three rows the argument turns on; bolding the control too
+        # would suggest it is part of the finding.
+        bold_cells={(0, 2), (1, 2), (2, 2)},
+        title="Two scores, same data, opposite conclusions",
+        subtitle=("The first column cannot tell the first three rows apart. The "
+                  "second column can."),
+        source=src, mode="light",
+        alt=("Table of four series. R\u00b2 on the level is 0.9934, 0.9874, "
+             "1.0000 and -0.0034; error relative to assuming no change is 1.003, "
+             "1.010, 0.019 and 0.711."),
+        caption=("Table 1. R\u00b2 says the first three are equally good models. "
+                 "The comparison against laziness says two of them are worthless "
+                 "and one is excellent."),
+        path=str(IMG / f"e5-t1-scores.{EXT}"))
+    figs["table"] = fig_meta
     return figs
 
 
@@ -259,6 +284,8 @@ def build() -> Post:
         author=qp.SETTINGS.author,
         code_url=qp.SETTINGS.code_repo_url,
         min_words=850, max_words=1600,
+        # Medium strips table markup on paste; the crosspost swaps in this image.
+        table_figures=[figs["table"]],
         data_sources=[
             "Four simulated series (random walk, slow autoregressive drift, "
             "Lorenz-63, white noise). No external data; every number is "

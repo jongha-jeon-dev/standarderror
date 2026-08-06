@@ -59,6 +59,10 @@ class Post:
     # single global minimum, every one of them would fail.
     min_words: int | None = None
     max_words: int | None = None
+    # Rendered stand-ins for the body's markdown tables, in order of appearance.
+    # Medium has no table support and strips the markup on paste, so the crosspost
+    # substitutes these images. The Hugo page keeps the real table.
+    table_figures: list[Figure] = field(default_factory=list)
 
     # ---------- assembly ----------
 
@@ -69,7 +73,36 @@ class Post:
 
     @property
     def figures(self) -> list[Figure]:
-        return [f for s in self.sections for f in s.figures]
+        return [f for s in self.sections for f in s.figures] + list(
+            self.table_figures)
+
+    @staticmethod
+    def find_markdown_tables(text: str) -> list[tuple[int, int]]:
+        """(start, end) line indices of each markdown table block in `text`.
+
+        A table is a pipe-delimited header line, a separator line of dashes and
+        colons, then one or more body lines. Scanned line by line rather than with
+        one regex because the failure mode of a slightly-wrong regex here is
+        silently mangling the body.
+        """
+        lines = text.split("\n")
+        out: list[tuple[int, int]] = []
+        i = 0
+        while i < len(lines) - 1:
+            head = lines[i].strip()
+            sep = lines[i + 1].strip()
+            is_row = head.startswith("|") and head.endswith("|")
+            is_sep = (sep.startswith("|") and sep.endswith("|")
+                      and set(sep) <= set("|-: \t"))
+            if is_row and is_sep:
+                j = i + 2
+                while j < len(lines) and lines[j].strip().startswith("|"):
+                    j += 1
+                out.append((i, j))
+                i = j
+            else:
+                i += 1
+        return out
 
     def word_count(self) -> int:
         text = " ".join(s.body for s in self.sections)

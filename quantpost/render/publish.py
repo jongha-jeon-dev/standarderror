@@ -11,6 +11,13 @@ Image handling differs by target and this is the usual source of broken posts:
 * Hugo page bundle -> images sit beside `index.md`, referenced relatively.
 * Medium -> the importer needs **absolute** URLs, so images must already be live
   on your site. Publish Hugo first; the bundle references those URLs.
+
+**Medium has no tables.** It supports none natively and strips the markup on
+paste, so a markdown table arrives as a run of plain text with the pipes gone —
+silently, and only visible once you look at the published draft.
+`medium_bundle` therefore swaps each markdown table for the matching image from
+`post.table_figures`, and shouts in the checklist about any table left unmatched
+rather than shipping one that will flatten.
 """
 
 from __future__ import annotations
@@ -65,7 +72,8 @@ def medium_bundle(post: Post, *, out_dir: Path | None = None,
     out.mkdir(parents=True, exist_ok=True)
     image_base = f"{canonical.rstrip('/')}"
 
-    body = post.body_markdown(image_base=image_base)
+    body, table_notes = _substitute_tables(
+        post.body_markdown(image_base=image_base), post, image_base)
     header = (f"# {post.title}\n\n"
               + (f"### {post.subtitle}\n\n" if post.subtitle else "")
               + f"> Originally published at [{base}]({canonical}).\n\n")
@@ -78,7 +86,7 @@ def medium_bundle(post: Post, *, out_dir: Path | None = None,
         "canonical_url": canonical,
         "tags": post.tags[:5],       # Medium caps at 5
         "images": [f"{image_base}/{Path(f.path).name}" for f in post.figures],
-        "checklist": [
+        "checklist": table_notes + [
             "Publish the Hugo page first so the image URLs above resolve.",
             "Import via https://medium.com/p/import — it sets rel=canonical.",
             "Medium keeps at most 5 tags.",
@@ -89,6 +97,37 @@ def medium_bundle(post: Post, *, out_dir: Path | None = None,
         ],
     }, indent=2, ensure_ascii=False), encoding="utf-8")
     return path
+
+
+def _substitute_tables(body: str, post: Post, image_base: str) -> tuple[str, list]:
+    """Replace markdown tables with `post.table_figures`, in order.
+
+    Returns the rewritten body and checklist notes. Substituting back-to-front
+    keeps the earlier line indices valid.
+    """
+    spans = Post.find_markdown_tables(body)
+    if not spans:
+        return body, []
+    notes: list[str] = []
+    lines = body.split("\n")
+    figs = list(post.table_figures)
+    n_sub = min(len(spans), len(figs))
+    for k in range(len(spans) - 1, -1, -1):
+        start, end = spans[k]
+        if k < len(figs):
+            lines[start:end] = figs[k].markdown(image_base).split("\n")
+    if n_sub:
+        notes.append(
+            f"{n_sub} markdown table(s) were replaced with rendered images, "
+            "because Medium has no table support and strips the markup on paste.")
+    leftover = len(spans) - len(figs)
+    if leftover > 0:
+        notes.append(
+            f"WARNING: {leftover} markdown table(s) have no image in "
+            "post.table_figures and WILL arrive on Medium as plain text with the "
+            "pipes stripped. Render them with viz.charts.table_image(), or embed a "
+            "GitHub gist, or rewrite them as prose.")
+    return "\n".join(lines), notes
 
 
 # ---------------------------------------------------------------- Notion

@@ -379,6 +379,100 @@ def ranked_bars(
     return fig, ax
 
 
+def table_image(
+    rows,
+    *,
+    header,
+    title: str = "",
+    subtitle: str = "",
+    source: str = "",
+    alt: str = "",
+    caption: str = "",
+    mode: str = "light",
+    bold_cols: tuple[int, ...] = (),
+    bold_cells: set | None = None,
+    align: str = "",
+    col_width: tuple[float, ...] | None = None,
+    row_height: float = 0.42,
+    path: str | None = None,
+):
+    """Render a small table as an image, in the same style as the charts.
+
+    This exists because **Medium has no table support and strips table markup on
+    paste** — a markdown table arrives as a run of plain text with the pipes gone.
+    The alternatives are a GitHub Gist embed (selectable text, but a second place
+    to keep the numbers in sync) or a picture. A picture rendered from the same
+    data that produced the post keeps one source of truth, and matches the
+    figures instead of looking like a screenshot of something else.
+
+    `align` is one character per column: "l" or "r" (default: first column left,
+    the rest right, which is what a label-plus-numbers table wants).
+    `bold_cols` emphasises whole columns; `bold_cells` takes `(row, col)` index
+    pairs when only some cells in a column carry the finding — bolding a whole
+    column when one of its values is the boring control tells the reader the
+    control matters too.
+
+    Keep it to a handful of rows. A table that needs scrolling is not a figure —
+    it belongs in the repo as a CSV, with the headline numbers in the prose.
+    """
+    m = theme.apply(mode)
+    body = [[str(c) for c in r] for r in rows]
+    head = [str(c) for c in header]
+    n_col = len(head)
+    if any(len(r) != n_col for r in body):
+        raise ValueError("every row must have the same number of cells as header")
+    align = align or ("l" + "r" * (n_col - 1))
+    if len(align) != n_col:
+        raise ValueError(f"align needs {n_col} characters, got {align!r}")
+
+    # Column widths from the longest cell, so numbers do not collide with labels.
+    widths = col_width or tuple(
+        max(len(head[j]), *(len(r[j]) for r in body)) for j in range(n_col))
+    total = sum(widths)
+    edges = [0.0]
+    for w in widths:
+        edges.append(edges[-1] + w / total)
+
+    n_row = len(body)
+    fig_h = row_height * (n_row + 1) + 1.1
+    fig, ax = plt.subplots(figsize=(min(7.2, 1.6 + 0.085 * total), fig_h))
+    ax.set_axis_off()
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, n_row + 1)
+    ax.grid(False)
+
+    def cell_x(j: int) -> tuple[float, str]:
+        pad = 0.012
+        if align[j] == "l":
+            return edges[j] + pad, "left"
+        return edges[j + 1] - pad, "right"
+
+    y_head = n_row + 0.45
+    for j, text in enumerate(head):
+        x, ha = cell_x(j)
+        ax.text(x, y_head, text, ha=ha, va="center", fontsize=9.0,
+                color=m.ink_secondary)
+    # Rule under the header, hairlines between rows: the minimum a table needs.
+    ax.plot([0, 1], [n_row, n_row], color=m.axis, lw=1.0, clip_on=False)
+    for i, row in enumerate(body):
+        y = n_row - 0.5 - i
+        if i:
+            ax.plot([0, 1], [y + 0.5, y + 0.5], color=m.grid, lw=0.6,
+                    clip_on=False)
+        for j, text in enumerate(row):
+            x, ha = cell_x(j)
+            strong = j in bold_cols or (i, j) in (bold_cells or set())
+            ax.text(x, y, text, ha=ha, va="center", fontsize=9.5,
+                    color=m.ink, fontweight="bold" if strong else "normal")
+
+    theme.finish(ax, title=title, subtitle=subtitle, source=source, mode=mode,
+                 legend=False)
+    if path:
+        theme.save(fig, path, mode=mode, close=False)
+        return Figure(path, alt or title, caption, title, mode), (fig, ax)
+    return fig, ax
+
+
 def coefficient_matrix(
     matrix,
     *,

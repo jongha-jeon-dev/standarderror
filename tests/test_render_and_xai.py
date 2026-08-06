@@ -306,3 +306,82 @@ class TestLengthTargets:
         post = good_post(tmp_path, words=900)
         post.min_words = 700
         assert any("words" in p for p in post.audit(min_words=1500))
+
+
+class TestMediumTables:
+    """Medium supports no tables and strips the markup on paste, so a markdown
+    table has to be swapped for an image or it ships as flattened text."""
+
+    TABLE = "before\n\n| a | b |\n|---|---|\n| 1 | 2 |\n| 3 | 4 |\n\nafter"
+
+    def test_finds_a_table(self):
+        assert Post.find_markdown_tables(self.TABLE) == [(2, 6)]
+
+    def test_finds_several_and_ignores_prose_with_pipes(self):
+        text = ("a | b is not a table\n\n| x |\n|---|\n| 1 |\n\nmid\n\n"
+                "| y | z |\n|:--|--:|\n| 1 | 2 |\n")
+        assert len(Post.find_markdown_tables(text)) == 2
+
+    def test_ignores_a_header_without_a_separator(self):
+        assert Post.find_markdown_tables("| a | b |\n| 1 | 2 |\n") == []
+
+    def _post(self, tmp_path, *, with_figure: bool):
+        fig = good_figure(tmp_path)
+        table_fig = Figure(str(tmp_path / "f1.png"), alt="the table as an image",
+                           caption="Table 1.")
+        post = Post(title="T", slug="s", summary="x", draft=False,
+                    data_sources=["d"], reproducibility={"seed": 1},
+                    table_figures=[table_fig] if with_figure else [])
+        post.add("S", self.TABLE, figures=[fig])
+        return post
+
+    def test_medium_swaps_the_table_for_the_image(self, tmp_path):
+        post = self._post(tmp_path, with_figure=True)
+        out = publish.medium_bundle(post, out_dir=tmp_path / "m",
+                                    base_url="https://ex.io/blog")
+        text = out.read_text(encoding="utf-8")
+        assert "| 1 | 2 |" not in text
+        assert "![the table as an image]" in text
+        assert "before" in text and "after" in text     # prose is untouched
+
+    def test_hugo_keeps_the_real_table(self, tmp_path):
+        post = self._post(tmp_path, with_figure=True)
+        out = publish.hugo_page_bundle(post, site_dir=tmp_path / "site")
+        assert "| 1 | 2 |" in out.read_text(encoding="utf-8")
+
+    def test_unmatched_table_raises_a_loud_checklist_warning(self, tmp_path):
+        import json
+        post = self._post(tmp_path, with_figure=False)
+        publish.medium_bundle(post, out_dir=tmp_path / "m",
+                              base_url="https://ex.io/blog")
+        meta = json.loads((tmp_path / "m" / "s.meta.json").read_text(
+            encoding="utf-8"))
+        assert any(c.startswith("WARNING") and "table" in c
+                   for c in meta["checklist"])
+
+    def test_table_figures_count_toward_the_audit(self, tmp_path):
+        post = self._post(tmp_path, with_figure=True)
+        assert len(post.figures) == 2
+        post.table_figures[0].alt = ""
+        assert any("alt text" in p for p in post.audit())
+
+
+class TestTableImage:
+    def test_renders_and_bolds_only_the_named_cells(self, tmp_path):
+        out = tmp_path / "t.png"
+        fig_meta, (fig, ax) = charts.table_image(
+            [["a", "1.0"], ["b", "2.0"]], header=["k", "v"],
+            bold_cells={(0, 1)}, alt="alt text here", caption="c",
+            path=str(out))
+        assert out.exists()
+        weights = {t.get_text(): t.get_fontweight() for t in ax.texts}
+        assert weights["1.0"] == "bold"
+        assert weights["2.0"] == "normal"
+
+    def test_ragged_rows_raise(self):
+        with pytest.raises(ValueError, match="same number of cells"):
+            charts.table_image([["a", "b"], ["c"]], header=["x", "y"])
+
+    def test_align_length_is_checked(self):
+        with pytest.raises(ValueError, match="align needs"):
+            charts.table_image([["a", "b"]], header=["x", "y"], align="l")
