@@ -12,6 +12,8 @@ Run: `quantpost run exp003_persistence --publish`
 
 from __future__ import annotations
 
+import os
+
 import numpy as np
 import pandas as pd
 
@@ -22,6 +24,9 @@ from quantpost.render import Post
 from quantpost.viz import charts, theme
 
 IMG = qp.SETTINGS.build_dir / "img"
+# PNG for the site and for Medium; SVG when a target wants inline vector text
+# (Notion accepts SVG as an inline attachment, which avoids needing a public URL).
+EXT = os.environ.get("QUANTPOST_FIG_EXT", "png")
 SEED = qp.SETTINGS.seed
 N = 1500
 
@@ -159,7 +164,7 @@ def figures(res: dict, trap: dict) -> dict:
         caption=("Fig 1. Two lines. You can barely see that there are two. If "
                  "someone showed you this chart and an R² of 0.99, you would "
                  "believe the model worked — and the series is a coin flip."),
-        path=str(IMG / "e5-f1-illusion.png"))
+        path=str(IMG / f"e5-f1-illusion.{EXT}"))
     figs["illusion"] = fig_meta
 
     # F2 — the same forecast, on the quantity that was actually up for grabs.
@@ -180,7 +185,7 @@ def figures(res: dict, trap: dict) -> dict:
                  "movement is what the model was supposed to predict, and it "
                  "predicted none of it. Same model, same data, same day — only "
                  "the axis changed."),
-        path=str(IMG / "e5-f2-truth.png"))
+        path=str(IMG / f"e5-f2-truth.{EXT}"))
     figs["truth"] = fig_meta
 
     # F3 — one number that is not fooled.
@@ -204,9 +209,9 @@ def figures(res: dict, trap: dict) -> dict:
                   "Below 1, the model added something. At 1, it did not."),
         xlabel="error relative to \u201cassume no change\u201d", source=src)
     mark_one(fig, ax)
-    theme.save(fig, str(IMG / "e5-f3-mase.png"), mode="light")
+    theme.save(fig, str(IMG / f"e5-f3-mase.{EXT}"), mode="light")
     figs["mase"] = charts.Figure(
-        str(IMG / "e5-f3-mase.png"),
+        str(IMG / f"e5-f3-mase.{EXT}"),
         alt=("Horizontal bar chart of forecast error relative to a naive forecast "
              "for four kinds of series, with a vertical reference line at 1.0. Two "
              "bars sit essentially on the line, one is well below it, and one is "
