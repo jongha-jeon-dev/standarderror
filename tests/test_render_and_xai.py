@@ -61,6 +61,31 @@ class TestPostAudit:
                  figures=[good_figure(tmp_path)])
         assert not any("baseline" in p for p in post.audit())
 
+    def test_chance_level_counts_as_a_baseline(self, tmp_path):
+        """For a classifier the reference point is chance, not persistence.
+
+        The winner's-curse post compares everything to a coin flip and mentions
+        "out-of-sample", which tripped the performance detector; demanding the word
+        "naive" from a post whose whole subject is the chance distribution is a
+        false positive that trains the author to ignore the audit.
+        """
+        post = Post(title="T", slug="s", summary="x",
+                    data_sources=["d"], reproducibility={"seed": 1})
+        post.add("S", " ".join(["word"] * 1400) +
+                 " Out-of-sample it scored 2.9 points above chance, which is what "
+                 "flipping a coin predicts.", figures=[good_figure(tmp_path)])
+        assert not any("baseline" in p for p in post.audit())
+
+    def test_chance_wording_does_not_satisfy_a_forced_baseline(self, tmp_path):
+        """`require_baseline=True` is a judgement call by the author, but the
+        vocabulary must still be the vocabulary — "by chance" alone is not a
+        persistence comparison for a forecasting post."""
+        post = Post(title="T", slug="s", summary="x",
+                    data_sources=["d"], reproducibility={"seed": 1})
+        post.add("S", " ".join(["word"] * 1400) + " It could have happened.",
+                 figures=[good_figure(tmp_path)])
+        assert any("baseline" in p for p in post.audit(require_baseline=True))
+
     def test_baseline_can_be_forced(self, tmp_path):
         post = Post(title="T", slug="s", summary="x",
                     data_sources=["d"], reproducibility={"seed": 1})

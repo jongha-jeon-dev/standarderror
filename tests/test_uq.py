@@ -8,8 +8,9 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
+from scipy import stats
 
-from quantpost.uq import causal, conformal
+from quantpost.uq import causal, conformal, multiplicity
 
 
 def linear_setup(n_train=400, n_calib=400, n_test=2000, *, seed=0,
@@ -272,3 +273,83 @@ class TestCausal:
         scm = causal.ConfoundedSCM(b_x=0.5, b_m=1.0, a_xm=0.8)
         assert scm.total_effect == pytest.approx(1.3)
         assert scm.direct_effect == pytest.approx(0.5)
+
+
+class TestMultiplicity:
+    """The winner's curse, checked against simulation rather than asserted.
+
+    These are the load-bearing numbers in exp004: the post's claim is that the best
+    of N chance-level models scores what the formula says it will, so the formula
+    itself has to be right to more precision than the effect being demonstrated.
+    """
+
+    def test_expected_max_matches_monte_carlo(self):
+        """Exact E[max] against 20,000 simulated searches of 200 models each."""
+        n_obs, n_models, reps = 300, 200, 20_000
+        rng = np.random.default_rng(3)
+        draws = rng.binomial(n_obs, 0.5, size=(reps, n_models)).max(axis=1) / n_obs
+        sim, se = draws.mean(), draws.std() / np.sqrt(reps)
+        exact = multiplicity.expected_max_accuracy(n_models, n_obs)
+        assert abs(exact - sim) < 4 * se, f"exact {exact:.5f} vs sim {sim:.5f}±{se:.5f}"
+
+    def test_expected_max_of_one_model_is_the_mean(self):
+        assert multiplicity.expected_max_accuracy(1, 900) == pytest.approx(0.5, abs=1e-12)
+
+    def test_expected_max_is_monotone_in_the_budget(self):
+        values = [multiplicity.expected_max_accuracy(n, 900)
+                  for n in (1, 2, 10, 100, 2000, 10 ** 6)]
+        assert all(b > a for a, b in zip(values, values[1:]))
+
+    def test_trials_to_reach_inverts_expected_max(self):
+        """The table and the curve must be one function read two ways."""
+        for target in (0.53, 0.55, 0.57):
+            n = multiplicity.trials_to_reach(target, 900)
+            assert multiplicity.expected_max_accuracy(n, 900) >= target
+            assert multiplicity.expected_max_accuracy(n - 1, 900) < target
+
+    def test_trials_to_reach_survives_the_far_tail(self):
+        """60% on 900 observations needs ~6.6e8 tries; the log-space arithmetic has
+        to get there without overflowing or silently returning the cap."""
+        n = multiplicity.trials_to_reach(0.60, 900)
+        assert 5e8 < n < 8e8
+        assert multiplicity.trials_to_reach(0.75, 900, cap=10 ** 9) is None
+
+    def test_normal_approximation_understates_the_expected_maximum(self):
+        """Why the exact version exists — and it is not only a tail problem.
+
+        The usual shortcut takes the (1 - 1/(N+1)) quantile of a normal as the
+        expected maximum. That quantile sits *below* the expected maximum at every
+        budget, by a third of a percentage point even at twenty models, so the
+        shortcut is biased in the flattering direction: it makes a lucky winner look
+        less explainable by luck than it is.
+        """
+        for n_models in (2, 20, 200, 2000):
+            exact = multiplicity.expected_max_accuracy(n_models, 900)
+            approx = multiplicity.normal_expected_max_accuracy(n_models, 900)
+            assert approx < exact, n_models
+
+    def test_normal_tail_inflates_the_trials_table(self):
+        """The far tail is where the error becomes a wrong headline number: the
+        normal version demands ~1.5x more models to reach 60% than the truth."""
+        exact = multiplicity.trials_to_reach(0.60, 900)
+        sd = np.sqrt(0.25 / 900)
+        normal = 1.0 / stats.norm.sf((0.60 - 0.5) / sd)
+        assert normal / exact > 1.4
+
+    def test_significance_threshold_attains_its_level(self):
+        acc, attained = multiplicity.significance_threshold(900, 0.05)
+        hits = round(acc * 900)
+        assert attained <= 0.05 < stats.binom.sf(hits - 2, 900, 0.5)
+        assert attained == pytest.approx(0.0445, abs=5e-4)
+
+    def test_false_positive_count_follows_the_attained_level(self):
+        """The count of "significant" models in a null search tracks the attained
+        level, not the nominal 5% — which is why the post quotes ~89 and not 100."""
+        n_obs, n_models = 900, 4000
+        acc, attained = multiplicity.significance_threshold(n_obs, 0.05)
+        rng = np.random.default_rng(7)
+        scores = rng.binomial(n_obs, 0.5, size=n_models) / n_obs
+        observed = int((scores >= acc).sum())
+        expected = attained * n_models
+        se = np.sqrt(n_models * attained * (1 - attained))
+        assert abs(observed - expected) < 4 * se

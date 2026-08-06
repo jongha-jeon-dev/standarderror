@@ -379,6 +379,59 @@ def ranked_bars(
     return fig, ax
 
 
+def histogram(
+    values,
+    *,
+    bins: int = 30,
+    overlay: dict | None = None,
+    mark: dict | None = None,
+    title: str = "",
+    subtitle: str = "",
+    xlabel: str = "",
+    ylabel: str = "probability density",
+    source: str = "",
+    alt: str = "",
+    caption: str = "",
+    mode: str = "light",
+    figsize: tuple[float, float] = (7.2, 4.0),
+    path: str | None = None,
+):
+    """Distribution of one quantity, optionally against a theoretical curve.
+
+    `overlay` is `{label: (x, y)}` for a reference density — the whole point of a
+    histogram in an analysis post is usually "is this spread more than chance
+    predicts", and that question needs the chance curve drawn on top of it.
+    `mark` is `{label: x}` for vertical annotations, e.g. where the winner landed.
+
+    Density, not counts, so the overlay can be a probability density and the two
+    are directly comparable without a second axis.
+    """
+    m = theme.apply(mode, figsize=figsize)
+    v = np.asarray(values, float)
+    v = v[np.isfinite(v)]
+    fig, ax = plt.subplots()
+    counts, edges = np.histogram(v, bins=bins, density=True)
+    centres = 0.5 * (edges[:-1] + edges[1:])
+    ax.bar(centres, counts, width=(edges[1] - edges[0]) * 0.92,
+           color=m.series[0], label="observed")
+    for (label, (ox, oy)), col in zip((overlay or {}).items(),
+                                      theme.series_colors(
+                                          max(len(overlay or {}), 1), mode)[1:]
+                                      or [m.series[1]]):
+        ax.plot(ox, oy, color=col, lw=2.0, label=label)
+    for label, x in (mark or {}).items():
+        ax.axvline(x, color=m.series[7], lw=1.4)
+        ax.annotate(label, (x, 0.97), xycoords=("data", "axes fraction"),
+                    xytext=(6, 0), textcoords="offset points", ha="left",
+                    va="top", fontsize=8.5, color=m.series[7])
+    ax.set_xlabel(xlabel); ax.set_ylabel(ylabel)
+    theme.finish(ax, title=title, subtitle=subtitle, source=source, mode=mode)
+    if path:
+        theme.save(fig, path, mode=mode, close=False)
+        return Figure(path, alt or title, caption, title, mode), (fig, ax)
+    return fig, ax
+
+
 def table_image(
     rows,
     *,

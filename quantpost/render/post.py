@@ -214,11 +214,17 @@ class Post:
             r"out-of-sample|state of the art)\b", body, re.I))
         needs_baseline = (claims_performance if require_baseline is None
                           else require_baseline)
-        if needs_baseline and not re.search(
-                r"persistence|na[iï]ve|baseline|random walk", body, re.I):
+        # For a classifier, the reference point is chance level, not persistence —
+        # "flipping a coin" is a baseline, and demanding the word "naive" from a
+        # post whose entire subject is the chance distribution is a false positive.
+        has_baseline = bool(re.search(
+            r"persistence|na[iï]ve|baseline|random walk|"
+            r"(?:above |pure |by |than )chance|chance level|"
+            r"coin flip\w*|flipping a coin|random guess\w*", body, re.I))
+        if needs_baseline and not has_baseline:
             problems.append(
                 "no baseline mentioned — a performance claim without a "
-                "persistence/naive comparison is not falsifiable")
+                "persistence/naive/chance-level comparison is not falsifiable")
         if not self.reproducibility:
             problems.append("no reproducibility block (seed, versions, commit)")
 
