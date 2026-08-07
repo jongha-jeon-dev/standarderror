@@ -307,6 +307,41 @@ def figures(search: dict, res: dict) -> dict:
                  "omission."),
         path=str(IMG / f"e6-t1-trials.{EXT}"))
     figs["table"] = fig_meta
+
+    # HERO — not part of the post body. Medium's story preview, an OpenGraph card
+    # and a Slack unfurl all shrink and crop the first image in the post, and at
+    # that size Fig 1's axis labels, overlay legend and winner annotation are
+    # unreadable — the finding disappears and a blue smear remains. This carries
+    # the finding in type, over a silhouette of the same histogram.
+    # Binned over a window padded to the right of the winner, so the marked line
+    # lands inside the card instead of on its edge — the winner *is* the maximum,
+    # so without the padding the mark reads as a border.
+    counts, edges = np.histogram(
+        va, bins=np.linspace(va.min() - 0.004, va.max() + 0.017, 44))
+    centres = 0.5 * (edges[:-1] + edges[1:])
+    fig_meta, _ = charts.social_card(
+        headline="I trained 2,000 models on a coin flip.",
+        stat=f"{res['val_best'] * 100:.1f}%",
+        stat_label=("the best one's hit rate, on data built to have "
+                    "no signal in it at all"),
+        supporting=(("predicted before I ran anything",
+                     f"{res['expected_max'] * 100:.1f}%"),
+                    ("the same model, out of sample",
+                     f"{res['test_of_best'] * 100:.1f}%"),
+                    ("its p-value at face value",
+                     f"{res['p_face']:.4f}")),
+        silhouette=(centres, counts.astype(float)), mark=res["val_best"],
+        footer="quantpost",
+        mode="light",
+        alt=(f"Card reading \u201cI trained 2,000 models on a coin flip\u201d over a "
+             f"large {res['val_best'] * 100:.1f}%, with the order-statistic "
+             f"prediction of {res['expected_max'] * 100:.1f}%, the winner's "
+             f"out-of-sample {res['test_of_best'] * 100:.1f}% and its face-value "
+             f"p of {res['p_face']:.4f} beside it, above a faint histogram "
+             "silhouette with the winner marked in the right tail."),
+        caption="",
+        path=str(IMG / f"e6-hero.{EXT}"))
+    figs["hero"] = fig_meta
     return figs
 
 

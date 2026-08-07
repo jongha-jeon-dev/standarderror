@@ -724,3 +724,100 @@ def phase_portrait(
         theme.save(fig, path, mode=mode, close=False)
         return Figure(path, alt or title, caption, title, mode), (fig, ax)
     return fig, ax
+
+
+def social_card(
+    *,
+    headline: str,
+    stat: str,
+    stat_label: str = "",
+    supporting: tuple[tuple[str, str], ...] = (),
+    silhouette: tuple = (),
+    mark: float | None = None,
+    footer: str = "",
+    alt: str = "",
+    caption: str = "",
+    mode: str = "light",
+    path: str | None = None,
+):
+    """A 1600x840 preview image for the places that crop and shrink a figure.
+
+    Medium's story preview, an OpenGraph card and a Slack unfurl all show the
+    post's first image at a fraction of its size, and an analysis chart loses at
+    that size: the axis labels, the legend and the annotation that carry its
+    meaning become illegible, so a reader sees a vaguely blue rectangle. This
+    renders the *finding* instead — one headline, one large number, at most three
+    supporting figures — over a stripped silhouette of the real data, so the card
+    is still made of the result rather than being decoration.
+
+    `silhouette` is `(x, y)` for a filled shape across the bottom, `mark` an x
+    position (in `silhouette`'s own units) for a vertical rule on it; a mark
+    outside the data range is clamped to the edge rather than silently dropped.
+    Both optional: the type alone works.
+
+    Keep `stat_label` under ~60 characters and each supporting label under ~32;
+    longer strings wrap, and a card that needs three wrapped lines is a card
+    doing the body text's job.
+
+    2:1 aspect and 1600px wide clears the ~1500px Medium and OpenGraph both want.
+    """
+    import textwrap
+
+    m = theme.apply(mode, figsize=(8.0, 4.2), dpi=200)
+    fig = plt.figure()
+    ax = fig.add_axes((0, 0, 1, 1))
+    ax.set_axis_off()
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+
+    # The data, reduced to a shape in the bottom quarter at low contrast: it is a
+    # texture behind the type, and anything a reader could measure back out of it
+    # would be a lie at this size.
+    band = 0.24
+    if len(silhouette) == 2:
+        sx, sy = (np.asarray(v, float) for v in silhouette)
+        if sx.size and sy.size and np.ptp(sx) > 0:
+            gx = (sx - sx.min()) / np.ptp(sx)
+            gy = sy / sy.max() if sy.max() > 0 else sy
+            ax.fill_between(gx, 0.0, 0.01 + band * gy, color=m.series[0],
+                            alpha=0.16, lw=0)
+            ax.plot(gx, 0.01 + band * gy, color=m.series[0], lw=1.6, alpha=0.5)
+            if mark is not None:
+                mx = float(np.clip((mark - sx.min()) / np.ptp(sx), 0.0, 1.0))
+                # Height follows the silhouette at that x, plus a little headroom,
+                # and never rises into the type band. A fixed-height rule collides
+                # with the supporting column whenever the mark lands under it —
+                # which is exactly where an interesting mark tends to land, since
+                # the tails are where the outliers are.
+                local = float(np.interp(mx, gx, 0.01 + band * gy))
+                ax.plot([mx, mx], [0.0, min(local + 0.07, band + 0.02)],
+                        color=m.series[7], lw=2.2)
+
+    # Everything sits inside a ~8% safe margin top and bottom: Medium's preview
+    # is a wider crop than 1.9:1 and it takes the difference off both edges, so
+    # type flush to the top of the card loses its ascenders in the preview.
+    ax.text(0.055, 0.86, headline, ha="left", va="top", fontsize=17.5,
+            color=m.ink, fontweight="medium")
+    ax.text(0.055, 0.63, stat, ha="left", va="center", fontsize=64,
+            color=m.ink, fontweight="bold")
+    if stat_label:
+        ax.text(0.058, 0.44, textwrap.fill(stat_label, 46), ha="left", va="top",
+                fontsize=12.5, color=m.ink_secondary, linespacing=1.4)
+
+    # Supporting figures right-aligned in a column, so the eye lands on the big
+    # number first and the qualifiers second.
+    for i, (label, value) in enumerate(supporting[:3]):
+        y = 0.74 - 0.20 * i
+        ax.text(0.965, y, value, ha="right", va="center", fontsize=21,
+                color=m.ink, fontweight="medium")
+        ax.text(0.965, y - 0.06, textwrap.fill(label, 32), ha="right", va="top",
+                fontsize=10.5, color=m.ink_secondary, linespacing=1.35)
+    # Top right, not bottom: the bottom belongs to the silhouette, and where the
+    # silhouette is tall enough to matter depends on the data.
+    if footer:
+        ax.text(0.965, 0.90, footer, ha="right", va="top", fontsize=10.5,
+                color=m.muted)
+    if path:
+        theme.save(fig, path, mode=mode, close=False)
+        return Figure(path, alt or headline, caption, headline, mode), (fig, ax)
+    return fig, ax

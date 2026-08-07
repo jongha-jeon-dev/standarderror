@@ -410,3 +410,49 @@ class TestTableImage:
     def test_align_length_is_checked(self):
         with pytest.raises(ValueError, match="align needs"):
             charts.table_image([["a", "b"]], header=["x", "y"], align="l")
+
+
+class TestSocialCard:
+    """The preview image is the only figure most readers see, since it appears in
+    the feed whether or not they open the post. It has one job: stay legible after
+    the platform crops and shrinks it."""
+
+    def card(self, tmp_path, **kw):
+        import numpy as np
+        x = np.linspace(0.44, 0.57, 40)
+        y = np.exp(-((x - 0.5) / 0.017) ** 2 / 2)
+        kw.setdefault("silhouette", (x, y))
+        return charts.social_card(
+            headline="H", stat="55.3%", stat_label="label",
+            supporting=(("a", "1"), ("b", "2"), ("c", "3")),
+            path=str(tmp_path / "hero.png"), **kw)
+
+    def test_aspect_and_width_clear_the_platform_minimum(self, tmp_path):
+        fig_meta, (fig, ax) = self.card(tmp_path)
+        w, h = fig.get_size_inches() * fig.dpi
+        assert w >= 1500, f"{w}px is under the ~1500px Medium and OpenGraph want"
+        assert 1.8 < w / h < 2.1
+
+    def test_a_mark_in_the_tail_stays_clear_of_the_type(self, tmp_path):
+        """A fixed-height rule collided with the supporting column, and the tail is
+        exactly where an interesting mark lands."""
+        _, (fig, ax) = self.card(tmp_path, mark=0.566)
+        rules = [ln for ln in ax.lines if len(set(ln.get_xdata())) == 1]
+        assert rules, "no vertical mark drawn"
+        assert max(max(ln.get_ydata()) for ln in rules) < 0.28
+
+    def test_a_mark_outside_the_data_is_clamped_not_dropped(self, tmp_path):
+        _, (fig, ax) = self.card(tmp_path, mark=99.0)
+        rules = [ln for ln in ax.lines if len(set(ln.get_xdata())) == 1]
+        assert rules and rules[0].get_xdata()[0] == 1.0
+
+    def test_everything_sits_inside_the_crop_safe_margin(self, tmp_path):
+        """Medium crops wider than 2:1 and takes it off both edges."""
+        _, (fig, ax) = self.card(tmp_path, footer="quantpost")
+        ys = [t.get_position()[1] for t in ax.texts]
+        assert max(ys) <= 0.92 and min(ys) >= 0.08
+
+    def test_type_alone_works_without_data(self, tmp_path):
+        out = tmp_path / "hero.png"
+        charts.social_card(headline="H", stat="9", path=str(out))
+        assert out.exists()
