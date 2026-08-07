@@ -385,6 +385,7 @@ def histogram(
     bins: int = 30,
     overlay: dict | None = None,
     mark: dict | None = None,
+    series_label: str = "observed",
     title: str = "",
     subtitle: str = "",
     xlabel: str = "",
@@ -412,8 +413,10 @@ def histogram(
     fig, ax = plt.subplots()
     counts, edges = np.histogram(v, bins=bins, density=True)
     centres = 0.5 * (edges[:-1] + edges[1:])
+    # Nameable, because "observed" is wrong whenever the overlay is also observed
+    # — a size-biased version of the same data, say, rather than a theory curve.
     ax.bar(centres, counts, width=(edges[1] - edges[0]) * 0.92,
-           color=m.series[0], label="observed")
+           color=m.series[0], label=series_label)
     for (label, (ox, oy)), col in zip((overlay or {}).items(),
                                       theme.series_colors(
                                           max(len(overlay or {}), 1), mode)[1:]
@@ -445,8 +448,8 @@ def table_image(
     bold_cols: tuple[int, ...] = (),
     bold_cells: set | None = None,
     align: str = "",
-    col_width: tuple[float, ...] | None = None,
     row_height: float = 0.42,
+    min_width: float = 4.0,
     path: str | None = None,
 ):
     """Render a small table as an image, in the same style as the charts.
@@ -457,6 +460,13 @@ def table_image(
     to keep the numbers in sync) or a picture. A picture rendered from the same
     data that produced the post keeps one source of truth, and matches the
     figures instead of looking like a screenshot of something else.
+
+    Column widths are **measured**, not counted. A character-count model got this
+    wrong the first time it met a table whose header was a long word over a short
+    number — "unevenness" over "0.00" — and rendered "unevennessaverage gap" as one
+    run of text, because proportional type does not care how many characters you
+    used. Every cell is drawn, its rendered extent read back, and the figure width
+    then set from the total, so the table is exactly as wide as its contents need.
 
     `align` is one character per column: "l" or "r" (default: first column left,
     the rest right, which is what a label-plus-numbers table wants).
@@ -478,45 +488,62 @@ def table_image(
     if len(align) != n_col:
         raise ValueError(f"align needs {n_col} characters, got {align!r}")
 
-    # Column widths from the longest cell, so numbers do not collide with labels.
-    widths = col_width or tuple(
-        max(len(head[j]), *(len(r[j]) for r in body)) for j in range(n_col))
-    total = sum(widths)
-    edges = [0.0]
-    for w in widths:
-        edges.append(edges[-1] + w / total)
-
     n_row = len(body)
     fig_h = row_height * (n_row + 1) + 1.1
-    fig, ax = plt.subplots(figsize=(min(7.2, 1.6 + 0.085 * total), fig_h))
+    fig, ax = plt.subplots(figsize=(7.2, fig_h))
     ax.set_axis_off()
     ax.set_xlim(0, 1)
     ax.set_ylim(0, n_row + 1)
     ax.grid(False)
 
-    def cell_x(j: int) -> tuple[float, str]:
-        pad = 0.012
-        if align[j] == "l":
-            return edges[j] + pad, "left"
-        return edges[j + 1] - pad, "right"
-
     y_head = n_row + 0.45
+    cells = []          # (artist, row_or_None, col)
     for j, text in enumerate(head):
-        x, ha = cell_x(j)
-        ax.text(x, y_head, text, ha=ha, va="center", fontsize=9.0,
-                color=m.ink_secondary)
-    # Rule under the header, hairlines between rows: the minimum a table needs.
-    ax.plot([0, 1], [n_row, n_row], color=m.axis, lw=1.0, clip_on=False)
+        cells.append((ax.text(0.0, y_head, text, ha="left", va="center",
+                              fontsize=9.0, color=m.ink_secondary), None, j))
     for i, row in enumerate(body):
         y = n_row - 0.5 - i
-        if i:
-            ax.plot([0, 1], [y + 0.5, y + 0.5], color=m.grid, lw=0.6,
-                    clip_on=False)
         for j, text in enumerate(row):
-            x, ha = cell_x(j)
             strong = j in bold_cols or (i, j) in (bold_cells or set())
-            ax.text(x, y, text, ha=ha, va="center", fontsize=9.5,
-                    color=m.ink, fontweight="bold" if strong else "normal")
+            cells.append((ax.text(0.0, y, text, ha="left", va="center",
+                                  fontsize=9.5, color=m.ink,
+                                  fontweight="bold" if strong else "normal"),
+                          i, j))
+
+    # Measure, then size the figure to what the type actually needs.
+    fig.canvas.draw()
+    renderer = fig.canvas.get_renderer()
+    col_px = [0.0] * n_col
+    for artist, _i, j in cells:
+        w = artist.get_window_extent(renderer).width
+        col_px[j] = max(col_px[j], w)
+    gap_px = 0.20 * fig.dpi
+    need_px = sum(col_px) + gap_px * (n_col - 1)
+    frac = ax.get_position().width
+    fig.set_size_inches(max(min_width, need_px / (frac * fig.dpi)), fig_h)
+    fig.canvas.draw()
+    renderer = fig.canvas.get_renderer()
+    axes_px = ax.get_window_extent(renderer).width
+
+    edges = [0.0]
+    for w in col_px:
+        edges.append(edges[-1] + (w + gap_px) / axes_px)
+    right = edges[-1] - gap_px / axes_px          # where the content actually ends
+
+    for artist, _i, j in cells:
+        if align[j] == "l":
+            artist.set_position((edges[j], artist.get_position()[1]))
+            artist.set_ha("left")
+        else:
+            artist.set_position((edges[j + 1] - gap_px / axes_px,
+                                 artist.get_position()[1]))
+            artist.set_ha("right")
+
+    # Rule under the header, hairlines between rows: the minimum a table needs.
+    ax.plot([0, right], [n_row, n_row], color=m.axis, lw=1.0, clip_on=False)
+    for i in range(1, n_row):
+        y = n_row - i
+        ax.plot([0, right], [y, y], color=m.grid, lw=0.6, clip_on=False)
 
     theme.finish(ax, title=title, subtitle=subtitle, source=source, mode=mode,
                  legend=False)

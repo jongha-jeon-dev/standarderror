@@ -403,6 +403,29 @@ class TestTableImage:
         assert weights["1.0"] == "bold"
         assert weights["2.0"] == "normal"
 
+    def test_a_long_header_over_short_numbers_does_not_collide(self, tmp_path):
+        """"unevenness" over "0.00" rendered as "unevennessaverage gap".
+
+        The old width model counted characters, and proportional type does not care
+        how many characters you used. Widths are measured now; this checks that no
+        two cells in a row overlap horizontally.
+        """
+        fig_meta, (fig, ax) = charts.table_image(
+            [["perfect timetable", "0.00", "10.0", "1.00x"],
+             ["bunched", "1.60", "10.0", "3.57x"]],
+            header=["timetable", "unevenness", "average gap", "vs. the timetable"],
+            path=str(tmp_path / "t.png"))
+        fig.canvas.draw()
+        renderer = fig.canvas.get_renderer()
+        by_row: dict[float, list] = {}
+        for t in ax.texts:
+            by_row.setdefault(round(t.get_position()[1], 3), []).append(
+                t.get_window_extent(renderer))
+        for boxes in by_row.values():
+            boxes.sort(key=lambda b: b.x0)
+            for left, right in zip(boxes, boxes[1:]):
+                assert left.x1 <= right.x0 + 0.5, "cells overlap"
+
     def test_ragged_rows_raise(self):
         with pytest.raises(ValueError, match="same number of cells"):
             charts.table_image([["a", "b"], ["c"]], header=["x", "y"])
