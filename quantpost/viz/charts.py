@@ -753,6 +753,287 @@ def phase_portrait(
     return fig, ax
 
 
+CARD_SIZE = (8.0, 4.2)          # 1600 x 840 at dpi 200
+CARD_DPI = 200
+CARD_SAFE = 0.08                # crop-safe margin, top and bottom
+
+
+def _card_base(mode: str, headline: str, footer: str = "",
+               headline_size: float = 17.5):
+    """The frame every preview card shares: geometry, headline, footer.
+
+    One helper rather than five copies, because the numbers in here are the ones
+    that drift: Medium's preview crops wider than this card's 1.9:1 and takes the
+    difference off both edges, so everything lives inside an 8% margin top and
+    bottom. A card whose headline sat at 0.94 in one function and 0.86 in another
+    would lose its ascenders in exactly one of them, and only in the preview.
+
+    Returns `(mode, figure, axes)` with the axes spanning the whole card in 0..1
+    coordinates and no spines, ready to draw type on.
+    """
+    m = theme.apply(mode, figsize=CARD_SIZE, dpi=CARD_DPI)
+    fig = plt.figure()
+    ax = fig.add_axes((0, 0, 1, 1))
+    ax.set_axis_off()
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+    if footer:
+        ax.text(0.965, 1.0 - CARD_SAFE - 0.02, footer, ha="right", va="top",
+                fontsize=10.5, color=m.muted)
+    if headline:
+        # Measured, then shrunk to fit. A headline set at a fixed size fits on one
+        # card and runs into the footer on the next, and the difference is one word.
+        # The limit is 0.86 of the width because the footer owns the top right.
+        art = ax.text(0.055, 1.0 - CARD_SAFE - 0.06, headline, ha="left",
+                      va="top", fontsize=headline_size, color=m.ink,
+                      fontweight="medium")
+        for _ in range(12):
+            fig.canvas.draw()
+            renderer = fig.canvas.get_renderer()
+            width = art.get_window_extent(renderer).transformed(
+                ax.transAxes.inverted()).width
+            if width <= 0.86 or art.get_fontsize() <= 12.0:
+                break
+            art.set_fontsize(art.get_fontsize() - 0.6)
+    return m, fig, ax
+
+
+def _card_plot_axes(fig, bottom: float = 0.10, height: float = 0.44):
+    """A bare plotting panel inside a card: no spines, no ticks, no labels.
+
+    Cards that show a shape rather than a number still must not show an axis. At
+    preview size a tick label is three pixels tall and reads as dirt.
+    """
+    ax = fig.add_axes((0.055, bottom, 0.89, height))
+    ax.set_axis_off()
+    return ax
+
+
+def _finish_card(fig, ax, path, headline, alt, caption, mode):
+    if path:
+        theme.save(fig, path, mode=mode, close=False)
+        return Figure(path, alt or headline, caption, headline, mode), (fig, ax)
+    return fig, ax
+
+
+def comparison_card(
+    *,
+    headline: str,
+    items,
+    note: str = "",
+    emphasis: int | None = None,
+    footer: str = "",
+    alt: str = "",
+    caption: str = "",
+    mode: str = "light",
+    path: str | None = None,
+):
+    """Two or three numbers side by side, for a finding that *is* a comparison.
+
+    Use when the post's result is "this was promised and that was delivered", or
+    "the brochure says X and you get Y". The whole card is type: at preview size a
+    pair of large numbers with a hairline between them survives scaling better than
+    any chart of the same pair, and it says the thing in one glance.
+
+    `items` is `[(value, label), ...]`; `emphasis` indexes the one to colour as the
+    bad news. Two or three items only — four large numbers is a table, and a table
+    at this size is unreadable.
+    """
+    import textwrap
+
+    items = list(items)
+    if not 2 <= len(items) <= 3:
+        raise ValueError("comparison_card takes two or three items")
+    m, fig, ax = _card_base(mode, headline, footer)
+
+    size = 60 if len(items) == 2 else 46
+    edges = np.linspace(0.055, 0.945, len(items) + 1)
+    column = float(edges[1] - edges[0])
+    values = []
+    for i, (value, label) in enumerate(items):
+        cx = 0.5 * (edges[i] + edges[i + 1])
+        colour = m.series[7] if emphasis == i else m.ink
+        values.append(ax.text(cx, 0.50, str(value), ha="center", va="center",
+                              fontsize=size, color=colour, fontweight="bold"))
+        ax.text(cx, 0.30, textwrap.fill(str(label), 26), ha="center", va="top",
+                fontsize=12.0, color=m.ink_secondary, linespacing=1.35)
+        if i:
+            ax.plot([edges[i], edges[i]], [0.26, 0.62], color=m.grid, lw=1.2)
+
+    # Shrink the values together until the widest fits its column. "10^30 yrs" at
+    # 60pt is twice as wide as "42%" and ran straight into its neighbour; scaling
+    # them *uniformly* matters, because two numbers set at different sizes read as
+    # one being more important than the other.
+    for _ in range(24):
+        fig.canvas.draw()
+        renderer = fig.canvas.get_renderer()
+        inv = ax.transAxes.inverted()
+        widest = max(v.get_window_extent(renderer).transformed(inv).width
+                     for v in values)
+        if widest <= column * 0.88 or values[0].get_fontsize() <= 22.0:
+            break
+        for v in values:
+            v.set_fontsize(v.get_fontsize() - 1.5)
+    if note:
+        ax.text(0.055, CARD_SAFE + 0.02, textwrap.fill(note, 96), ha="left",
+                va="bottom", fontsize=11.0, color=m.muted, linespacing=1.35)
+    return _finish_card(fig, ax, path, headline, alt, caption, mode)
+
+
+def distribution_card(
+    values,
+    *,
+    headline: str,
+    mark: float | None = None,
+    mark_label: str = "",
+    note: str = "",
+    bins: int = 46,
+    footer: str = "",
+    alt: str = "",
+    caption: str = "",
+    mode: str = "light",
+    path: str | None = None,
+):
+    """A distribution drawn large, with one value marked, for a tail finding.
+
+    Use when the result is "look where this one landed": the shape carries the
+    argument, so the shape gets the space instead of a number. Deliberately has no
+    big statistic — the marked label is the number, and putting both on the card
+    makes it a busier version of `social_card` rather than a different card.
+    """
+    import textwrap
+
+    v = np.asarray(values, float)
+    v = v[np.isfinite(v)]
+    if v.size == 0:
+        raise ValueError("no finite values to plot")
+    m, fig, ax = _card_base(mode, headline, footer)
+    if note:
+        ax.text(0.055, 0.72, textwrap.fill(note, 62), ha="left", va="top",
+                fontsize=12.0, color=m.ink_secondary, linespacing=1.35)
+
+    panel = _card_plot_axes(fig, bottom=CARD_SAFE + 0.02, height=0.44)
+    counts, edges = np.histogram(v, bins=bins)
+    centres = 0.5 * (edges[:-1] + edges[1:])
+    panel.bar(centres, counts, width=(edges[1] - edges[0]) * 0.9,
+              color=m.series[0], alpha=0.85, lw=0)
+    if mark is not None:
+        panel.axvline(mark, color=m.series[7], lw=2.4)
+        if mark_label:
+            panel.annotate(mark_label, (mark, 1.0),
+                           xycoords=("data", "axes fraction"),
+                           xytext=(8, -2), textcoords="offset points",
+                           ha="left", va="top", fontsize=12.5,
+                           color=m.series[7], fontweight="medium")
+        lo, hi = float(min(centres.min(), mark)), float(max(centres.max(), mark))
+        pad = 0.06 * (hi - lo)
+        panel.set_xlim(lo - pad, hi + pad * 3)
+    panel.set_ylim(0, counts.max() * 1.18)
+    return _finish_card(fig, ax, path, headline, alt, caption, mode)
+
+
+def series_card(
+    y,
+    *,
+    headline: str,
+    mark_index: int | None = None,
+    mark_label: str = "",
+    note: str = "",
+    footer: str = "",
+    alt: str = "",
+    caption: str = "",
+    mode: str = "light",
+    path: str | None = None,
+):
+    """One series drawn large with a single moment annotated.
+
+    Use when the finding is an event in time — a spike, a cliff, a break. The
+    annotated point does the work a big number would do in `social_card`, and it
+    does it in place, which is the reason to prefer this layout when the *timing*
+    is the point.
+    """
+    import textwrap
+
+    arr = np.asarray(y, float)
+    if arr.ndim != 1 or arr.size < 2:
+        raise ValueError("series_card needs a 1-D series of at least two points")
+    m, fig, ax = _card_base(mode, headline, footer)
+    if note:
+        ax.text(0.055, 0.72, textwrap.fill(note, 62), ha="left", va="top",
+                fontsize=12.0, color=m.ink_secondary, linespacing=1.35)
+
+    panel = _card_plot_axes(fig, bottom=CARD_SAFE + 0.02, height=0.46)
+    x = np.arange(arr.size)
+    panel.plot(x, arr, color=m.series[0], lw=1.8)
+    panel.fill_between(x, arr.min(), arr, color=m.series[0], alpha=0.14, lw=0)
+    if mark_index is not None:
+        i = int(np.clip(mark_index, 0, arr.size - 1))
+        panel.plot([i], [arr[i]], marker="o", ms=11, color=m.series[7],
+                   markeredgecolor=m.surface, markeredgewidth=2.0, zorder=5)
+        if mark_label:
+            # Label away from the edge it is nearest, so a spike at either end of
+            # the series does not push its own annotation off the card.
+            left = i < arr.size * 0.5
+            panel.annotate(mark_label, (i, arr[i]),
+                           xytext=(14 if left else -14, 0),
+                           textcoords="offset points",
+                           ha="left" if left else "right", va="center",
+                           fontsize=12.5, color=m.series[7],
+                           fontweight="medium")
+    span = float(np.ptp(arr)) or 1.0
+    panel.set_ylim(arr.min() - 0.08 * span, arr.max() + 0.14 * span)
+    return _finish_card(fig, ax, path, headline, alt, caption, mode)
+
+
+def bar_card(
+    *,
+    headline: str,
+    items,
+    note: str = "",
+    emphasis: int | None = None,
+    footer: str = "",
+    alt: str = "",
+    caption: str = "",
+    mode: str = "light",
+    path: str | None = None,
+):
+    """A few labelled horizontal bars, for a finding that is a ranking or a ramp.
+
+    Use when the result is "these four cases differ, and by this much". Bars read
+    at any size, which is more than can be said for a line chart's axis, and the
+    value labels mean the card does not need a legend or a scale.
+
+    `items` is `[(label, value, value_text), ...]`, in the order to draw them top
+    to bottom; `emphasis` indexes the bar to colour as the headline case.
+    """
+    import textwrap
+
+    items = list(items)
+    if not 2 <= len(items) <= 5:
+        raise ValueError("bar_card takes two to five bars")
+    m, fig, ax = _card_base(mode, headline, footer)
+    if note:
+        ax.text(0.055, CARD_SAFE + 0.02, textwrap.fill(note, 96), ha="left",
+                va="bottom", fontsize=11.0, color=m.muted, linespacing=1.35)
+
+    top, bottom = 0.68, CARD_SAFE + (0.10 if note else 0.03)
+    n = len(items)
+    step = (top - bottom) / n
+    biggest = max(abs(float(v)) for _l, v, _t in items) or 1.0
+    x0, x1 = 0.30, 0.86            # bar track, leaving room for labels and values
+    for i, (label, value, value_text) in enumerate(items):
+        y = top - step * (i + 0.5)
+        w = (x1 - x0) * abs(float(value)) / biggest
+        colour = m.series[7] if emphasis == i else m.series[0]
+        ax.add_patch(plt.Rectangle((x0, y - step * 0.28), w, step * 0.56,
+                                   color=colour, alpha=0.9, lw=0))
+        ax.text(x0 - 0.02, y, str(label), ha="right", va="center", fontsize=12.5,
+                color=m.ink_secondary)
+        ax.text(x0 + w + 0.015, y, str(value_text), ha="left", va="center",
+                fontsize=15.0, color=m.ink, fontweight="medium")
+    return _finish_card(fig, ax, path, headline, alt, caption, mode)
+
+
 def social_card(
     *,
     headline: str,
@@ -790,12 +1071,7 @@ def social_card(
     """
     import textwrap
 
-    m = theme.apply(mode, figsize=(8.0, 4.2), dpi=200)
-    fig = plt.figure()
-    ax = fig.add_axes((0, 0, 1, 1))
-    ax.set_axis_off()
-    ax.set_xlim(0, 1)
-    ax.set_ylim(0, 1)
+    m, fig, ax = _card_base(mode, headline, footer)
 
     # The data, reduced to a shape in the bottom quarter at low contrast: it is a
     # texture behind the type, and anything a reader could measure back out of it
@@ -820,11 +1096,6 @@ def social_card(
                 ax.plot([mx, mx], [0.0, min(local + 0.07, band + 0.02)],
                         color=m.series[7], lw=2.2)
 
-    # Everything sits inside a ~8% safe margin top and bottom: Medium's preview
-    # is a wider crop than 1.9:1 and it takes the difference off both edges, so
-    # type flush to the top of the card loses its ascenders in the preview.
-    ax.text(0.055, 0.86, headline, ha="left", va="top", fontsize=17.5,
-            color=m.ink, fontweight="medium")
     ax.text(0.055, 0.63, stat, ha="left", va="center", fontsize=64,
             color=m.ink, fontweight="bold")
     if stat_label:
@@ -839,11 +1110,6 @@ def social_card(
                 color=m.ink, fontweight="medium")
         ax.text(0.965, y - 0.06, textwrap.fill(label, 32), ha="right", va="top",
                 fontsize=10.5, color=m.ink_secondary, linespacing=1.35)
-    # Top right, not bottom: the bottom belongs to the silhouette, and where the
-    # silhouette is tall enough to matter depends on the data.
-    if footer:
-        ax.text(0.965, 0.90, footer, ha="right", va="top", fontsize=10.5,
-                color=m.muted)
     if path:
         theme.save(fig, path, mode=mode, close=False)
         return Figure(path, alt or headline, caption, headline, mode), (fig, ax)

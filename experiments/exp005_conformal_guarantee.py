@@ -406,29 +406,24 @@ def figures(data: dict, res: dict) -> dict:
         path=str(IMG / f"a2-t1-methods.{EXT}"))
     figs["table"] = fig_meta
 
-    # HERO — the preview card. Not part of the body. The silhouette is the static
-    # method's rolling coverage through the break, because "flat, then a cliff" is
-    # the shape of the finding; a histogram of the inputs would be decoration.
-    roll = np.asarray(res["static_rolling"], float)
-    fig_meta, _ = charts.social_card(
-        headline="A 90% prediction interval, after the world moved.",
-        stat=f"{res['static_after'] * 100:.0f}%",
-        stat_label=("realised coverage of a nominal 90% conformal interval, "
-                    "after the volatility tripled"),
-        supporting=(("what it promised", "90%"),
-                    ("hardest fifth of inputs",
-                     f"{res['per_method']['split']['worst_bin'] * 100:.0f}%"),
-                    ("easiest fifth of inputs",
-                     f"{res['per_method']['split']['by_bin'][0] * 100:.0f}%")),
-        silhouette=(np.asarray(res["roll_x"], float), roll),
-        mark=float(res["t_break"]),
+    # HERO — the preview card, not part of the body. A *series* card, because this
+    # post's finding is an event in time: coverage that was fine and then was not.
+    # The annotated moment does the job a large number would do, and does it in the
+    # place where it happened.
+    roll = 100.0 * np.asarray(res["static_rolling"], float)
+    break_at = int(np.searchsorted(np.asarray(res["roll_x"]), res["t_break"]))
+    fig_meta, _ = charts.series_card(
+        roll,
+        headline="A 90% prediction interval, before and after the world moved.",
+        mark_index=break_at,
+        mark_label=f"volatility ×{res['vol_ratio']:.0f}",
+        note=("Rolling coverage of a nominal 90% conformal interval. The mean "
+              f"model is exactly correct throughout; after the break it covers "
+              f"{res['static_after'] * 100:.0f}% of the time."),
         footer="quantpost", mode="light",
-        alt=(f"Card reading “A 90% prediction interval, after the world moved”, "
-             f"with {res['static_after'] * 100:.0f}% large, and the 90% promise, "
-             f"the {res['per_method']['split']['worst_bin'] * 100:.0f}% "
-             f"hardest-quintile coverage and the "
-             f"{res['per_method']['split']['by_bin'][0] * 100:.0f}% easiest-"
-             "quintile coverage beside it."),
+        alt=("A line of rolling coverage sitting near 90 percent, then falling off "
+             "a cliff at a marked point where the volatility tripled and settling "
+             "near 40 percent."),
         caption="",
         path=str(IMG / f"a2-hero.{EXT}"))
     figs["hero"] = fig_meta

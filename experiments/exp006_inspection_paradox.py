@@ -272,30 +272,24 @@ def figures(res: dict) -> dict:
         path=str(IMG / f"c3-t1-schedules.{EXT}"))
     figs["table"] = fig_meta
 
-    # HERO — preview card.
-    counts, edges = np.histogram(ref["experienced_gaps"], bins=50,
-                                 range=(0, float(np.quantile(
-                                     ref["experienced_gaps"], 0.99))))
-    centres = 0.5 * (edges[:-1] + edges[1:])
-    fig_meta, _ = charts.social_card(
-        headline="The buses average a 10-minute gap.",
-        stat=f"{ref['measured_experienced']:.0f} min",
-        stat_label=("the gap the average passenger actually lands in, on that "
-                    "same timetable"),
-        supporting=(("what the timetable says you wait",
-                     f"{ref['naive_wait']:.0f} min"),
-                    ("what you actually wait",
-                     f"{ref['measured_wait']:.0f} min"),
-                    ("on a badly bunched route",
-                     f"{res['worst']['measured_experienced']:.0f} min")),
-        silhouette=(centres, counts.astype(float)),
-        mark=float(ref["mean_gap"]),
+    # HERO — preview card, not part of the body. Bars, because the finding is four
+    # cases that differ by a lot, and a bar with its value printed on it survives
+    # being shrunk to a feed thumbnail in a way that a line chart's axis does not.
+    names = list(res["bus"].keys())
+    fig_meta, _ = charts.bar_card(
+        headline=f"All four of these timetables run a bus every "
+                 f"{MEAN_GAP:.0f} minutes.",
+        items=[(n, res["bus"][n]["measured_wait"],
+                f"{res['bus'][n]['measured_wait']:.1f} min") for n in names],
+        emphasis=names.index("London bus"),
+        note=("What a passenger arriving at a random moment actually waits. The "
+              "average gap is identical down the list; only its unevenness "
+              "changes."),
         footer="quantpost", mode="light",
-        alt=(f"Card reading “The buses average a 10-minute gap”, with "
-             f"{ref['measured_experienced']:.0f} minutes large as the gap a "
-             f"passenger lands in, and the timetabled "
-             f"{ref['naive_wait']:.0f}-minute wait against the actual "
-             f"{ref['measured_wait']:.0f}-minute wait beside it."),
+        alt=("Four horizontal bars of average passenger wait for timetables with "
+             "the same 10-minute average gap: "
+             + ", ".join(f"{n} {res['bus'][n]['measured_wait']:.1f} minutes"
+                         for n in names) + "."),
         caption="",
         path=str(IMG / f"c3-hero.{EXT}"))
     figs["hero"] = fig_meta

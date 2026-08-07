@@ -479,3 +479,112 @@ class TestSocialCard:
         out = tmp_path / "hero.png"
         charts.social_card(headline="H", stat="9", path=str(out))
         assert out.exists()
+
+
+class TestCardFamily:
+    """The four preview-card layouts. Every post used the same one until they all
+    looked identical in a feed, so the family exists to make each post's card match
+    the shape of its finding — and these tests cover the ways type overflows a card
+    that has no axes to push against."""
+
+    def boxes(self, ax, fig):
+        fig.canvas.draw()
+        r = fig.canvas.get_renderer()
+        return [(t, t.get_window_extent(r)) for t in ax.texts]
+
+    def test_comparison_values_do_not_overlap(self, tmp_path):
+        """"10^30 yrs" at 60pt is twice the width of "42%" and ran into its
+        neighbour. The values shrink together until the widest fits its column."""
+        _, (fig, ax) = charts.comparison_card(
+            headline="H",
+            items=[("10^30 yrs", "a Gaussian"), ("110 yrs", "with fat tails")],
+            path=str(tmp_path / "c.png"))
+        big = sorted((b for t, b in self.boxes(ax, fig) if t.get_fontsize() > 20),
+                     key=lambda b: b.x0)
+        assert len(big) == 2
+        assert big[0].x1 <= big[1].x0, "the two values overlap"
+
+    def test_comparison_values_share_one_size(self, tmp_path):
+        """Two numbers at different sizes read as one being more important."""
+        _, (fig, ax) = charts.comparison_card(
+            headline="H", items=[("10^30 yrs", "a"), ("110 yrs", "b")],
+            path=str(tmp_path / "c.png"))
+        sizes = {t.get_fontsize() for t, _b in self.boxes(ax, fig)
+                 if t.get_fontsize() > 20}
+        assert len(sizes) == 1
+
+    @pytest.mark.parametrize("n", [1, 4])
+    def test_comparison_rejects_bad_item_counts(self, n):
+        with pytest.raises(ValueError, match="two or three"):
+            charts.comparison_card(headline="H",
+                                   items=[(str(i), "l") for i in range(n)])
+
+    def test_a_long_headline_is_shrunk_to_fit(self, tmp_path):
+        short = charts.comparison_card(
+            headline="Short one.", items=[("1", "a"), ("2", "b")],
+            path=str(tmp_path / "s.png"))[1][1]
+        long_ = charts.comparison_card(
+            headline="A 90% prediction interval, before and after the world moved, "
+                     "and then some more words to be sure.",
+            items=[("1", "a"), ("2", "b")], path=str(tmp_path / "l.png"))[1][1]
+        big_short = max(t.get_fontsize() for t in short.texts)
+        head_long = min(t.get_fontsize() for t in long_.texts
+                        if t.get_text().startswith("A 90%"))
+        assert head_long < 17.5 <= big_short or head_long < 17.5
+
+    def test_bar_card_scales_to_the_largest_value(self, tmp_path):
+        fig_meta, (fig, ax) = charts.bar_card(
+            headline="H", items=[("a", 5.0, "5.0"), ("b", 17.9, "17.9")],
+            emphasis=1, path=str(tmp_path / "b.png"))
+        widths = sorted(p.get_width() for p in ax.patches)
+        assert widths[1] > widths[0]
+        assert widths[1] == pytest.approx(0.86 - 0.30, abs=1e-9)
+
+    @pytest.mark.parametrize("n", [1, 6])
+    def test_bar_card_rejects_bad_item_counts(self, n):
+        with pytest.raises(ValueError, match="two to five"):
+            charts.bar_card(headline="H",
+                            items=[(str(i), 1.0, "1") for i in range(n)])
+
+    def test_series_card_marks_a_point_and_clamps_the_index(self, tmp_path):
+        import numpy as np
+        y = np.arange(50, dtype=float)
+        _, (fig, ax) = charts.series_card(y, headline="H", mark_index=9999,
+                                          mark_label="here",
+                                          path=str(tmp_path / "s.png"))
+        panel = [a for a in fig.axes if a is not ax][0]
+        dots = [ln for ln in panel.lines if ln.get_marker() == "o"]
+        assert dots and dots[0].get_xdata()[0] == len(y) - 1
+
+    def test_series_card_rejects_a_scalar(self):
+        with pytest.raises(ValueError, match="1-D series"):
+            charts.series_card([1.0], headline="H")
+
+    def test_distribution_card_keeps_an_out_of_range_mark_visible(self, tmp_path):
+        import numpy as np
+        rng = np.random.default_rng(0)
+        _, (fig, ax) = charts.distribution_card(
+            rng.normal(size=500), headline="H", mark=12.0, mark_label="way out",
+            path=str(tmp_path / "d.png"))
+        panel = [a for a in fig.axes if a is not ax][0]
+        lo, hi = panel.get_xlim()
+        assert lo < 12.0 < hi, "the mark fell outside the drawn window"
+
+    def test_every_card_stays_inside_the_crop_safe_margin(self, tmp_path):
+        """Medium crops wider than 1.9:1 and takes it off both edges."""
+        import numpy as np
+        cards = [
+            charts.comparison_card(headline="H", items=[("1", "a"), ("2", "b")],
+                                   note="n", footer="f",
+                                   path=str(tmp_path / "1.png")),
+            charts.bar_card(headline="H", items=[("a", 1.0, "1"), ("b", 2.0, "2")],
+                            note="n", footer="f", path=str(tmp_path / "2.png")),
+            charts.series_card(np.arange(20, dtype=float), headline="H", note="n",
+                               footer="f", path=str(tmp_path / "3.png")),
+            charts.distribution_card(np.arange(20, dtype=float), headline="H",
+                                     note="n", footer="f",
+                                     path=str(tmp_path / "4.png")),
+        ]
+        for _meta, (_fig, ax) in cards:
+            ys = [t.get_position()[1] for t in ax.texts]
+            assert min(ys) >= 0.05 and max(ys) <= 0.95

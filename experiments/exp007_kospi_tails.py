@@ -422,24 +422,27 @@ def figures(res: dict) -> dict:
         path=str(IMG / f"b2-f3-best-worst.{EXT}"))
     figs["bestworst"] = fig_meta
 
-    # HERO
-    r = res["sim"]["r"][-500:]
-    fig_meta, _ = charts.social_card(
-        headline="A +17.91% day. Then everyone said “fat tails”.",
-        stat=f"{res['adj_1'] * 100:.1f}%",
-        stat_label=("the chance a year's best and worst day are neighbours, "
-                    "under any i.i.d. model"),
-        supporting=(("sigmas, at 1.5% daily vol",
-                     f"{res['gauss'][1.5]['z']:.1f}"),
-                    ("circuit breakers in seven months",
-                     f"{CIRCUIT_BREAKERS_2026}"),
-                    ("July 2026, worst month since 1997", f"{JULY_MONTH}%")),
-        silhouette=(np.arange(len(r), dtype=float), np.abs(r)),
+    # HERO — a *comparison* card. The post's hook is two models disagreeing by
+    # thirty orders of magnitude about the same day, which is two numbers and no
+    # chart; and the note carries the twist, which is that neither of them explains
+    # the timing. Drawing the simulated GARCH series here would have been the
+    # obvious choice and the dishonest one — at preview size a reader would take it
+    # for the KOSPI.
+    fig_meta, _ = charts.comparison_card(
+        headline=f"A +{RECORD_DAY}% day. How often each model says that happens.",
+        items=[(f"10^{res['gauss'][1.5]['log10_years']:.0f} yrs",
+                "a Gaussian, at 1.5% daily volatility"),
+               (f"{10 ** res['t'][(1.5, 4)]['log10_years']:,.0f} yrs",
+                "the same, with fat tails")],
+        emphasis=None,
+        note=("And neither of them explains the part that mattered: the record "
+              "gain landed next to the crash, which under any i.i.d. model — fat "
+              f"tails included — has a probability of {res['adj_1'] * 100:.1f}%."),
         footer="quantpost", mode="light",
-        alt=(f"Card reading “A +17.91% day. Then everyone said fat tails.” with {res['adj_1'] * 100:.1f}% large — the chance that a "
-             f"year's best and worst day are neighbours under any i.i.d. model — "
-             f"and the 12-sigma z-score, eight circuit breakers and "
-             f"{JULY_MONTH}% month beside it."),
+        alt=(f"Card comparing two return periods for a +{RECORD_DAY}% day: ten to "
+             f"the {res['gauss'][1.5]['log10_years']:.0f} years under a Gaussian "
+             f"against {10 ** res['t'][(1.5, 4)]['log10_years']:,.0f} years with "
+             "fat tails."),
         caption="",
         path=str(IMG / f"b2-hero.{EXT}"))
     figs["hero"] = fig_meta
