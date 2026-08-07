@@ -1,6 +1,6 @@
 ---
 title: "I Trained 2,000 Models on a Coin Flip and the Best One Looked Great"
-date: 2026-08-06
+date: 2026-08-07
 slug: "i-trained-2000-models-on-a-coin-flip"
 draft: false
 description: "A 55.3% hit rate, a p-value of 0.0008, and not one shred of signal in the data"
@@ -150,7 +150,7 @@ whether anybody looked at it before deciding.
 
 ![Line chart of five cumulative score curves. All five climb steadily for the first nine hundred observations to around plus eighty-five, then after a marked vertical line they wander up and down around a dashed horizontal reference at that level and end near it.](e6-f2-curves.png)
 
-*Fig 2. Five confident climbs, then a random walk. After the line they run as far as +42 calls above the level they were picked at and -25 below it, and end +0.4 on average — 50.0% out of sample. Every backtest has a left half; ask what the right half looks like.*
+*Fig 2. Five confident climbs, then a random walk. After the line they run as far as +42 calls above the level they were picked at and 25 below it, and end +0.4 on average — 50.0% out of sample. Every backtest has a left half; ask what the right half looks like.*
 
 ## Where this simulation is kinder than reality
 

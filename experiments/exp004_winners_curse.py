@@ -256,7 +256,7 @@ def figures(search: dict, res: dict) -> dict:
              "dashed horizontal reference at that level and end near it."),
         caption=(f"Fig 2. Five confident climbs, then a random walk. After the "
                  f"line they run as far as {res['top5_peak_up']:+d} calls above "
-                 f"the level they were picked at and {res['top5_peak_down']:+d} "
+                 f"the level they were picked at and {abs(res['top5_peak_down'])} "
                  f"below it, and end {res['top5_right_mean']:+.1f} on average — "
                  f"{res['top5_test_mean'] * 100:.1f}% out of sample. Every "
                  "backtest has a left half; ask what the right half looks like."),
