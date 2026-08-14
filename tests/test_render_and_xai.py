@@ -133,6 +133,45 @@ class TestPostAudit:
                  + "\n```\n\n$" + " ".join(["math"] * 500) + "$")
         assert post.word_count() < 20
 
+    def test_word_count_excludes_table_cells(self, tmp_path):
+        """A length target is about prose. A table is data, like a code block.
+
+        Counting table cells makes the length gate penalise a post for showing its
+        numbers instead of asserting them, which is backwards.
+        """
+        post = Post(title="T", slug="s", summary="x")
+        rows = "\n".join("| " + " | ".join(["cell"] * 6) + " |" for _ in range(40))
+        post.add("S", "one two three\n\n| a | b | c | d | e | f |\n"
+                      "|---|---|---|---|---|---|\n" + rows)
+        assert post.word_count() < 20
+
+    def test_word_count_keeps_a_sentence_containing_a_pipe(self):
+        """The table match is line-anchored on purpose.
+
+        `a | b` inside a sentence is prose. Matching pipes anywhere would silently
+        delete real paragraphs from the count.
+        """
+        post = Post(title="T", slug="s", summary="x")
+        post.add("S", "the operator a | b is a pipe and these words all count")
+        assert post.word_count() == 12
+
+    def test_declared_table_image_without_a_markdown_table_fails(self, tmp_path):
+        """Regression: three posts shipped a table image that never appeared.
+
+        The image is only ever *substituted* for a markdown table in the body, so a
+        `table_figures` entry with no table to replace is silently invisible in
+        Hugo, Medium and Notion alike.
+        """
+        post = good_post(tmp_path)
+        post.table_figures = [post.figures[0]]
+        assert any("no markdown table" in p for p in post.audit())
+
+    def test_declared_table_image_with_a_markdown_table_passes(self, tmp_path):
+        post = good_post(tmp_path)
+        post.table_figures = [post.figures[0]]
+        post.add("Numbers", "| a | b |\n|---|---|\n| 1 | 2 |")
+        assert not any("no markdown table" in p for p in post.audit())
+
 
 class TestRendering:
     def test_front_matter_escapes_quotes(self, tmp_path):

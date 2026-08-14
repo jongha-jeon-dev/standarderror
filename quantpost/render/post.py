@@ -105,9 +105,18 @@ class Post:
         return out
 
     def word_count(self) -> int:
-        text = " ".join(s.body for s in self.sections)
+        """Words of *prose*, which is what a length target is about.
+
+        Code, math and table cells are all excluded, for the same reason: none of
+        them is read at prose speed, and counting them makes the length gate
+        penalise a post for showing its numbers. A table row is matched
+        line-anchored on leading and trailing pipes, so a sentence that happens to
+        contain a pipe is still counted.
+        """
+        text = "\n".join(s.body for s in self.sections)
         text = re.sub(r"```.*?```", " ", text, flags=re.S)     # exclude code
         text = re.sub(r"\$[^$]*\$", " ", text)                 # exclude math
+        text = re.sub(r"^\s*\|.*\|\s*$", " ", text, flags=re.M)  # exclude tables
         return len(re.findall(r"\b[\w'-]+\b", text))
 
     # ---------- rendering ----------
@@ -195,6 +204,18 @@ class Post:
                 problems.append(f"figure {i} ({f.path}) has no caption")
         if not self.data_sources:
             problems.append("no data citations — every figure needs a source line")
+        # A declared table image is only ever *substituted* for a markdown table in
+        # the body (Medium and Notion strip table markup, Hugo renders it). Declaring
+        # the image without writing the table means the image silently never appears
+        # anywhere — which shipped three times before this check existed.
+        table_rows_in_body = re.search(
+            r"^\s*\|.*\|\s*$", "\n".join(s.body for s in self.sections),
+            flags=re.M)
+        if self.table_figures and not table_rows_in_body:
+            problems.append(
+                f"{len(self.table_figures)} table figure(s) declared but no markdown "
+                "table in the body — the image has nothing to substitute for and "
+                "will not appear in any output")
         body = " ".join(s.body for s in self.sections)
 
         # Word-bounded, because a substring match here is worse than useless: the
