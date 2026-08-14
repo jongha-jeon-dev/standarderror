@@ -317,6 +317,7 @@ def ranked_bars(
     caption: str = "",
     mode: str = "light",
     signed: bool = False,
+    value_fmt: str = ",.3g",
     figsize: tuple[float, float] | None = None,
     path: str | None = None,
 ):
@@ -326,6 +327,11 @@ def ranked_bars(
     Signed values use the diverging pair so sign is visible without reading the
     axis; unsigned use one hue, because varying hue across bars of the same
     measure encodes nothing.
+
+    `value_fmt` sets the label format. The default of three significant figures
+    reads badly when the values span an order of magnitude — "-2.4" above "-0.0833"
+    looks like carelessness rather than precision — so pass an explicit format when
+    the bars are all the same kind of quantity.
     """
     m = theme.apply(mode)
     labels = list(labels)
@@ -365,7 +371,7 @@ def ranked_bars(
         reach = errs
     for i, v in enumerate(values):
         off = (0.022 * span + float(reach[i])) * (1 if v >= 0 else -1)
-        ax.annotate(f"{v:,.3g}", (v + off, i), va="center",
+        ax.annotate(f"{v:{value_fmt}}", (v + off, i), va="center",
                     ha="left" if v >= 0 else "right", fontsize=8.0,
                     color=m.ink_secondary)
     ax.margins(x=0.20)

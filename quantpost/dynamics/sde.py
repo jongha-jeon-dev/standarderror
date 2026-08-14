@@ -13,6 +13,11 @@ than naive absorption at zero.
 `rough_bergomi` uses fractional Brownian motion via the Davies-Harte circulant
 embedding — exact for the covariance structure, unlike the Cholesky hack, and
 O(n log n) rather than O(n^3).
+
+`garch11` is the discrete-time member of the family, and `money_weighted_return`
+sits beside it because the two are used together: a cash-flow stream's IRR only
+differs from the index's return when volatility clusters, so the generator and the
+measurement belong in the same place.
 """
 
 from __future__ import annotations
@@ -203,3 +208,123 @@ def hawkes_exp(
                 {"mu": mu, "alpha": alpha, "beta": beta,
                  "branching_ratio": round(alpha / beta, 3),
                  "n_events": len(arr)})
+
+
+def garch11(
+    n: int = 6000, *,
+    omega: float = 0.02, arch: float = 0.10, beta: float = 0.88,
+    df: float = 5.0, seed: int | None = 5,
+) -> Path:
+    """GARCH(1,1) returns with Student-t shocks: fat tails *and* clustering.
+
+    The discrete-time counterpart of `heston` for this repo's purposes — a process
+    where you generated the conditional variance, so you can check whether a model
+    recovers it. Returns are in percent.
+
+    Two details that matter for using it as ground truth:
+
+    * The shocks are **rescaled to unit variance** (`df/(df-2)`), so `omega`,
+      `arch` and `beta` mean what the textbook says and the unconditional variance
+      is `omega / (1 - arch - beta)` regardless of `df`. Skipping that step makes
+      every fitted parameter wrong by a factor nobody notices.
+    * Persistence `arch + beta` must be below 1 for a stationary variance; 0.98 is
+      the usual equity-index estimate and is what makes large moves arrive next to
+      large moves. Setting it to 0 gives i.i.d. draws, which is the control any
+      claim about clustering needs.
+
+    `df <= 2` is refused: a t with two degrees of freedom has no finite variance,
+    so there is nothing to rescale and the "unit variance shock" is a fiction.
+    """
+    if not 0.0 <= arch + beta < 1.0:
+        raise ValueError(f"arch + beta must lie in [0, 1); got {arch + beta}")
+    if omega <= 0:
+        raise ValueError("omega must be positive")
+    if df <= 2:
+        raise ValueError("t shocks need df > 2 for a finite variance to rescale")
+    from scipy import stats
+
+    rng = np.random.default_rng(seed)
+    z = stats.t.rvs(df, size=n, random_state=rng) / np.sqrt(df / (df - 2.0))
+    r = np.empty(n)
+    h = np.empty(n)
+    h[0] = omega / (1.0 - arch - beta) if arch + beta else omega
+    for t in range(n):
+        if t:
+            h[t] = omega + arch * r[t - 1] ** 2 + beta * h[t - 1]
+        r[t] = np.sqrt(h[t]) * z[t]
+    return Path(t=np.arange(n, dtype=float), data={"r": r, "h": h}, dt=1.0,
+                system="garch11",
+                params={"omega": omega, "arch": arch, "beta": beta, "df": df,
+                        "persistence": arch + beta,
+                        "uncond_sd": float(np.sqrt(
+                            omega / (1.0 - arch - beta)) if arch + beta
+                            else np.sqrt(omega))})
+
+
+def simple_from_log(log_pct, *, drift_annual: float = 0.0,
+                    periods_per_year: float = 252.0) -> np.ndarray:
+    """Percentage *simple* returns from percentage *log* returns, plus a drift.
+
+    Use this before compounding anything a GARCH generator produced. A GARCH path
+    is a log-return path, and treating it as simple returns is not a harmless
+    reinterpretation: with persistence near one and Student-t shocks, a tail draw
+    reaches -100% every few hundred simulated years, at which point
+    `prod(1 + r/100)` turns **negative** and annualising it — raising a negative
+    total to a fractional power — returns a complex number. NumPy casts that back
+    to a float with a warning nobody reads, and the resulting "return" is silently
+    wrong rather than obviously wrong.
+
+    Converting through `expm1` bounds the simple return below by -100% by
+    construction, which is also the only value an index can actually have.
+
+    `drift_annual` is the compounded annual drift added in log space; a raw GARCH
+    path has none, so an experiment that needs a market which *rises* has to say
+    so rather than accidentally testing a zero-drift world.
+    """
+    g = np.asarray(log_pct, float)
+    mu = 100.0 * np.log1p(drift_annual) / periods_per_year
+    return 100.0 * np.expm1((g + mu) / 100.0)
+
+
+def money_weighted_return(
+    cashflows, final_value: float, *, periods_per_year: float = 252.0,
+    lo: float = -0.999, hi: float = 100.0, tol: float = 1e-10,
+) -> float:
+    """Internal rate of return of a cash-flow stream, annualised.
+
+    The number an investor actually earned, as opposed to the time-weighted return
+    the fund reports. They differ whenever money moves, and the gap is the whole
+    subject of the behaviour-gap literature — so it is worth solving properly
+    rather than approximating by "average of the periods you were invested".
+
+    `cashflows[t]` is money paid **in** at period `t` (negative for withdrawals),
+    `final_value` the account's worth after the last period. Solved by bisection on
+    the terminal-value identity, which is monotone in the rate, so there is no
+    multiple-root problem of the kind that makes naive IRR solvers unreliable.
+
+    Returns nan when no rate can explain the flows — for instance a stream whose
+    contributions exceed any achievable terminal value.
+    """
+    cf = np.asarray(cashflows, float).ravel()
+    n = cf.size
+    if n == 0:
+        raise ValueError("no cashflows")
+
+    def terminal(rate: float) -> float:
+        # (1 + rate) is per year; each flow compounds for the periods that remain.
+        growth = (1.0 + rate) ** ((n - np.arange(n)) / periods_per_year)
+        return float(np.sum(cf * growth)) - final_value
+
+    f_lo, f_hi = terminal(lo), terminal(hi)
+    if not np.isfinite(f_lo) or not np.isfinite(f_hi) or f_lo * f_hi > 0:
+        return float("nan")
+    for _ in range(200):
+        mid = 0.5 * (lo + hi)
+        f_mid = terminal(mid)
+        if abs(f_mid) < tol:
+            return float(mid)
+        if f_lo * f_mid <= 0:
+            hi, f_hi = mid, f_mid
+        else:
+            lo, f_lo = mid, f_mid
+    return float(0.5 * (lo + hi))

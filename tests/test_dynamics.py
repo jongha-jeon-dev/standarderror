@@ -189,3 +189,91 @@ class TestValidPredictionTime:
         # A data-driven estimator on one coordinate: loose tolerance is honest.
         assert 0.5 < res.exponent < 1.4
         assert res.detail["fit_r2"] > 0.9
+
+
+class TestGarchAndFlows:
+    """The discrete-time returns process and the IRR that goes with it.
+
+    Both exist for the behaviour-gap post, and both have a property that is easy to
+    get subtly wrong: the shock rescaling (so `omega` means what the textbook says)
+    and the compounding exponent (so a flow on the last day compounds for one
+    period, not zero).
+    """
+
+    def test_unconditional_variance_matches_the_formula(self):
+        p = sde.garch11(200_000, omega=0.02, arch=0.10, beta=0.88, df=5.0, seed=1)
+        target = 0.02 / (1 - 0.10 - 0.88)
+        assert np.std(p.data["r"]) ** 2 == pytest.approx(target, rel=0.25)
+        assert p.params["uncond_sd"] == pytest.approx(np.sqrt(target))
+
+    def test_the_shocks_are_rescaled_so_df_does_not_move_the_variance(self):
+        """A raw t has variance df/(df-2). Without the rescaling, every fitted
+        parameter is wrong by a factor that nothing in the output reveals."""
+        a = sde.garch11(120_000, df=4.0, seed=2)
+        b = sde.garch11(120_000, df=12.0, seed=2)
+        assert np.std(a.data["r"]) == pytest.approx(np.std(b.data["r"]), rel=0.2)
+
+    def test_persistence_creates_clustering_and_zero_removes_it(self):
+        """The control any claim about clustering needs: switch it off."""
+        def sq_acf(r, lag=1):
+            x = r ** 2 - np.mean(r ** 2)
+            return float(np.mean(x[:-lag] * x[lag:]) / np.mean(x * x))
+
+        clustered = sde.garch11(60_000, omega=0.02, arch=0.10, beta=0.88, seed=3)
+        iid = sde.garch11(60_000, omega=1.0, arch=0.0, beta=0.0, seed=3)
+        assert sq_acf(clustered.data["r"]) > 0.15
+        assert abs(sq_acf(iid.data["r"])) < 0.03
+
+    @pytest.mark.parametrize("kw", [{"arch": 0.5, "beta": 0.6},
+                                    {"df": 2.0}, {"omega": 0.0}])
+    def test_impossible_parameters_are_refused(self, kw):
+        with pytest.raises(ValueError):
+            sde.garch11(100, **kw)
+
+    def test_irr_of_a_single_investment_is_its_simple_return(self):
+        r = sde.money_weighted_return([100.0], 110.0, periods_per_year=1)
+        assert r == pytest.approx(0.10, abs=1e-6)
+
+    def test_irr_compounds_each_flow_for_the_periods_that_remain(self):
+        """Two equal yearly contributions at 10%: 100*1.1^2 + 100*1.1 = 231."""
+        r = sde.money_weighted_return([100.0, 100.0], 231.0, periods_per_year=1)
+        assert r == pytest.approx(0.10, abs=1e-6)
+
+    def test_buying_before_a_fall_earns_less_than_the_index(self):
+        """The behaviour gap, in its smallest possible form. The index doubles then
+        halves — a zero time-weighted return — but an investor who put most of the
+        money in at the top did worse than zero, on the same asset."""
+        # Flows: 1 at the start, 9 just before the halving; index +100% then -50%.
+        final = 1 * 2 * 0.5 + 9 * 0.5
+        irr = sde.money_weighted_return([1.0, 9.0], final, periods_per_year=1)
+        assert irr < 0.0
+
+    def test_log_to_simple_returns_cannot_go_below_minus_one(self):
+        """The bug this helper exists for: a -120% "simple" return makes the
+        compounded product negative, and annualising a negative total returns a
+        complex number that NumPy quietly casts back to a float."""
+        simple = sde.simple_from_log([-120.0, -400.0, 5.0])
+        assert np.all(simple > -100.0)
+        assert np.prod(1.0 + simple / 100.0) > 0.0
+
+    def test_the_unconverted_path_really_does_break(self):
+        """Guard against someone deciding the conversion is ceremonial.
+
+        Annualising is `total ** (252/n)`; on a negative total that is a fractional
+        power of a negative number, which is complex — and in float arithmetic it
+        comes back as nan instead, which is how the original bug hid.
+        """
+        raw = np.array([-120.0, 5.0])
+        total = float(np.prod(1.0 + raw / 100.0))
+        assert total < 0.0
+        # This is the exact mechanism: a *Python* float raised to a fractional
+        # power returns a complex number rather than raising or returning nan, so
+        # an annualised return becomes complex and every downstream mean, median
+        # and plot silently discards the imaginary part.
+        annualised = total ** (252 / 5040)
+        assert isinstance(annualised, complex)
+
+    def test_drift_lands_on_the_requested_annual_rate(self):
+        g = np.zeros(252)
+        simple = sde.simple_from_log(g, drift_annual=0.07)
+        assert np.prod(1.0 + simple / 100.0) == pytest.approx(1.07, rel=1e-9)
