@@ -856,13 +856,15 @@ def comparison_card(
     edges = np.linspace(0.055, 0.945, len(items) + 1)
     column = float(edges[1] - edges[0])
     values = []
+    labels = []
     for i, (value, label) in enumerate(items):
         cx = 0.5 * (edges[i] + edges[i + 1])
         colour = m.series[7] if emphasis == i else m.ink
         values.append(ax.text(cx, 0.50, str(value), ha="center", va="center",
                               fontsize=size, color=colour, fontweight="bold"))
-        ax.text(cx, 0.30, textwrap.fill(str(label), 26), ha="center", va="top",
-                fontsize=12.0, color=m.ink_secondary, linespacing=1.35)
+        labels.append(ax.text(cx, 0.30, textwrap.fill(str(label), 26),
+                              ha="center", va="top", fontsize=12.0,
+                              color=m.ink_secondary, linespacing=1.35))
         if i:
             ax.plot([edges[i], edges[i]], [0.26, 0.62], color=m.grid, lw=1.2)
 
@@ -881,8 +883,17 @@ def comparison_card(
         for v in values:
             v.set_fontsize(v.get_fontsize() - 1.5)
     if note:
-        ax.text(0.055, CARD_SAFE + 0.02, textwrap.fill(note, 96), ha="left",
-                va="bottom", fontsize=11.0, color=m.muted, linespacing=1.35)
+        # Placed under the *measured* bottom of the labels, not at a fixed height.
+        # A label that wraps to two lines grows downwards into a note pinned to the
+        # safe margin, and the collision only appears for some label lengths.
+        fig.canvas.draw()
+        renderer = fig.canvas.get_renderer()
+        inv = ax.transAxes.inverted()
+        floor = min(label.get_window_extent(renderer).transformed(inv).y0
+                    for label in labels) if labels else 0.30
+        ax.text(0.055, max(floor - 0.03, CARD_SAFE), textwrap.fill(note, 96),
+                ha="left", va="top", fontsize=11.0, color=m.muted,
+                linespacing=1.35)
     return _finish_card(fig, ax, path, headline, alt, caption, mode)
 
 

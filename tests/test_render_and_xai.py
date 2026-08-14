@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import date
 from pathlib import Path
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 
@@ -481,6 +482,16 @@ class TestSocialCard:
         assert out.exists()
 
 
+@pytest.fixture(autouse=True)
+def _close_figures():
+    """Every chart helper returns its figure open so a caller can tweak it, which
+    means a test module that renders dozens of them trips matplotlib's
+    open-figure warning. Close them between tests rather than changing the
+    library's contract for the sake of the suite."""
+    yield
+    plt.close("all")
+
+
 class TestCardFamily:
     """The four preview-card layouts. Every post used the same one until they all
     looked identical in a feed, so the family exists to make each post's card match
@@ -512,6 +523,24 @@ class TestCardFamily:
         sizes = {t.get_fontsize() for t, _b in self.boxes(ax, fig)
                  if t.get_fontsize() > 20}
         assert len(sizes) == 1
+
+    def test_a_wrapped_label_does_not_collide_with_the_note(self, tmp_path):
+        """Labels that wrap to two lines grow downwards into a note pinned to the
+        safe margin, and the collision only appears for some label lengths."""
+        _, (fig, ax) = charts.comparison_card(
+            headline="H",
+            items=[("503", "companies you own"),
+                   ("57", "effective holdings, by weight"),
+                   ("2.8", "independent bets, at typical correlation")],
+            note="A note long enough to wrap across more than one line of the card.",
+            path=str(tmp_path / "c.png"))
+        fig.canvas.draw()
+        r = fig.canvas.get_renderer()
+        boxes = {t.get_text(): t.get_window_extent(r) for t in ax.texts}
+        note = next(b for t, b in boxes.items() if t.startswith("A note"))
+        labels = [b for t, b in boxes.items() if "holdings" in t or "bets" in t]
+        assert labels
+        assert note.y1 <= min(b.y0 for b in labels) + 1.0, "note overlaps a label"
 
     @pytest.mark.parametrize("n", [1, 4])
     def test_comparison_rejects_bad_item_counts(self, n):
