@@ -546,8 +546,8 @@ def build() -> Post:
             f"2022 needed {villa22['required_fall_pct']:.1f}%. The compensation "
             f"is the same in both cases: about {res['spread']:.1f}% a year of "
             f"free housing, net of what the money would otherwise earn. In one "
-            f"row that covers the expected loss thousands of times over; in the "
-            f"other it covers it once."),
+            f"row that covers the expected loss more than a thousand times over; in "
+            f"the other it covers it once."),
         tags=["investing", "risk-management", "housing", "korea", "quantitative-finance"],
         author=qp.SETTINGS.author,
         code_url=qp.SETTINGS.code_repo_url,
@@ -770,7 +770,7 @@ and {res['robust']['Seoul villa, Dec 2022']['coverage']:.1f} times at 18% — no
 all, since a first-loss tranche needs a risk premium *on top of* its expected loss.
 
 A bond desk would put it this way. Given a loss-given-default of
-{100 * res['lgd']:.0f}% — HUG recovers {hug['recovery_pct']:.0f}% on claims it takes
+{100 * res['lgd']:.0f}% — HUG recovers {hug['recovery_pct']:.1f}% on claims it takes
 over — a spread of {res['spread']:.2f}% a year fairly compensates an annual default
 probability of about **{res['breakeven_default_pct']:.1f}%**. That is a single-B
 credit. Apartment tenants in Seoul are being paid single-B spreads to hold
@@ -782,8 +782,7 @@ quoted for two completely different instruments.**
 """.strip())
 
     post.add("Three ways to switch the mechanism off", f"""
-A claim about a mechanism should come with a way to switch it off. This one has
-three.
+A mechanism claim should come with a way to switch it off. This one has three.
 
 **Take volatility to zero.** If prices never move, an out-of-the-money tranche never
 breaches: the entire loss in Fig 2 is option value, not arithmetic. Except at the
@@ -861,7 +860,7 @@ charged about {HUG_PREMIUM:.3f}% a year to insure it. Ratio:
 Now the same question with no model involved. Over 2020-2024 HUG paid **9조
 4,189억원** of subrogation on incidents totalling **11조 441억원** across
 {HUG_INCIDENT_COUNT:,} cases and recovered **2조 3,458억원** — a
-{hug['recovery_pct']:.0f}% recovery rate — for a net loss of
+{hug['recovery_pct']:.1f}% recovery rate — for a net loss of
 **{hug['net_loss'] / 10_000:.1f}조원**. Premiums over roughly the same window:
 **3,525억원.**
 

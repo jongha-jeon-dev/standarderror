@@ -8,7 +8,7 @@ author: "Jongha Jeon"
 tags: ["investing", "risk-management", "housing", "korea", "quantitative-finance"]
 ---
 
-*Under Korea's jeonse system a tenant hands the landlord a lump sum worth half to four fifths of the home, pays no monthly rent for two years, and gets the sum back at the end. Everyone calls this an interest-free loan and stops there. It is a loan with a security structure: the tenant holds the first-loss tranche of a single-property mortgage, and the attachment point is one published ratio divided by another. A Seoul apartment tenant in January 2026 needs a 50% fall in the home's value before a single won is at risk. A Seoul villa tenant in December 2022 needed 0.5%. The compensation is the same in both cases: about 3.7% a year of free housing, net of what the money would otherwise earn. In one row that covers the expected loss thousands of times over; in the other it covers it once.*
+*Under Korea's jeonse system a tenant hands the landlord a lump sum worth half to four fifths of the home, pays no monthly rent for two years, and gets the sum back at the end. Everyone calls this an interest-free loan and stops there. It is a loan with a security structure: the tenant holds the first-loss tranche of a single-property mortgage, and the attachment point is one published ratio divided by another. A Seoul apartment tenant in January 2026 needs a 50% fall in the home's value before a single won is at risk. A Seoul villa tenant in December 2022 needed 0.5%. The compensation is the same in both cases: about 3.7% a year of free housing, net of what the money would otherwise earn. In one row that covers the expected loss more than a thousand times over; in the other it covers it once.*
 
 ## A loan everybody describes and nobody prices
 
@@ -148,7 +148,7 @@ and 0.8 times at 18% — not at
 all, since a first-loss tranche needs a risk premium *on top of* its expected loss.
 
 A bond desk would put it this way. Given a loss-given-default of
-75% — HUG recovers 25% on claims it takes
+75% — HUG recovers 24.9% on claims it takes
 over — a spread of 3.74% a year fairly compensates an annual default
 probability of about **5.0%**. That is a single-B
 credit. Apartment tenants in Seoul are being paid single-B spreads to hold
@@ -160,8 +160,7 @@ quoted for two completely different instruments.**
 
 ## Three ways to switch the mechanism off
 
-A claim about a mechanism should come with a way to switch it off. This one has
-three.
+A mechanism claim should come with a way to switch it off. This one has three.
 
 **Take volatility to zero.** If prices never move, an out-of-the-money tranche never
 breaches: the entire loss in Fig 2 is option value, not arithmetic. Except at the
@@ -243,7 +242,7 @@ charged about 0.128% a year to insure it. Ratio:
 Now the same question with no model involved. Over 2020-2024 HUG paid **9조
 4,189억원** of subrogation on incidents totalling **11조 441억원** across
 50,941 cases and recovered **2조 3,458억원** — a
-25% recovery rate — for a net loss of
+24.9% recovery rate — for a net loss of
 **7.1조원**. Premiums over roughly the same window:
 **3,525억원.**
 
