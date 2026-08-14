@@ -1,79 +1,78 @@
-"""exp010 — Korea's jeonse deposit, priced as the junior tranche it is.
+"""exp010 — the safety margin on a Korean jeonse deposit, and how to compute it.
 
-Backlog: Track C, numbers on society, and the third markets post. Requested
-directly; the reason it belongs here is that jeonse has an exact core.
+Backlog: Track C, numbers on society. Requested directly; it belongs here because
+jeonse has an exactly computable core that nobody puts in front of tenants.
 
-Under jeonse a tenant hands the landlord a lump sum — commonly half to four
-fifths of what the home is worth — pays no monthly rent for two years, and gets
-the sum back at the end. Every English explainer describes this as an
-interest-free loan from tenant to landlord, which is right and is where they stop.
-The loan has a security structure, and the structure is the whole story.
-
-At the end of the term the tenant receives
+Under jeonse a tenant hands the landlord a lump sum — commonly half to four fifths
+of what the home is worth — pays no monthly rent for two years, and receives the sum
+back at the end. It is a secured loan, and secured loans have a **safety margin**:
+how far the collateral can fall before the loan stops being fully covered. The
+tenant's claim pays
 
     min(D, max(0, lambda * V_T - M))
 
-for deposit `D`, senior mortgage `M`, terminal home value `V_T` and liquidation
-ratio `lambda`. That is a put spread on the home struck between `M` and `M + D`:
-the tenant holds the **first-loss tranche** of a single-property loan, and the
-attachment point is
+for deposit `D`, mortgage `M` ranking ahead of it, terminal home value `V_T` and
+liquidation ratio `lambda`, so it is fully covered above
 
     V* = (M + D) / lambda
 
-which contains no volatility, no drift and no model. It is arithmetic on two
-published numbers, and it is the post.
+which contains no volatility, no drift and no model. Two published Korean figures
+divided, and the number appears on no contract. That is the post.
 
-Run with `M = 0` — no mortgage at all, the friendliest possible landlord — and
-two Korean cohorts sit at opposite ends of the same instrument:
+Two worked cases with `M = 0`:
 
-* A **Seoul apartment** in January 2026. Jeonse-to-price ratio 50.92%, an
-  all-time low; apartments at auction clear at 101% of appraisal. The tenant is
-  breached at a **49.6% fall**.
-* A **Seoul villa** in December 2022. Ratio 78.6%; villas at auction clear at 79%.
-  Breached at a **0.5% fall**.
+* **Seoul apartments** at January 2026 ratios. Deposit ratio 50.92%, an all-time
+  low; apartments clear 101% of appraisal at auction. Margin **49.6%**.
+* **Seoul villas** at December 2022 ratios. Ratio 78.6%; villas clear 79%. Margin
+  **0.51%**.
 
-Same contract, same country, 49 points of cushion against half a point. Two things
-worth being careful about, because an earlier draft of this got both wrong:
+Two things an earlier draft of this got wrong, both worth keeping written down:
 
-* That gap is **two** published ratios moving, not one. Of the 49.1 points, the
-  deposit ratio (50.92% to 78.6%) accounts for 27.4 and the auction clearing ratio
-  (101% to 79%) for 21.7. Villas are riskier because the deposit is bigger *and*
-  because a court gets less for them, in roughly equal measure.
-* The trigger itself is **linear** in the deposit ratio — slope -1/lambda, which is
-  why Fig 1 is three straight lines. Quoting the two cohorts' ratio, "a factor of
-  98", was doubly wrong: a ratio of a linear function's values measures no curvature,
-  and it is large only because the villa cohort sits near the zero crossing. The
-  convexity in this post is real but it lives in the *loss*, not the trigger.
+* That gap is **two** ratios moving, not one. Of the 49.1 points, the deposit ratio
+  accounts for 27.4 and the auction clearing ratio for 21.7. Building type matters
+  through both channels in roughly equal measure.
+* The margin is **linear** in the deposit ratio — slope -1/lambda, which is why Fig 1
+  is three straight lines. Quoting the two cases' ratio, "a factor of 98", was doubly
+  wrong: a ratio of a linear function's values measures no curvature, and it is large
+  only because one case sits near zero. The convexity here is real but it lives in
+  the *loss*, not the margin.
 
-Only the probability of breach needs a model, and the model is deliberately thin: a lognormal terminal value, volatility swept across
-the range Giacoletti (2021) measures for individual homes rather than indices,
-integrated in closed form and checked against Monte Carlo.
+An earlier draft also carried the analysis into a verdict — on the pricing of the
+public deposit-return guarantee, and on the instrument itself. That was further than
+this topic warrants from me: millions of households hold most of their net worth in
+one of these deposits right now, and a post that reads as an argument against the
+system is not what the arithmetic supports. The rewrite keeps every piece of the
+analysis and moves the conclusion to what a reader can compute before signing.
+Guarantee statistics stay, for scale, with the reasons they cannot be compared
+against premium income.
 
-Three controls, because the post's claim is mechanical and mechanical claims can
-be switched off:
+Only the probability of breach needs a model, and the model is deliberately thin: a
+lognormal terminal value, volatility swept across the range Giacoletti (2021)
+measures for individual homes rather than indices, integrated in closed form and
+checked against Monte Carlo.
 
-1. **Volatility to zero.** It passes everywhere except at the ratio that was
-   actually being written. The Dec-2022 villa cohort sits 0.51% from its attachment
-   point, so even at sigma = 0.2%/yr — two orders of magnitude below any measured
-   housing market — the breach probability is 3.6%, and at sigma = 2% it is 43%.
-   Half a percent is under two standard deviations of almost nothing.
+Three controls, because a mechanical claim should be switchable:
+
+1. **Volatility to zero.** Passes everywhere except at the December 2022 villa
+   ratio, which sits 0.51% from its threshold: even at sigma = 0.2%/yr — two orders
+   of magnitude below any measured housing market — the breach probability is 3.6%,
+   and at sigma = 2% it is 43%. At that margin, volatility is not what decides the
+   outcome.
 2. **Liquidation haircut to one.** Holding the ratio at 78.6% and paying full
-   value at auction cuts the expected loss by a factor of ten. So the villa
-   problem was a *liquidation* problem before it was a market-risk problem, which
-   is not how it was reported.
-3. **The senior mortgage.** Every headline figure here assumes none, which makes
-   them a floor on the tenant's risk rather than an estimate of it.
+   appraised value cuts expected loss by a factor of ten, which moves the emphasis
+   from market risk to appraisal and liquidation.
+3. **The senior mortgage.** Every headline figure assumes none, so every margin here
+   is an upper bound.
 
-And one out-of-sample check I did not expect to get. The model says the Dec-2022
-villa cohort was losing about 3.3% of deposit a year while HUG charged about 0.13%
-a year to guarantee it — a factor of 25. Independently: HUG collected 3,525 억원
-of premiums between 2020 and August 2024 and paid 9조 4,189억원 of subrogation
-over 2020-2024, recovering 24%, for a net 7조 731억원 — a realised loss ratio of
-20. Two unrelated routes to the same order of magnitude.
+And the mechanism the margin misses: refunds became hard through **rollover**, not
+collateral. Seoul villa deposit ratios fell from 78.6% to 65.4% between December 2022
+and December 2024, so a landlord returning a deposit on a completely unchanged home
+had to find 16.8% of it in cash. That path is linear, needs no price move, and is why
+apartment cases with margins of tens of points still saw refund problems.
 
-Nothing here redistributes a price series. Every input is a published scalar,
-quoted with its source in `data_sources`, and everything else is closed form or
-fixed-seed simulation.
+Nothing here redistributes a price series. Every input is a published scalar quoted
+with its source in `data_sources`; everything else is closed form or fixed-seed
+simulation.
 
 Run: `quantpost run exp010_jeonse_tranche --publish`
 """
@@ -435,11 +434,11 @@ def figures(res: dict) -> dict:
 
     fig_meta, _ = charts.lines(
         res["triggers"], mode="light", direct_labels=False, decorate=mark_cohorts,
-        title="How far the house has to fall before the tenant loses money",
+        title="How far the home can fall before the deposit stops being covered",
         subtitle=("Deposit as the only claim on the property — no mortgage ahead "
                   "of it, which makes every line here the friendliest case. Each "
                   "curve is one type of property's auction clearing ratio."),
-        ylabel="fall in the home's value needed to breach (%)",
+        ylabel="fall the deposit can absorb (%)",
         xlabel="jeonse deposit as % of the home's sale price", source=src_exact,
         alt=("Three downward-sloping lines. At a 51% deposit ratio the required "
              "fall is around 50%; the Seoul-villa line reaches zero at a 79% "
@@ -478,7 +477,7 @@ def figures(res: dict) -> dict:
     fig_meta, _ = charts.lines(
         res["losses"], mode="light", direct_labels=False, decorate=mark_spread,
         logy=True, ylim=(1e-3, 20.0),
-        title="The loss is an option, so it does not rise in a straight line",
+        title="The margin is linear. The loss is not.",
         subtitle=("Expected shortfall on a Seoul villa deposit, per year, against "
                   "the deposit ratio. Three volatilities: the metropolitan index, "
                   "and the low and high ends of what individual homes measure."),
@@ -524,34 +523,32 @@ def figures(res: dict) -> dict:
     # T1 — the five cohorts, as an image because Medium has no tables.
     fig_meta, _ = charts.table_image(
         table_rows(res), header=TABLE_HEADER,
-        title="One contract, five cohorts, five completely different risks",
+        title="One contract, five cases, five different margins",
         subtitle=(f"No senior mortgage assumed, so every figure is a floor. Breach "
                   f"probability and coverage at {100 * SIGMA_BASE:.0f}%/yr "
-                  f"volatility over a two-year term."),
+                  f"volatility over a two-year term. Margins are upper bounds."),
         source=src_model, mode="light", bold_cols=(3, 5), align="lrrrrr",
         alt=("Table of five Korean rental cohorts. A Seoul apartment in January "
              "2026 needs a 50% fall to breach and the spread covers the expected "
              "loss more than a thousand times over; a Seoul villa in December 2022 "
              "needed a fall of half a percent and the spread covers the loss about "
              "once."),
-        caption=("Table 1. Every column but the last two is either published or "
-                 "arithmetic on published numbers. The last column is the point: "
-                 "the same in-kind coupon is enormous compensation in one row and "
-                 "not compensation at all in another."),
+        caption=("Table 1. The first three columns are published; the fourth is "
+                 "arithmetic on them; the last two need a volatility assumption. "
+                 "Read the margins as bounds — no senior mortgage is assumed."),
         path=str(IMG / f"c4-t1-cohorts.{EXT}"))
     figs["table"] = fig_meta
 
     # HERO — the finding is a comparison of two triggers.
     fig_meta, _ = charts.comparison_card(
-        headline="How far must a Korean home fall before the tenant's deposit is at risk?",
-        items=[(f"{apt['required_fall_pct']:.0f}%", "Seoul apartment, Jan 2026"),
-               (f"{villa22['required_fall_pct']:.1f}%", "Seoul villa, Dec 2022")],
-        emphasis=1,
-        note=("Same contract, same city, same law. The deposit is the first-loss "
-              "tranche of a single-property loan, and its attachment point is one "
-              "published ratio divided by another."),
+        headline="How far can the home fall before a jeonse deposit stops being covered?",
+        items=[(f"{apt['required_fall_pct']:.0f}%", "Seoul apartments, Jan 2026"),
+               (f"{villa22['required_fall_pct']:.1f}%", "Seoul villas, Dec 2022")],
+        note=("The deposit plus any registered mortgage, divided by what that kind of "
+              "property fetches at a court auction. Both figures are published "
+              "monthly. Neither is on the contract."),
         footer="quantpost", mode="light",
-        alt=(f"Card comparing the price fall needed to put a deposit at risk: "
+        alt=(f"Card comparing the price fall a deposit can absorb: "
              f"{apt['required_fall_pct']:.0f}% for a Seoul apartment in January "
              f"2026 against {villa22['required_fall_pct']:.1f}% for a Seoul villa "
              f"in December 2022."),
@@ -577,26 +574,26 @@ def build() -> Post:
     table_body = "\n".join("| " + " | ".join(r) + " |" for r in table_rows(res))
 
     post = Post(
-        title="Some Korean Renters Needed a 50% Crash to Lose Money. Others Needed 0.5%.",
-        slug="korean-renters-first-loss-tranche",
-        subtitle=("Jeonse is a loan from tenant to landlord, and the security "
-                  "structure decides everything"),
+        title="The Jeonse Number That Is Not on the Contract",
+        slug="the-jeonse-number-not-on-the-contract",
+        subtitle=("A deposit's safety margin is two published ratios divided — and "
+                  "the interesting part is what that arithmetic cannot tell you"),
         summary=(
             f"Under Korea's jeonse system a tenant hands the landlord a lump sum "
             f"worth half to four fifths of the home, pays no monthly rent for two "
-            f"years, and gets the sum back at the end. Everyone calls this an "
-            f"interest-free loan and stops there. It is a loan with a security "
-            f"structure: the tenant holds the first-loss tranche of a "
-            f"single-property mortgage, and the attachment point is one published "
-            f"ratio divided by another. A Seoul apartment tenant in January 2026 "
-            f"needs a {apt['required_fall_pct']:.0f}% fall in the home's value "
-            f"before a single won is at risk. A Seoul villa tenant in December "
-            f"2022 needed {villa22['required_fall_pct']:.1f}%. The compensation "
-            f"is the same in both cases: about {res['spread']:.1f}% a year of "
-            f"free housing, net of what the money would otherwise earn. In one "
-            f"row that covers the expected loss more than a thousand times over; in "
-            f"the other it covers it once."),
-        tags=["investing", "risk-management", "housing", "korea", "quantitative-finance"],
+            f"years, and receives it back at the end. It is a secured loan, and "
+            f"secured loans have a safety margin you can compute: how far the home "
+            f"can fall before the deposit stops being fully covered. It is the "
+            f"deposit plus any registered mortgage, divided by what that kind of "
+            f"property fetches at a court auction — two figures Korea publishes "
+            f"monthly, and a number that appears on no contract. For a Seoul "
+            f"apartment at January 2026 ratios it is about "
+            f"{apt['required_fall_pct']:.0f}%. For a Seoul villa at December 2022 "
+            f"ratios it was under a point. This post works out how to compute it, "
+            f"how much of it is arithmetic and how much is modelling, and the one "
+            f"mechanism it misses entirely."),
+        tags=["housing", "korea", "risk-management", "quantitative-finance",
+              "data-science"],
         author=qp.SETTINGS.author,
         code_url=qp.SETTINGS.code_repo_url,
         min_words=1500, max_words=2400,
@@ -695,278 +692,231 @@ def build() -> Post:
                 f"triggers, the deposit ratio contributes "
                 f"{res['decomposition']['deposit_ratio_pp']:.1f}pp and the auction "
                 f"clearing ratio {res['decomposition']['auction_ratio_pp']:.1f}pp"),
-            "cross_check": (f"the model's mispricing factor for the December 2022 "
-                            f"Seoul villa cohort is {res['model_mispricing']:.0f}x; "
-                            f"HUG's realised net loss ratio over 2020-2024 is "
-                            f"{hug['loss_ratio']:.0f}x"),
+            "guarantee_experience": (
+                f"HUG's 2020-2024 figures are quoted for scale only: "
+                f"{HUG_INCIDENT_COUNT:,} incidents, "
+                f"{hug['recovery_pct']:.1f}% recovered on claims taken over. The "
+                f"pool is not the cohorts modelled here, recovery from landlords is "
+                f"not lien recovery, and fraud is not priced above, so no comparison "
+                f"against premium income is drawn"),
         },
     )
 
-    post.add("A loan everybody describes and nobody prices", f"""
-Korea has a rental contract that exists nowhere else at scale. Under **jeonse** a
-tenant hands the landlord a lump sum — commonly half to four fifths of what the home
-is worth — lives there two years paying **no monthly rent at all**, and receives the
-whole sum back at the end.
+    post.add("A contract with a number missing", f"""
+Korea has a rental arrangement that exists nowhere else at scale. Under **jeonse**,
+a tenant hands the landlord a lump sum — commonly half to four fifths of what the
+home is worth — lives there for two years paying **no monthly rent at all**, and
+receives the whole sum back at the end.
 
-Every English explanation arrives at the same sentence: an interest-free loan from
-tenant to landlord. Correct, and it is where they stop — which is a shame, because a
-loan has a security structure and this one's decides everything.
+It is easy to call this strange and much harder to call it bad. For decades it did
+several useful things at once: it turned savings into housing without a mortgage, it
+forced saving in a way monthly rent does not, and it was the standard rung between
+renting and owning. Millions of households hold most of their net worth in one right
+now.
 
-Here is the tenant's payoff at the end of the term, with `D` the deposit, `M` any
-mortgage ranking ahead of it, `V_T` the home's terminal value and `lambda` the fraction
-of appraised value it fetches at a forced sale:
+It is also, unavoidably, a **secured loan** from tenant to landlord — and secured
+loans have a quantity any lender asks for before signing: the **safety margin**, how
+far the collateral can fall before the loan stops being fully covered. Korea publishes
+both numbers you need to compute it. It appears on no contract and in no listing.
+
+This post works it out: what the margin is, how much is arithmetic and how much is
+modelling, and the one mechanism it misses entirely.
+""".strip())
+
+    post.add("The margin is two published ratios divided", f"""
+Write `D` for the deposit, `M` for any mortgage registered ahead of it, `V_T` for
+what the home is worth when the lease ends, and `lambda` for the fraction of
+appraised value that kind of property fetches if it has to be sold at a court
+auction. The tenant's claim pays
 
 **min(D, max(0, lambda · V_T − M))**
 
-Anyone who has looked at a securitisation has seen that expression. It is a
-**first-loss tranche**. The tenant is not a customer paying rent but the most junior
-creditor of a single-property loan, for an amount that is typically their entire net
-worth. The rest of this post prices it.
-""".strip())
+which is fully covered as long as the home is worth at least
 
-    post.add("The one number that matters is arithmetic", f"""
-Tranches have an **attachment point**: the collateral value at which they start taking
-losses. Rearranging the payoff gives it immediately:
+**V\* = (M + D) / lambda**
 
-**V\\* = (M + D) / lambda**
+Note what is *not* in that expression: no volatility, no expected return, no horizon,
+no model. The deposit ratio is 전세가율 — deposit over sale price. The liquidation
+ratio is 낙찰가율 — winning bid over appraised value, published monthly by building
+type and district.
 
-Stare at that, because of what is *not* in it. No volatility, no expected return, no
-horizon, no model — one published number divided by another, and Korea publishes both
-monthly: 전세가율, deposit over sale price, and 낙찰가율, winning bid over appraised
-value, from the court auction statistics.
+Two worked examples, with `M = 0` so nothing else is in the way:
 
-Take the friendliest case, `M = 0` — the deposit is the only claim. Two cohorts from
-one city then sit at opposite ends of the same contract.
+**Seoul apartments at January 2026 ratios.** Deposit ratio {RATIO_SEOUL_APT}% — an
+all-time low since the series began in 2013, not because deposits fell but because
+sale prices ran ahead of them. Seoul apartments cleared
+{AUCTION_SEOUL_APT:.0f}% of appraisal at auction in July 2026, a fourth straight
+month above par. Margin: **{apt['required_fall_pct']:.1f}%**.
 
-**A Seoul apartment, January 2026.** Deposit ratio {RATIO_SEOUL_APT}%, an all-time
-low since 2013 — not because deposits fell but because sale prices ran away from them.
-Seoul apartments cleared {AUCTION_SEOUL_APT:.0f}% of appraisal at auction in July 2026,
-a fourth straight month above par. Attachment point {apt['attachment']:.3f}: the home
-must fall **{apt['required_fall_pct']:.1f}%** before one won is at risk.
+**Seoul villas at December 2022 ratios.** Villas — 연립·다세대, much of the
+affordable rental stock — had a deposit ratio of {RATIO_SEOUL_VILLA_2022}%, and Seoul
+villas clear {AUCTION_SEOUL_VILLA:.0f}% at auction. Margin:
+**{villa22['required_fall_pct']:.1f}%**. By December 2024 the ratio had come down to
+{RATIO_SEOUL_VILLA_2024}%, which puts the same calculation at
+{villa24['required_fall_pct']:.1f}%.
 
-**A Seoul villa, December 2022.** Villas — 연립·다세대, the low-rise walk-ups for
-people priced out of apartments — had a ratio of {RATIO_SEOUL_VILLA_2022}%. Seoul
-villas clear {AUCTION_SEOUL_VILLA:.0f}%, and the ones nobody wants go for
-{AUCTION_VILLA_TAIL:.0f}% after four failed rounds. Attachment point
-{villa22['attachment']:.3f}: the home must fall
-**{villa22['required_fall_pct']:.1f}%**.
+Two things about the distance between those, because the obvious way to describe it
+is wrong twice over.
 
-Half of one percent against fifty. Same contract, same city, same statute, same
-courts.
-
-Two things about that gap, because the obvious way to describe it is wrong twice
-over. First, it is **two** ratios moving, not one: of the
+First, it is **two** ratios moving, not one. Of the
 {res['decomposition']['total_pp']:.0f} points, the deposit ratio accounts for
 {res['decomposition']['deposit_ratio_pp']:.1f} and the auction clearing ratio for
 {res['decomposition']['auction_ratio_pp']:.1f}. Move the deposit ratio alone and the
-cushion goes to {res['decomposition']['deposit_ratio_only_pct']:.1f}%, not to half a
-percent. Villas are worse because the deposit is bigger *and* because a court gets
-less for them, in roughly equal measure.
+margin goes to {res['decomposition']['deposit_ratio_only_pct']:.1f}%, not to under a
+point. Building type matters through both channels, in roughly equal measure.
 
-Second, resist dividing. Fifty over a half is "a factor of a hundred" and it means
-nothing: the trigger is exactly linear in the deposit ratio — every point of ratio
-costs {res['decomposition']['slope_per_point']:.2f} points of cushion, at every ratio,
-which is why Fig 1 is three straight lines — so a ratio of two of its values is large
-only because one sits near zero. The honest statistic is the difference in points.
-There *is* real convexity here; it is in the next section, and it is about the loss.
+Second, resist dividing. Fifty over a half is "a factor of a hundred" and means nothing
+here: the margin is exactly **linear** in the deposit ratio — every point of ratio costs
+{res['decomposition']['slope_per_point']:.2f} points of margin, at every ratio, which is
+why Fig 1 is three straight lines — so a ratio of two of its values is large only because
+one sits near zero. The honest statistic is the difference in points.
 
-None of which makes this clever. It is division, worth writing down because nobody
-does it and because no number matters more to a prospective tenant.
+None of which makes this clever. It is division, worth doing because the answer is
+specific to your building and nobody hands it to you.
 """.strip(), figures=[figs["trigger"]])
 
-    post.add("Now the part that needs a model", f"""
-Knowing the trigger is not knowing the risk. For that you need the chance of reaching
-it, and there a model must be admitted. Mine is thin: lognormal terminal value, zero
-drift, two-year term, one volatility parameter.
+    post.add("The margin is not the risk", f"""
+Knowing how far the home can fall is not the same as knowing how likely that is,
+and for the second question a model has to be admitted. Mine is thin on purpose:
+lognormal terminal value, zero drift, two-year term, one volatility parameter.
 
-That parameter is the interesting choice. House price *indices* are quiet — Giacoletti
-puts metropolitan index volatility at 4-5% a year. But the tenant does not own an index;
-the tenant owns one building, and the same paper measures idiosyncratic volatility for
-individual homes at **10-18% a year**. Pricing this off an index understates it three-
-to four-fold.
+That parameter is the interesting choice. House price *indices* are quiet —
+Giacoletti's work on repeat sales puts metropolitan index volatility at 4-5% a year.
+But a tenant is exposed to one building, not an index, and the same paper measures
+idiosyncratic volatility for individual homes at **10-18% a year**. Reading this risk
+off an index number understates it three- to fourfold, which is probably the most
+transferable point here.
 
-So I swept it. Table 1 has every cohort; the two ends are what matter. At
-{100 * SIGMA_BASE:.0f}% a year over a two-year term, the January 2026 Seoul apartment
-breaches with probability {apt['p_breach_pct']:.2f}% and loses
-{apt['loss_per_year_pct']:.4f}% of the deposit a year; the December 2022 Seoul villa
-breaches with probability **{villa22['p_breach_pct']:.0f}%** and loses
-**{villa22['loss_per_year_pct']:.2f}%**. Four thousandths of a basis point to three
-hundred basis points — four orders of magnitude.
+At {100 * SIGMA_BASE:.0f}% a year over a two-year term, the January 2026 Seoul
+apartment case breaches its margin with probability {apt['p_breach_pct']:.2f}% and
+loses {apt['loss_per_year_pct']:.4f}% of the deposit a year in expectation; the
+December 2022 Seoul villa case, {villa22['p_breach_pct']:.0f}% and
+{villa22['loss_per_year_pct']:.2f}%.
 
-*This* is the non-linearity, and note where it is not. The trigger in Fig 1 is a
-straight line; the loss in Fig 2 spans four orders of magnitude over the same range.
-Convexity is a property of the option, not of the arithmetic — far out of the money a
-tranche is nearly free, at the money nearly worthless, with no gentle middle. Which is
-why "the deposit ratio crept up a bit" is not a mild sentence.
+Here the two halves of the calculation behave completely differently, and it is worth
+being precise. **The margin is linear. The loss is convex.** Fig 1 is a straight line;
+Fig 2 spans four orders of magnitude across the same range. That convexity is a
+property of the payoff, not of my parameters: a claim far below its threshold is nearly
+riskless, one sitting at its threshold is nearly all risk, with no gentle middle. Which
+is why "the deposit ratio went up a few points" is not a mild sentence, even though the
+margin moved only a few points too.
 
-Every cohort, with the first three columns published and the last two modelled:
+Every case, side by side — the first three columns published or arithmetic, the last
+two modelled:
 
 | {" | ".join(TABLE_HEADER)} |
 |---|---|---|---|---|---|
 {table_body}
 
-(The integral is easy to get wrong, so every cohort is checked against a
+(The integral is easy to get wrong, so every row is checked against a
 {N_SIM:,}-draw Monte Carlo. Largest disagreement:
-{res['max_check_err_pp']:.4f} percentage points.)
+{res['max_check_err_pp']:.4f} percentage points. The margin is also computed twice
+by different code paths and asserted equal, which is how I caught a unit slip that
+had already shipped one broken chart.)
 """.strip(), figures=[figs["loss"]])
 
-    post.add("What the tenant is paid for carrying it", f"""
-A junior creditor should be compensated, and this one is — in kind. The tenant lives
-rent-free, and Korea publishes the market price of that swap: the 전월세전환율, the
-rate at which a deposit converts into monthly rent. In June 2026 it was
-**{CONVERSION_SEOUL}%** for Seoul and **{CONVERSION_NATIONWIDE}%** nationwide, a
-record.
+    post.add("What the deposit earns", f"""
+The tenant is not lending for nothing. The return is paid in kind — a home occupied
+rent-free — and Korea publishes the market price of that swap: the 전월세전환율, the
+rate at which a deposit converts into monthly rent. In
+June 2026 it was **{CONVERSION_SEOUL}%** for Seoul and **{CONVERSION_NATIONWIDE}%**
+nationwide, a record for the series.
 
-Subtract what the money would otherwise earn — the Base Rate is {BASE_RATE}% after
-July's hike — and the {HUG_PREMIUM:.3f}% guarantee premium. What is left is
-compensation for credit risk and nothing else:
+Net of what the money would otherwise earn — the Base Rate is {BASE_RATE}% after
+July's increase — that is roughly **{res['spread'] + HUG_PREMIUM:.1f}% a year**, and
+about {res['spread']:.1f}% after a deposit-return guarantee premium of
+{HUG_PREMIUM:.3f}%. For readers who think in credit terms: at the loss rates above,
+that is a comfortable multiple of expected loss in the apartment case and roughly
+one times it in the December 2022 villa case.
 
-**{res['spread']:.2f}% a year.**
+The observation I would draw is narrow, and I want to keep it narrow. The conversion
+rate is essentially **one national number**; the margin is **building-specific**, and
+across Table 1 it runs from fifty points to under one. That is not evidence anyone was
+cheated — deposit ratios are negotiated, tenants have preferences over building and
+location, and much besides risk goes into what a home rents for. It does mean the
+price is not where you look to find out how safe a deposit is. The margin is, and the
+margin is free.
 
-(For contrast, the Housing Lease Protection Act caps this rate at the Base Rate plus
-{STATUTORY_SPREAD:.0f} points — **{res['statutory_cap']:.2f}%** — in a formula that
-never mentions the security structure. It binds only on conversions mid-tenancy, so
-nothing is being broken.)
-
-Set that against the expected losses. For the January 2026 Seoul apartment it covers
-the loss **more than a thousand times over** — still
-{res['robust']['Seoul apartment, Jan 2026']['coverage']:,.0f} times at the top of the
-volatility range. For the December 2022 Seoul villa it covers the loss
-**{villa22['coverage']:.1f} times**,
-and {res['robust']['Seoul villa, Dec 2022']['coverage']:.1f} times at 18% — not at
-all, since a first-loss tranche needs a risk premium *on top of* its expected loss.
-
-A bond desk would say it this way. Given a loss-given-default of
-{100 * res['lgd']:.0f}% — HUG recovers {hug['recovery_pct']:.1f}% on claims it takes
-over — a spread of {res['spread']:.2f}% a year fairly compensates an annual default
-probability of about **{res['breakeven_default_pct']:.1f}%**. That is a single-B
-credit. Apartment tenants in Seoul are being paid single-B spreads to hold
-something that, at a 51% attachment point, is closer to investment grade; villa
-tenants in 2022 were paid the same spread to hold something well below it.
-
-Which is the whole problem. The price was never wrong. **One price was quoted for two
-completely different instruments.**
+As for what margin is reasonable, the market has a rough convention: analysts describe
+deposit ratios of **60-70%** as the band where jeonse and sale prices sit in stable
+balance. Table 1 lets you turn any ratio into a breach probability at a volatility you
+choose, which is more use than a band.
 """.strip())
 
-    post.add("Three ways to switch the mechanism off", f"""
-A mechanism claim should come with a way to switch it off. This one has three.
+    post.add("Three ways to check the arithmetic", f"""
+A claim built on a mechanism should come with ways to switch the mechanism off.
+This one has three, and the second changed what I thought the answer was.
 
-**Take volatility to zero.** If prices never move, an out-of-the-money tranche never
-breaches: the loss in Fig 2 is all option value. Except at the
-December 2022 villa ratio, where the control cannot bite, because that cohort sat
-{villa22['required_fall_pct']:.2f}% from its attachment point. Take volatility to
+**Take volatility to zero.** If prices never move, a claim below its threshold never
+breaches, so the loss in Fig 2 is all option value. The exception is the December 2022
+villa ratio, where the control cannot bite: that case sat
+{villa22['required_fall_pct']:.2f}% from its threshold, and at a volatility of
 **0.2% a year** — two orders of magnitude below any housing market ever measured —
-and the breach probability is still **{vc[0.002]['p_breach_pct']:.1f}%**, since half
-a percent is under two standard deviations even then. At 2% it is
+the breach probability is still **{vc[0.002]['p_breach_pct']:.1f}%**, because half a
+point is under two standard deviations even then. At 2% it is
 {vc[0.02]['p_breach_pct']:.0f}%, at 12% {vc[0.12]['p_breach_pct']:.0f}%, at 18%
-{vc[0.18]['p_breach_pct']:.0f}%. So the control passes everywhere except at the ratio
-actually being written, and there it says what the model cannot: the risk came not from
-volatility but from signing half a percent from the edge.
+{vc[0.18]['p_breach_pct']:.0f}%. So the control passes everywhere except at the
+ratio that mattered most, and there it says something the model cannot: at that
+margin, volatility is not what determines the outcome.
 
-**Take the liquidation haircut away.** Hold the ratio at {RATIO_SEOUL_VILLA_2022}%
-and let the property sell at full appraised value. Expected loss falls from
+**Take the liquidation haircut away.** Hold the deposit ratio at
+{RATIO_SEOUL_VILLA_2022}% and let the property sell at full appraised value instead
+of {AUCTION_SEOUL_VILLA:.0f}%. Expected loss falls from
 {hc[AUCTION_SEOUL_VILLA]['loss_per_year_pct']:.2f}% a year to
-{hc[100.0]['loss_per_year_pct']:.2f}% — a factor of
-{res['haircut_factor']:.0f}.
-This is the control that reallocates blame. The villa deposit crisis was reported as
-a story about falling prices; most of the loss here is not the price falling but the
-{res['haircut_gap_pp']:.0f}-point gap between a villa's appraisal and what a court
-gets for it. Those call for different policies, and Korea has mostly debated the
-first.
+{hc[100.0]['loss_per_year_pct']:.2f}% — a factor of {res['haircut_factor']:.0f}.
+I did not expect that, and it moves the emphasis. Most of the modelled loss is not
+the price falling; it is the {res['haircut_gap_pp']:.0f}-point gap between what a
+villa is appraised at and what a court realises for it. Appraisal and liquidation
+are a different problem from market risk, and the second is the one that gets
+discussed.
 
-**Put a mortgage back in.** Every headline number above assumes none, which is why
-they are floors. A senior lien takes the January 2026 Seoul apartment's
-{apt['required_fall_pct']:.0f}% cushion to {mc[20.0]['required_fall_pct']:.0f}% at a
-20% mortgage and {mc[40.0]['required_fall_pct']:.0f}% at 40%, with expected loss going
-from {mc[0.0]['loss_per_year_pct']:.4f}% a year to
-{mc[40.0]['loss_per_year_pct']:.2f}%. HUG capped the debt ratio at 80%.
+**Put a mortgage back in.** Every figure above assumes none, which makes them upper
+bounds rather than estimates. A senior lien takes the January 2026 Seoul apartment case
+from {apt['required_fall_pct']:.0f}% to {mc[20.0]['required_fall_pct']:.0f}% at a 20%
+mortgage and {mc[40.0]['required_fall_pct']:.0f}% at 40% — the single biggest reason to
+run this on your own building rather than a district average. The registered mortgage is
+on the 등기부등본, and it is yours to look up.
 """.strip())
 
-    post.add("The crisis that arrived through the other door", f"""
-Here is where my own model needs correcting, and the correction is the most useful
-paragraph in the post.
+    post.add("The mechanism the margin misses", f"""
+Now the part where the arithmetic above is not enough, which is the most useful section
+here.
 
-Korea had a mass deposit-refund crisis in 2023 and 2024 without anything deserving the
-word crash. For villas that fits Fig 1 — half a percent. But apartments also produced
-tens of thousands of incidents, needing falls of tens of percent that never happened. A
-collateral model cannot explain those, and I should not pretend it does.
+Korea had a great deal of difficulty with deposit refunds in 2023 and 2024 without
+anything deserving the word crash. For villas that fits Fig 1 — the margin was under a
+point. But apartments, whose margins were tens of points, also saw many refund
+problems, and the collateral arithmetic cannot explain those. I should not pretend it
+does.
 
-There is a second mechanism, it is **linear**, and it fires first. When a contract rolls
-over the landlord refunds `D` and collects a new deposit set by *today's* ratio and
-price. The gap is cash he must find elsewhere.
+There is a second mechanism, it is **linear**, and it arrives first. When a lease
+rolls over the landlord returns `D` and collects a new deposit set by *today's*
+ratio and *today's* price. Any difference is cash that has to come from somewhere
+else, and it has nothing to do with whether the collateral covers the claim.
 
 Do that arithmetic on the published villa ratios with no price move at all. They went
-from {RATIO_SEOUL_VILLA_2022}% in December 2022 to {RATIO_SEOUL_VILLA_2024}% in
-December 2024, so a landlord refunding a completely unchanged house had to produce
-**{res['gaps']['ratio to 65.4%, prices flat']:.1f}% of the deposit in cash**; with a
-10% price fall, {res['gaps']['ratio to 65.4%, prices -10%']:.1f}%.
+from {RATIO_SEOUL_VILLA_2022}% to {RATIO_SEOUL_VILLA_2024}% between December 2022 and
+December 2024, so a landlord returning a deposit on a completely unchanged home had to
+produce **{res['gaps']['ratio to 65.4%, prices flat']:.1f}% of it in cash**; with a 10%
+price fall, {res['gaps']['ratio to 65.4%, prices -10%']:.1f}%.
 
-That is the shape of what happened. The collateral gap needs a large price move and is
-an option; the funding gap needs no price move, is a straight line, and Korea generated
-an enormous quantity of it. Whether it becomes a tenant's loss turns on something no
-model here contains: whether the landlord had other money.
+That is the shape of it. The collateral gap needs a large price move and is convex;
+the funding gap needs no price move, is a straight line, and there was a great deal of
+it. Whether a funding gap becomes a tenant's loss depends on something no model here
+contains — whether the landlord could raise the difference — and in most cases they
+could.
 
-It is also why the falling ratio is not simply good news. Tenants repriced the tranche
-by demanding a lower attachment point — the correct response — and every tenant who
-did made every incumbent landlord's refund harder.
+It also cuts against reading the falling ratio as unambiguously good. Asking for a
+larger margin is the right response to a convex risk, and every tenant who did made
+the incumbent landlord's refund arithmetic harder. Both are true at once, which is
+usually a sign a single number is being asked to carry a judgement it cannot.
 """.strip(), figures=[figs["rollover"]])
-
-    post.add("An accidental out-of-sample test", f"""
-I did not plan this next number, and it is why I trust the rest.
-
-My model says the December 2022 Seoul villa cohort lost about
-{villa22['loss_per_year_pct']:.2f}% of deposit a year. HUG — the state guarantor —
-charged {HUG_PREMIUM:.3f}% a year to insure it: **{res['model_mispricing']:.0f} times
-too cheap.**
-
-Now the same question with no model involved. Over 2020-2024 HUG paid **9조
-4,189억원** of subrogation on incidents totalling **11조 441억원** across
-{HUG_INCIDENT_COUNT:,} cases and recovered **2조 3,458억원** — a
-{hug['recovery_pct']:.1f}% recovery rate — for a net loss of
-**{hug['net_loss'] / 10_000:.1f}조원**. Premiums over roughly the same window:
-**3,525억원.**
-
-A realised net loss ratio of **{hug['loss_ratio']:.0f}x premium.**
-
-Two unrelated routes — a lognormal integral on two published ratios, and a public
-guarantor's audited cash flows — reaching the same order of magnitude. The agreement
-is partly luck: HUG's book is not made of December 2022 Seoul villas, its recovery is
-recovery *from landlords* rather than from property liens, and a guarantee also covers
-fraud, which my model does not price. I would not defend the two agreeing to within a
-factor of two. But the direction and magnitude are not in question, and neither
-calculation knew about the other.
-
-The building-type split says it a third time: {HUG_BY_TYPE['villa (다세대)'][0]:,}
-of the {HUG_INCIDENT_COUNT:,} incidents were villas against
-{HUG_BY_TYPE['apartment'][0]:,} for apartments — {hug['villa_over_apartment']:.1f} to
-one, in a country with far more apartments. That is where the attachment points were.
-""".strip())
-
-    post.add("What this means now", f"""
-Jeonse is disappearing while I write this. In June 2026 monthly rent took
-**{SEOUL_MONTHLY_SHARE}%** of Seoul apartment rental deals against
-{SEOUL_JEONSE_SHARE}% for jeonse — overtaking the deposit system in the country's
-central market — and on 14 July 2026 the government floated a public trust to hold
-deposits instead of landlords.
-
-That proposal is a clean statement of the problem in tranche terms: if a public body
-holds the deposit and pays the landlord a yield, the attachment point stops existing.
-It also means the landlord no longer receives a lump sum, which was the only reason to
-offer jeonse — so the honest description is not "jeonse made safe" but "jeonse ended,
-with a transition period". Whether that is good policy my arithmetic cannot say.
-
-What it can say is smaller and more useful. Anyone signing a jeonse contract can
-compute their own attachment point first, from numbers the state publishes for free:
-deposit over sale price, plus any registered mortgage, divided by the auction clearing
-ratio for that building type in that district. Ten seconds, for the only figure that
-matters. Nobody puts it on the contract, and there is no reason they could not.
-""".strip())
 
     post.add("Where this is a caricature", f"""
 **Lognormal, zero drift, one volatility.** Real house prices are autocorrelated and
 skewed, volatility clusters, and two-year windows in Korea have been anything but
-drift-free. A jump or regime model would fatten the left tail and make every loss figure
-larger — the direction that does not rescue the conclusion.
+drift-free in either direction. A jump or regime model would fatten the left tail and
+make every loss figure larger, which is the direction that does not rescue the
+conclusion.
 
 **Volatility does not scale the way I made it scale.** Giacoletti's other finding is
 that idiosyncratic house risk barely grows with holding period while index risk does,
@@ -974,16 +924,52 @@ so my √T scaling understates one-year and overstates five-year risk. Small ove
 two-year term; not to be pushed further unfixed.
 
 **The auction ratio is not the tenant's recovery.** 낙찰가율 is the winning bid over
-*appraised* value, and appraisals are stale, contested and — the villa fraud cases
-turned on this — sometimes inflated on purpose. Real recovery also loses court costs,
-arrears and any tax lien outranking the tenant. Every figure here is optimistic on
-that axis.
+*appraised* value, and appraisals are stale, contested and occasionally wrong. Real
+recovery also loses court costs, arrears and any tax lien that outranks the tenant,
+and it takes time. Every figure here is optimistic on that axis, which is another
+reason to treat the margin as a bound rather than a promise.
 
-**And the tenant's real problem is one I did not model at all.** A bond desk holding
-this tranche would hold a hundred. A household holds one, funded with everything it
-has, and cannot diversify, hedge or sell it. Expected loss is the least of it: what
-matters is a {100 * res['lgd']:.0f}% loss of net worth in a single event, and no spread
-I can compute makes that a reasonable position. That is an argument about position
-sizing rather than pricing, and it is the strongest case against the instrument.
+**The loss numbers are the least useful part.** An investor holding this kind of claim
+would hold a hundred and care about expected loss, because a portfolio average is what
+a portfolio delivers. A household holds one, and an average is not what it experiences.
+That is a fact about position size rather than pricing, and no expected-loss figure
+captures it — which is exactly why the number I would want before signing is the margin
+in Fig 1, not anything in Fig 2. It is exact, it is specific to the building, and it
+answers the question a household actually has.
+
+**Guarantee statistics, for scale only.** HUG's published figures: 11조 441억원 of
+deposit-return guarantee incidents across {HUG_INCIDENT_COUNT:,} cases over 2020-2024,
+{HUG_BY_TYPE['villa (다세대)'][0]:,} of them 다세대 against
+{HUG_BY_TYPE['apartment'][0]:,} apartments, {hug['recovery_pct']:.0f}% recovered on
+claims taken over. Setting that against premium income produces a large ratio and an
+earlier draft made something of it, but the pool is not the cohorts modelled here,
+recovery from landlords is not lien recovery, and a guarantee covers fraud, which
+nothing above prices. A sizing fact, not a verdict.
 """.strip())
+
+    post.add("The ten-second version", f"""
+If you take one thing from this, take the recipe.
+
+**(deposit + any registered mortgage) ÷ the auction clearing ratio for that building
+type and district.** Subtract from one. That is how much the home can lose before your
+deposit stops being fully covered.
+
+Every input is public and free. The deposit is on your contract, the registered
+mortgage on the 등기부등본, the auction clearing ratio published monthly by building
+type and district. And the answer differs enormously between two buildings that would
+look identical in a listing, which is the whole reason it is worth the thirty seconds.
+
+Context, stated flatly because it is not my place to draw a conclusion from it. Jeonse's
+share is falling: in June 2026 monthly rent took {SEOUL_MONTHLY_SHARE}% of Seoul
+apartment rental transactions against {SEOUL_JEONSE_SHARE}% for jeonse, and listings
+were down {SEOUL_LISTINGS_FALL}% year on year. In July 2026 the government said it
+would develop a proposal for a public body to hold deposits rather than landlords, with
+mechanism, participation and guarantee terms all undecided.
+
+Whether any of that is good policy is a question my arithmetic has no standing to
+answer. What the arithmetic can do is put one specific, checkable number in front of
+someone before they sign — and there is no reason that number could not simply be
+printed on the contract.
+""".strip())
+
     return post
