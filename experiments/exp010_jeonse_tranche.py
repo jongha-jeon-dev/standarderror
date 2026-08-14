@@ -445,15 +445,14 @@ def figures(res: dict) -> dict:
              "ratio and goes negative beyond it, meaning the deposit exceeds what "
              "the property would fetch at auction before prices move at all."),
         caption=(f"Fig 1. No model in this chart — it is "
-                 f"(deposit + mortgage) / auction ratio, and nothing else. A Seoul "
-                 f"apartment tenant in January 2026 needs a "
-                 f"**{apt['required_fall_pct']:.0f}% fall** before a single won is "
-                 f"at risk. A Seoul villa tenant in December 2022 needed "
-                 f"**{villa22['required_fall_pct']:.1f}%**. The lines are straight "
-                 f"because the trigger is linear in the deposit ratio, so read the "
-                 f"vertical gap in points, not as a ratio — and note that the two "
-                 f"cohorts differ in the auction ratio as well as the deposit ratio, "
-                 f"by {res['decomposition']['auction_ratio_pp']:.1f} points of the "
+                 f"(deposit + mortgage) / auction ratio and nothing else. At January "
+                 f"2026 Seoul apartment ratios the margin is "
+                 f"**{apt['required_fall_pct']:.0f}%**; at December 2022 Seoul villa "
+                 f"ratios it was **{villa22['required_fall_pct']:.1f}%**. The lines "
+                 f"are straight because the margin is linear in the deposit ratio, so "
+                 f"read the vertical gap in points rather than as a ratio — and note "
+                 f"that the two cases differ in the auction ratio as well, by "
+                 f"{res['decomposition']['auction_ratio_pp']:.1f} points of the "
                  f"{res['decomposition']['total_pp']:.0f}."),
         path=str(IMG / f"c4-f1-trigger.{EXT}"))
     figs["trigger"] = fig_meta
@@ -477,7 +476,7 @@ def figures(res: dict) -> dict:
     fig_meta, _ = charts.lines(
         res["losses"], mode="light", direct_labels=False, decorate=mark_spread,
         logy=True, ylim=(1e-3, 20.0),
-        title="The margin is linear. The loss is not.",
+        title="The same range of deposit ratios, four orders of magnitude of loss",
         subtitle=("Expected shortfall on a Seoul villa deposit, per year, against "
                   "the deposit ratio. Three volatilities: the metropolitan index, "
                   "and the low and high ends of what individual homes measure."),
@@ -488,12 +487,12 @@ def figures(res: dict) -> dict:
              "horizontal reference lines mark the spread the tenant earns and the "
              "much lower state guarantee premium."),
         caption=(f"Fig 2. Between a 55% and an 80% deposit ratio the expected loss "
-                 f"rises by roughly four orders of magnitude. Nothing about the "
-                 f"contract changed across that range; the tenant simply moved "
-                 f"from a tranche that is far out of the money to one that is at "
-                 f"the money. The two reference lines are what the tenant receives "
-                 f"for carrying it ({res['spread']:.2f}%/yr) and what the state "
-                 f"charged to guarantee it ({HUG_PREMIUM:.3f}%/yr)."),
+                 f"rises by roughly four orders of magnitude, while the margin in "
+                 f"Fig 1 falls by about thirty points in a straight line. That is "
+                 f"what convexity looks like: the same contract, a claim moving from "
+                 f"far below its threshold to sitting on it. The reference lines mark "
+                 f"the in-kind return net of the Base Rate ({res['spread']:.2f}%/yr) "
+                 f"and the guarantee premium ({HUG_PREMIUM:.3f}%/yr), for scale."),
         path=str(IMG / f"c4-f2-loss.{EXT}"))
     figs["loss"] = fig_meta
 

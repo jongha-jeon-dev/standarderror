@@ -85,7 +85,7 @@ specific to your building and nobody hands it to you.
 
 ![Three downward-sloping lines. At a 51% deposit ratio the required fall is around 50%; the Seoul-villa line reaches zero at a 79% ratio and goes negative beyond it, meaning the deposit exceeds what the property would fetch at auction before prices move at all.](c4-f1-trigger.png)
 
-*Fig 1. No model in this chart — it is (deposit + mortgage) / auction ratio, and nothing else. A Seoul apartment tenant in January 2026 needs a **50% fall** before a single won is at risk. A Seoul villa tenant in December 2022 needed **0.5%**. The lines are straight because the trigger is linear in the deposit ratio, so read the vertical gap in points, not as a ratio — and note that the two cohorts differ in the auction ratio as well as the deposit ratio, by 21.7 points of the 49.*
+*Fig 1. No model in this chart — it is (deposit + mortgage) / auction ratio and nothing else. At January 2026 Seoul apartment ratios the margin is **50%**; at December 2022 Seoul villa ratios it was **0.5%**. The lines are straight because the margin is linear in the deposit ratio, so read the vertical gap in points rather than as a ratio — and note that the two cases differ in the auction ratio as well, by 21.7 points of the 49.*
 
 ## The margin is not the risk
 
@@ -133,7 +133,7 @@ had already shipped one broken chart.)
 
 ![Three curves rising steeply and then flattening as the deposit ratio increases, on a log scale spanning five orders of magnitude. Two horizontal reference lines mark the spread the tenant earns and the much lower state guarantee premium.](c4-f2-loss.png)
 
-*Fig 2. Between a 55% and an 80% deposit ratio the expected loss rises by roughly four orders of magnitude. Nothing about the contract changed across that range; the tenant simply moved from a tranche that is far out of the money to one that is at the money. The two reference lines are what the tenant receives for carrying it (3.74%/yr) and what the state charged to guarantee it (0.128%/yr).*
+*Fig 2. Between a 55% and an 80% deposit ratio the expected loss rises by roughly four orders of magnitude, while the margin in Fig 1 falls by about thirty points in a straight line. That is what convexity looks like: the same contract, a claim moving from far below its threshold to sitting on it. The reference lines mark the in-kind return net of the Base Rate (3.74%/yr) and the guarantee premium (0.128%/yr), for scale.*
 
 ## What the deposit earns
 
