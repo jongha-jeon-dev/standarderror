@@ -1051,6 +1051,103 @@ def bar_card(
     return _finish_card(fig, ax, path, headline, alt, caption, mode)
 
 
+def sketch_card(
+    *,
+    headline: str,
+    items,
+    sketch=None,
+    note: str = "",
+    footer: str = "",
+    alt: str = "",
+    caption: str = "",
+    mode: str = "light",
+    path: str | None = None,
+):
+    """A hand-drawn card: two numbers beside a small diagram of the mechanism.
+
+    The other cards in this family are pure type, which is the right default: at
+    preview size type survives scaling and a chart does not. This one exists for the
+    case where the finding is a *shape* that type cannot carry — a forecast that
+    tracks something until it doesn't, a curve that forks — and where a schematic of
+    the shape earns the space a third number would have taken.
+
+    The wobble comes from matplotlib's xkcd path filter plus the bundled Patrick
+    Hand face. Both are cosmetic and both degrade: without the font the card renders
+    in the system sans and reads as a slightly loose ordinary card. What the style is
+    *not* is a licence to draw a fake chart — `sketch` gets no axes, no ticks and no
+    numbers, precisely so nobody reads a value off it. It is a diagram, and the
+    numbers beside it are the measurement.
+
+    `sketch(panel, m)` receives a bare axes and the mode, and should draw the
+    diagram and set its own limits. Two items only: three large numbers plus a
+    drawing is a busier version of `comparison_card` rather than a different card.
+    """
+    import textwrap
+
+    items = list(items)
+    if len(items) != 2:
+        raise ValueError("sketch_card takes exactly two items; use "
+                         "comparison_card for three")
+    m = theme.LIGHT if mode == "light" else theme.DARK
+
+    with plt.xkcd(scale=0.9, length=110, randomness=2):
+        plt.rcParams["font.family"] = theme.sketch_family()
+        fig = plt.figure(figsize=CARD_SIZE, dpi=CARD_DPI)
+        fig.patch.set_facecolor(m.surface)
+        ax = fig.add_axes([0, 0, 1, 1])
+        ax.set_axis_off()
+        ax.set_xlim(0, 1)
+        ax.set_ylim(0, 1)
+
+        # Headline shrinks to fit rather than wrapping into the drawing.
+        size = 20.0
+        txt = ax.text(0.055, 0.94, headline, ha="left", va="top", fontsize=size,
+                      color=m.ink)
+        fig.canvas.draw()
+        while size > 12.0:
+            w = txt.get_window_extent(fig.canvas.get_renderer()).width
+            if w <= 0.86 * fig.get_size_inches()[0] * CARD_DPI:
+                break
+            size -= 0.6
+            txt.set_fontsize(size)
+            fig.canvas.draw()
+        if footer:
+            ax.text(0.945, 0.965, footer, ha="right", va="top", fontsize=12,
+                    color=m.muted)
+
+        if sketch is not None:
+            panel = fig.add_axes([0.05, 0.30, 0.47, 0.46])
+            panel.patch.set_visible(False)
+            for spine in panel.spines.values():
+                spine.set_visible(False)
+            panel.set_xticks([])
+            panel.set_yticks([])
+            sketch(panel, m)
+
+        xs = (0.655, 0.895) if sketch is not None else (0.28, 0.72)
+        for (value, label), x in zip(items, xs):
+            ax.text(x, 0.56, str(value), ha="center", va="center", fontsize=40,
+                    color=m.ink)
+            ax.text(x, 0.40, textwrap.fill(str(label), 18), ha="center", va="top",
+                    fontsize=11.5, color=m.ink_secondary, linespacing=1.3)
+        mid = 0.5 * (xs[0] + xs[1])
+        ax.plot([mid, mid], [0.42, 0.64], color=m.grid, lw=1.6)
+
+        if note:
+            # Wrapped at 80 rather than the 62 the sans cards use: the drawn face
+            # is wider per character, and at 74 this note left an orphan word on a
+            # third line.
+            ax.text(0.055, 0.16, textwrap.fill(note, 80), ha="left", va="top",
+                    fontsize=12.5, color=m.ink_secondary, linespacing=1.35)
+
+        if path:
+            theme.save(fig, path, mode=mode, close=False)
+            out = Figure(path, alt or headline, caption, headline, mode)
+            plt.close(fig)
+            return out, (fig, ax)
+        return fig, ax
+
+
 def social_card(
     *,
     headline: str,

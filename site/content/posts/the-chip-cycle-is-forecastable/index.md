@@ -149,11 +149,14 @@ feature set and then comparing across feature sets measures the tuning. The hone
 summary is that a reservoir on heterogeneous standardised inputs needs care that a
 ridge on lags does not, and that on this problem the care buys nothing.
 
-The shock size barely matters either. Raising the monthly demand shock from 1.2% to
-8% moves the period from 33 to 33
-months and the median three-year peak-to-trough from
-2.03x to 2.03x. The cycle
-is not noise-driven. It is structural, and structure is what models are good at.
+The shock size barely matters either, and the cleanest way to report that is to say
+what does not move. Raising the monthly demand shock nearly sevenfold, from 1.2% to
+8%, leaves the period unchanged to the resolution the measurement has
+(**33.3** months against **33.3**) and the
+median three-year peak-to-trough unchanged to two decimals
+(2.03x against 2.03x). This
+cycle is not noise-driven. It is structural, and structure is what models are good
+at — which is the whole reason the first result came out the way it did.
 
 So if the endogenous cycle is this forecastable, why is anyone uncertain?
 
@@ -193,10 +196,11 @@ the break, in months:
 | and the true demand series | ridge on 12 lags | 143 | 2 |
 | and the true demand series | reservoir, 400 | 8 | 0 |
 
-Read the last two columns. The model class does almost nothing. The feature set does
-almost nothing. A training window cannot contain a trend that has not happened yet,
-and no amount of state fixes that, because the missing information is not about the
-present.
+Neither dimension of that table rescues anything. Every steady-trend row is at or
+near the 144-month cap; every post-break row is inside a quarter, whether the
+model is a ridge or a reservoir and whether it sees one channel or six. A training
+window cannot contain a trend that has not happened yet, and no amount of state fixes
+that, because the missing information is not about the present.
 
 ![Three curves on a log scale. The steady-trend error stays near 0.1 across the whole 144-month horizon; the post-break error sits above 1 everywhere, above the persistence baseline; persistence rises from near zero and flattens around 2.](a3-f2-horizon.png)
 

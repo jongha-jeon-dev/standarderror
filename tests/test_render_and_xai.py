@@ -173,6 +173,61 @@ class TestPostAudit:
         assert not any("no markdown table" in p for p in post.audit())
 
 
+class TestSketchCard:
+    """The hand-drawn card. Cosmetic, so the tests are about it degrading safely."""
+
+    def test_renders_and_returns_a_figure(self, tmp_path):
+        out = tmp_path / "s.png"
+
+        def sketch(panel, m):
+            panel.plot([0, 1, 2], [0, 1, 0], color=m.ink)
+
+        meta, _ = charts.sketch_card(
+            headline="Does it draw?", items=[("1 mo", "a"), ("2 mo", "b")],
+            sketch=sketch, note="n", footer="q", alt="alt text here",
+            path=str(out))
+        assert out.exists() and out.stat().st_size > 5000
+        assert meta.alt == "alt text here"
+
+    def test_works_without_a_sketch(self, tmp_path):
+        out = tmp_path / "s2.png"
+        charts.sketch_card(headline="No drawing",
+                           items=[("1", "a"), ("2", "b")], path=str(out))
+        assert out.exists()
+
+    def test_rejects_anything_but_two_items(self, tmp_path):
+        for items in ([("1", "a")], [("1", "a"), ("2", "b"), ("3", "c")]):
+            with pytest.raises(ValueError, match="exactly two"):
+                charts.sketch_card(headline="x", items=items,
+                                   path=str(tmp_path / "bad.png"))
+
+    def test_does_not_leak_the_hand_drawn_style(self, tmp_path):
+        """xkcd mode is global in matplotlib; the card must scope it.
+
+        If it leaks, every chart rendered after a hero card in the same process
+        comes out wobbly and in the wrong face — which is exactly the sort of thing
+        that would ship unnoticed.
+        """
+        import matplotlib.pyplot as plt
+        before_family = list(plt.rcParams["font.family"])
+        before_sketch = plt.rcParams["path.sketch"]
+        charts.sketch_card(headline="x", items=[("1", "a"), ("2", "b")],
+                           path=str(tmp_path / "s3.png"))
+        assert list(plt.rcParams["font.family"]) == before_family
+        assert plt.rcParams["path.sketch"] == before_sketch
+
+    def test_the_bundled_face_is_present_with_its_licence(self):
+        """The OFL requires the licence to travel with the font."""
+        assert theme.SKETCH_FONT_FILE.exists()
+        assert (theme.SKETCH_FONT_FILE.parent / "OFL-PatrickHand.txt").exists()
+        assert theme.sketch_font_available()
+
+    def test_family_always_ends_in_a_fallback(self):
+        fam = theme.sketch_family()
+        assert fam[-1] == "DejaVu Sans"
+        assert theme.sketch_family() is not fam      # a copy, not the cached list
+
+
 class TestRendering:
     def test_front_matter_escapes_quotes(self, tmp_path):
         post = good_post(tmp_path)

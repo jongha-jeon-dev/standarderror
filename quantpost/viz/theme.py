@@ -19,9 +19,11 @@ inverted light palette.
 
 from __future__ import annotations
 
+import pathlib as _pathlib
 from dataclasses import dataclass
 
 import matplotlib as mpl
+import matplotlib.font_manager as _fm
 import matplotlib.pyplot as plt
 
 LIGHT_SERIES = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100",
@@ -52,6 +54,43 @@ class Mode:
     axis: str
     series: tuple[str, ...]
     diverging_mid: str
+
+
+
+# --- the one bundled face -----------------------------------------------------
+# Everything in this module uses the system sans. `charts.sketch_card` is the sole
+# exception, and it is bundled rather than assumed so the rendered card is identical
+# wherever the repo is checked out. Missing font degrades to the system sans.
+_FONT_DIR = _pathlib.Path(__file__).with_name("fonts")
+SKETCH_FONT_FILE = _FONT_DIR / "PatrickHand-Regular.ttf"
+_sketch_family: list[str] | None = None
+
+
+def sketch_family() -> list[str]:
+    """Font family list for the hand-drawn card, most specific first.
+
+    Registers the bundled face with matplotlib on first call. Returns a list whose
+    last entry is always a system fallback, so the caller never has to branch on
+    whether the font is present.
+    """
+    global _sketch_family
+    if _sketch_family is None:
+        fallback = ["DejaVu Sans"]
+        if SKETCH_FONT_FILE.exists():
+            try:
+                _fm.fontManager.addfont(str(SKETCH_FONT_FILE))
+                name = _fm.FontProperties(fname=str(SKETCH_FONT_FILE)).get_name()
+                _sketch_family = [name] + fallback
+            except Exception:
+                _sketch_family = fallback
+        else:
+            _sketch_family = fallback
+    return list(_sketch_family)
+
+
+def sketch_font_available() -> bool:
+    """Whether the drawn face actually loaded, for tests and diagnostics."""
+    return len(sketch_family()) > 1
 
 
 LIGHT = Mode("light", "#fcfcfb", "#f9f9f7", "#0b0b0b", "#52514e", "#898781",

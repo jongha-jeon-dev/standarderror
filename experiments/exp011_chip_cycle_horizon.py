@@ -434,18 +434,51 @@ def figures(res: dict) -> dict:
         path=str(IMG / f"a3-t1-horizons.{EXT}"))
     figs["table"] = fig_meta
 
-    # HERO — the finding is two numbers for one model.
-    fig_meta, _ = charts.comparison_card(
+    # HERO — two numbers, plus a drawing of the shape they are about. The shape is
+    # the reason this post gets the hand-drawn card rather than the plain one: "a
+    # forecast that tracks until it doesn't" is a picture, and no amount of type
+    # says it. The diagram carries no axes and no values on purpose.
+    def hero_sketch(panel, m):
+        t = np.linspace(0, 3.6 * np.pi, 400)
+        wave = np.sin(t)
+        split = 250
+        tail = t[split - 1:]
+        panel.plot(t[:split], wave[:split], color=m.ink, lw=2.6,
+                   solid_capstyle="round")
+        panel.plot(tail, wave[split - 1:], color=m.series[0], lw=2.2,
+                   ls=(0, (5, 4)), solid_capstyle="round")
+        broke = wave[split - 1] + 2.6 * (tail - tail[0]) / (tail[-1] - tail[0])
+        panel.plot(tail, broke, color=m.series[1], lw=3.0, solid_capstyle="round")
+        panel.axvline(t[split - 1], color=m.muted, lw=1.4, ls=(0, (2, 3)))
+        panel.set_xlim(t[0] - 0.3, t[-1] + 0.4)
+        panel.set_ylim(-2.3, 3.6)
+        panel.annotate("the forecast\nkeeps cycling", (tail[-1], wave[-1]),
+                       xytext=(-2, -10), textcoords="offset points",
+                       fontsize=11.5, color=m.series[0], ha="right", va="top",
+                       linespacing=1.25)
+        panel.annotate("what demand\nactually did", (tail[-1], broke[-1]),
+                       xytext=(2, 2), textcoords="offset points", fontsize=11.5,
+                       color=m.series[1], ha="right", va="bottom",
+                       linespacing=1.25)
+        panel.annotate("one step in the trend", (t[split - 1], -2.15),
+                       xytext=(-6, 0), textcoords="offset points", fontsize=10.5,
+                       color=m.muted, ha="right", va="bottom")
+
+    fig_meta, _ = charts.sketch_card(
         headline="How far ahead can you forecast a chip cycle?",
         items=[(f"{MAX_H}+ mo", "steady demand trend"),
                (f"{res['break_horizon']} mo", "after one trend break")],
+        sketch=hero_sketch,
         note=("Same model, same features, same training window. A saturated "
               "capacity cycle is a limit cycle and limit cycles are easy. What is "
               "hard is not the cycle."),
         footer="quantpost", mode="light",
-        alt=(f"Card comparing a forecast horizon of over {MAX_H} months on a "
-             f"steady demand trend against {res['break_horizon']} months after a "
-             "single step change in the demand growth rate."),
+        alt=(f"A hand-drawn card. A wavy line stops at a marked point, where a "
+             f"dashed line continues the wave downward and a solid line breaks "
+             f"sharply upward instead. Beside it, a forecast horizon of over "
+             f"{MAX_H} months on a steady demand trend against "
+             f"{res['break_horizon']} months after a single step change in the "
+             "demand growth rate."),
         caption="",
         path=str(IMG / f"a3-hero.{EXT}"))
     figs["hero"] = fig_meta
@@ -730,11 +763,14 @@ feature set and then comparing across feature sets measures the tuning. The hone
 summary is that a reservoir on heterogeneous standardised inputs needs care that a
 ridge on lags does not, and that on this problem the care buys nothing.
 
-The shock size barely matters either. Raising the monthly demand shock from 1.2% to
-8% moves the period from {sh[0.012]['period']:.0f} to {sh[0.08]['period']:.0f}
-months and the median three-year peak-to-trough from
-{sh[0.012]['peak_to_trough']:.2f}x to {sh[0.08]['peak_to_trough']:.2f}x. The cycle
-is not noise-driven. It is structural, and structure is what models are good at.
+The shock size barely matters either, and the cleanest way to report that is to say
+what does not move. Raising the monthly demand shock nearly sevenfold, from 1.2% to
+8%, leaves the period unchanged to the resolution the measurement has
+(**{sh[0.012]['period']:.1f}** months against **{sh[0.08]['period']:.1f}**) and the
+median three-year peak-to-trough unchanged to two decimals
+({sh[0.012]['peak_to_trough']:.2f}x against {sh[0.08]['peak_to_trough']:.2f}x). This
+cycle is not noise-driven. It is structural, and structure is what models are good
+at — which is the whole reason the first result came out the way it did.
 
 So if the endogenous cycle is this forecastable, why is anyone uncertain?
 """.strip())
@@ -767,10 +803,11 @@ the break, in months:
 |---|---|---|---|
 {table_body}
 
-Read the last two columns. The model class does almost nothing. The feature set does
-almost nothing. A training window cannot contain a trend that has not happened yet,
-and no amount of state fixes that, because the missing information is not about the
-present.
+Neither dimension of that table rescues anything. Every steady-trend row is at or
+near the {MAX_H}-month cap; every post-break row is inside a quarter, whether the
+model is a ridge or a reservoir and whether it sees one channel or six. A training
+window cannot contain a trend that has not happened yet, and no amount of state fixes
+that, because the missing information is not about the present.
 """.strip(), figures=[figs["horizon"], figs["observability"]])
 
     post.add("What that makes a multi-year claim", f"""
