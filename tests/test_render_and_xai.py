@@ -173,6 +173,47 @@ class TestPostAudit:
         assert not any("no markdown table" in p for p in post.audit())
 
 
+class TestRankedBarsSort:
+    """The `sort` option, added because two charts described an order they lacked.
+
+    `ranked_bars` sorts signed data by magnitude, which is right for attribution and
+    wrong twice over: it interleaves positives and negatives when the *grouping* by
+    sign is the finding, and it reorders a timeline into a ranking.
+    """
+
+    @staticmethod
+    def _order(tmp_path, name, labels, values, **kw):
+        fig, ax = charts.ranked_bars(labels, values, **kw)
+        got = [t.get_text() for t in ax.get_yticklabels()]
+        plt.close(fig)
+        return got
+
+    def test_auto_sorts_signed_data_by_magnitude(self, tmp_path):
+        got = self._order(tmp_path, "a", ["big-", "small+", "mid+"],
+                          [-0.34, 0.10, 0.22], signed=True)
+        # barh puts the first row at the bottom, so read the result upwards.
+        assert got == ["small+", "mid+", "big-"]
+
+    def test_value_sort_groups_by_sign(self, tmp_path):
+        got = self._order(tmp_path, "b", ["big-", "small+", "mid+"],
+                          [-0.34, 0.10, 0.22], signed=True, sort="value")
+        assert got == ["big-", "small+", "mid+"]
+
+    def test_none_keeps_the_callers_order(self, tmp_path):
+        labels = ["first", "second", "third", "fourth"]
+        got = self._order(tmp_path, "c", labels, [0.36, -0.09, 0.01, -0.06],
+                          signed=True, sort="none")
+        assert got == labels
+
+    def test_unsigned_default_is_unchanged(self, tmp_path):
+        got = self._order(tmp_path, "d", ["a", "b", "c"], [3.0, 1.0, 2.0])
+        assert got == ["b", "c", "a"]
+
+    def test_rejects_an_unknown_sort(self, tmp_path):
+        with pytest.raises(ValueError, match="unknown sort"):
+            charts.ranked_bars(["a", "b"], [1.0, 2.0], sort="sideways")
+
+
 class TestSketchCard:
     """The hand-drawn card. Cosmetic, so the tests are about it degrading safely."""
 

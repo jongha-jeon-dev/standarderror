@@ -317,6 +317,7 @@ def ranked_bars(
     caption: str = "",
     mode: str = "light",
     signed: bool = False,
+    sort: str = "auto",
     value_fmt: str = ",.3g",
     figsize: tuple[float, float] | None = None,
     path: str | None = None,
@@ -328,15 +329,30 @@ def ranked_bars(
     axis; unsigned use one hue, because varying hue across bars of the same
     measure encodes nothing.
 
+    `sort` controls the order. `"auto"` sorts signed data by magnitude and unsigned
+    data by value, which is the right default for attribution — the biggest
+    contributor first regardless of direction. Pass `"value"` when the *grouping* by
+    sign is the finding rather than the ranking: sorting a mixed set by magnitude
+    interleaves positives and negatives, and a caption that then says "the four
+    positive ones" is describing a chart the reader is not looking at. `"none"`
+    keeps the caller's order.
+
     `value_fmt` sets the label format. The default of three significant figures
     reads badly when the values span an order of magnitude — "-2.4" above "-0.0833"
     looks like carelessness rather than precision — so pass an explicit format when
     the bars are all the same kind of quantity.
     """
+    if sort not in ("auto", "value", "magnitude", "none"):
+        raise ValueError(f"unknown sort {sort!r}")
     m = theme.apply(mode)
     labels = list(labels)
     values = np.asarray(values, float)
-    order = np.argsort(np.abs(values) if signed else values)
+    if sort == "none":
+        order = np.arange(len(values))
+    elif sort == "value" or (sort == "auto" and not signed):
+        order = np.argsort(values)
+    else:
+        order = np.argsort(np.abs(values))
     labels = [labels[i] for i in order]
     values = values[order]
     # matplotlib accepts either a 1-D symmetric error or a (2, n) [lower, upper]
