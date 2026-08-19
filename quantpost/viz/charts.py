@@ -1164,6 +1164,99 @@ def sketch_card(
         return fig, ax
 
 
+def strip_card(
+    *,
+    headline: str,
+    panels,
+    note: str = "",
+    footer: str = "",
+    alt: str = "",
+    caption: str = "",
+    mode: str = "light",
+    path: str | None = None,
+):
+    """A hand-drawn strip: two or three panels, each with a drawing and a number.
+
+    `sketch_card` draws one diagram of a mechanism. This draws a *sequence* — the
+    comic-strip form, where the point is that panel two follows panel one and
+    undercuts it. Use it when the finding has a setup and a punchline, which is more
+    often than it sounds: "the rumour moved it, the announcement did nothing" and
+    "the forecast held, then the regime changed" are both two-panel jokes with a
+    number under each frame.
+
+    `panels` is `[(draw, value, label), ...]`, where `draw(panel, m)` receives a bare
+    axes with no ticks or spines and the mode. Each panel gets a light frame, because
+    a strip without frames reads as one confused picture rather than a sequence.
+
+    Same constraints as the other drawn card: no axes, no values inside the drawings,
+    nothing a reader could mistake for a measurement. The numbers under the frames
+    are the measurement; the frames are the story.
+    """
+    import textwrap
+
+    panels = list(panels)
+    if not 2 <= len(panels) <= 3:
+        raise ValueError("a strip takes two or three panels")
+    m = theme.LIGHT if mode == "light" else theme.DARK
+
+    with plt.xkcd(scale=0.9, length=110, randomness=2):
+        plt.rcParams["font.family"] = theme.sketch_family()
+        fig = plt.figure(figsize=CARD_SIZE, dpi=CARD_DPI)
+        fig.patch.set_facecolor(m.surface)
+        ax = fig.add_axes([0, 0, 1, 1])
+        ax.set_axis_off()
+        ax.set_xlim(0, 1)
+        ax.set_ylim(0, 1)
+
+        size = 19.0
+        txt = ax.text(0.055, 0.95, headline, ha="left", va="top", fontsize=size,
+                      color=m.ink)
+        fig.canvas.draw()
+        while size > 12.0:
+            w = txt.get_window_extent(fig.canvas.get_renderer()).width
+            if w <= 0.86 * fig.get_size_inches()[0] * CARD_DPI:
+                break
+            size -= 0.6
+            txt.set_fontsize(size)
+            fig.canvas.draw()
+        if footer:
+            ax.text(0.945, 0.975, footer, ha="right", va="top", fontsize=12,
+                    color=m.muted)
+
+        n = len(panels)
+        left, right, gap = 0.055, 0.945, 0.035
+        width = ((right - left) - gap * (n - 1)) / n
+        bottom, height = 0.40, 0.36
+        for i, (draw, value, label) in enumerate(panels):
+            x0 = left + i * (width + gap)
+            panel = fig.add_axes([x0, bottom, width, height])
+            panel.set_xticks([])
+            panel.set_yticks([])
+            panel.patch.set_facecolor(m.page)
+            for spine in panel.spines.values():
+                spine.set_visible(True)
+                spine.set_color(m.grid)
+                spine.set_linewidth(1.4)
+            draw(panel, m)
+            ax.text(x0 + width / 2, bottom - 0.06, str(value), ha="center",
+                    va="top", fontsize=34, color=m.ink,
+                    transform=ax.transAxes)
+            ax.text(x0 + width / 2, bottom - 0.20, textwrap.fill(str(label), 24),
+                    ha="center", va="top", fontsize=11.5, color=m.ink_secondary,
+                    linespacing=1.3, transform=ax.transAxes)
+
+        if note:
+            ax.text(0.055, 0.115, textwrap.fill(note, 92), ha="left", va="top",
+                    fontsize=12, color=m.ink_secondary, linespacing=1.35)
+
+        if path:
+            theme.save(fig, path, mode=mode, close=False)
+            out = Figure(path, alt or headline, caption, headline, mode)
+            plt.close(fig)
+            return out, (fig, ax)
+        return fig, ax
+
+
 def social_card(
     *,
     headline: str,

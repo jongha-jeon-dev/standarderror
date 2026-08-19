@@ -360,20 +360,61 @@ def figures(res: dict) -> dict:
         path=str(IMG / f"a4-t1-tags.{EXT}"))
     figs["table"] = fig_meta
 
-    # HERO — the paper's headline finding is two levels on one path.
-    fig_meta, _ = charts.comparison_card(
+    # HERO — a two-panel strip, because the finding *is* a setup and a punchline:
+    # the whisper moves the price, the announcement does not. Panels carry no axes
+    # and no values, so nothing in them can be read as a measurement.
+    def whisper(panel, m):
+        # A small speech bubble, and a price line that steps up under it.
+        from matplotlib.patches import FancyBboxPatch, Polygon
+        panel.set_xlim(0, 10)
+        panel.set_ylim(0, 6)
+        panel.add_patch(FancyBboxPatch((0.7, 3.5), 5.0, 1.7,
+                                       boxstyle="round,pad=0.18,rounding_size=0.5",
+                                       fc=m.surface, ec=m.ink, lw=2.0))
+        panel.add_patch(Polygon([[2.0, 3.5], [2.5, 2.5], [3.1, 3.5]],
+                                closed=True, fc=m.surface, ec=m.ink, lw=2.0))
+        panel.text(3.2, 4.35, "psst... they\nmight buy it", ha="center",
+                   va="center", fontsize=12.5, color=m.ink, linespacing=1.2)
+        x = np.linspace(6.2, 9.5, 60)
+        y = 1.2 + 2.6 / (1.0 + np.exp(-(x - 7.6) * 2.2))
+        panel.plot(x, y, color=m.series[0], lw=3.0, solid_capstyle="round")
+        panel.plot([0.7, 5.9], [1.2, 1.2], color=m.muted, lw=1.6,
+                   ls=(0, (4, 3)))
+
+    def announcement(panel, m):
+        # A front page shouting the same news, and a price line that does nothing.
+        from matplotlib.patches import Rectangle
+        panel.set_xlim(0, 10)
+        panel.set_ylim(0, 6)
+        panel.add_patch(Rectangle((0.7, 2.3), 5.0, 3.0, fc=m.surface, ec=m.ink,
+                                  lw=2.2))
+        panel.add_patch(Rectangle((1.05, 4.35), 4.3, 0.72, fc=m.ink, ec="none"))
+        # path_effects=[] because xkcd mode puts a white stroke around every text
+        # object, which turns white-on-black lettering into mush.
+        panel.text(3.2, 4.71, "IT IS OFFICIAL", ha="center", va="center",
+                   fontsize=12.5, color=m.surface, path_effects=[])
+        for k, w in enumerate((4.3, 3.9, 4.1, 3.4)):
+            panel.plot([1.05, 1.05 + w], [3.95 - k * 0.42] * 2, color=m.muted,
+                       lw=1.8, solid_capstyle="round")
+        x = np.linspace(6.2, 9.5, 60)
+        panel.plot(x, np.full_like(x, 3.8), color=m.series[1], lw=3.0,
+                   solid_capstyle="round")
+
+    fig_meta, _ = charts.strip_card(
         headline="Where is the price move when news is published?",
-        items=[(f"+{CAR_AT_PUBLICATION:.2f}%", "by the closing bell on the day"),
-               (f"+{CAR_AT_20:.2f}%", "twenty days later")],
-        emphasis=1,
-        note=(f"Pooled across 1.68 million stock-day news events. Two thirds of "
-              f"the news-aligned move is handed back after publication — and for "
-              f"rumours, the confirmation day is worth "
-              f"{RUMOUR['the confirmation day']:+.2f}%."),
+        panels=[(whisper, f"{RUMOUR['the rumour day']:+.2f}%", "the rumour day"),
+                (announcement, f"{RUMOUR['the confirmation day']:+.2f}%",
+                 "the day it is confirmed")],
+        note=(f"Abnormal return in the news direction, across "
+              f"{N_EVENTS / 1e6:.2f} million stock-day events. Pooled over every "
+              f"signed event, {res['given_back_pct']:.0f}% of the move is handed "
+              f"back after publication."),
         footer="quantpost", mode="light",
-        alt=(f"Card comparing a cumulative abnormal return of "
-             f"+{CAR_AT_PUBLICATION:.2f}% by the close of publication day against "
-             f"+{CAR_AT_20:.2f}% twenty days later."),
+        alt=("A two-panel hand-drawn strip. In the first a small speech bubble "
+             "whispers that someone might buy it, and a price line steps up: "
+             f"{RUMOUR['the rumour day']:+.2f}%. In the second a newspaper front "
+             "page announces it officially and the price line is flat: "
+             f"{RUMOUR['the confirmation day']:+.2f}%."),
         caption="",
         path=str(IMG / f"a4-hero.{EXT}"))
     figs["hero"] = fig_meta

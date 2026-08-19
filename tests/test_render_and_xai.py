@@ -173,6 +173,67 @@ class TestPostAudit:
         assert not any("no markdown table" in p for p in post.audit())
 
 
+class TestStripCard:
+    """The webtoon-style strip. Cosmetic, so the tests guard the failure modes."""
+
+    @staticmethod
+    def _panel(panel, m):
+        panel.set_xlim(0, 10)
+        panel.set_ylim(0, 6)
+        panel.plot([1, 9], [2, 5], color=m.series[0], lw=3.0)
+
+    def test_renders_two_panels(self, tmp_path):
+        out = tmp_path / "strip.png"
+        meta, _ = charts.strip_card(
+            headline="Setup, then punchline",
+            panels=[(self._panel, "+0.36%", "the rumour day"),
+                    (self._panel, "+0.01%", "the day it is confirmed")],
+            note="n", footer="q", alt="a strip", path=str(out))
+        assert out.exists() and out.stat().st_size > 5000
+        assert meta.alt == "a strip"
+
+    def test_renders_three_panels(self, tmp_path):
+        out = tmp_path / "strip3.png"
+        charts.strip_card(headline="x",
+                          panels=[(self._panel, str(i), f"panel {i}")
+                                  for i in range(3)],
+                          path=str(out))
+        assert out.exists()
+
+    @pytest.mark.parametrize("n", [1, 4])
+    def test_rejects_one_or_four_panels(self, tmp_path, n):
+        with pytest.raises(ValueError, match="two or three panels"):
+            charts.strip_card(headline="x",
+                              panels=[(self._panel, "1", "a")] * n,
+                              path=str(tmp_path / "bad.png"))
+
+    def test_does_not_leak_the_hand_drawn_style(self, tmp_path):
+        """xkcd mode is global; a leak makes every later chart wobbly."""
+        import matplotlib.pyplot as plt
+        before_family = list(plt.rcParams["font.family"])
+        before_sketch = plt.rcParams["path.sketch"]
+        charts.strip_card(headline="x",
+                          panels=[(self._panel, "1", "a"),
+                                  (self._panel, "2", "b")],
+                          path=str(tmp_path / "s.png"))
+        assert list(plt.rcParams["font.family"]) == before_family
+        assert plt.rcParams["path.sketch"] == before_sketch
+
+    def test_panels_have_no_ticks(self, tmp_path):
+        """The drawing must not be mistakable for a measurement."""
+        seen = {}
+
+        def check(panel, m):
+            self._panel(panel, m)
+            seen["x"] = list(panel.get_xticks())
+            seen["y"] = list(panel.get_yticks())
+
+        charts.strip_card(headline="x",
+                          panels=[(check, "1", "a"), (self._panel, "2", "b")],
+                          path=str(tmp_path / "s2.png"))
+        assert seen["x"] == [] and seen["y"] == []
+
+
 class TestRankedBarsSort:
     """The `sort` option, added because two charts described an order they lacked.
 
