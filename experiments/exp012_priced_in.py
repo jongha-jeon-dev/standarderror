@@ -553,7 +553,8 @@ One basis point on the day the news is confirmed. Buy the rumour, sell the news.
 The pooled number hides the good part. Split by event type and the sign of the
 post-publication drift splits with it.
 
-Over days +6 to +20, placebo-adjusted:
+Over days +6 to +20, placebo-adjusted. The first three columns are the paper's; the
+last two are mine and are explained two sections down — ignore them for now.
 
 | {" | ".join(TABLE_HEADER)} |
 |---|---|---|---|---|
