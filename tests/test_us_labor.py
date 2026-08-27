@@ -118,11 +118,61 @@ class TestParsingTheDownload:
 
     def test_the_documented_survey_figures_are_internally_consistent(self):
         c = ul.CPS_2026
-        # The whole argument rests on these being the paper's numbers, so a typo
-        # that reverses a direction should fail here rather than in the prose.
+        # The whole argument rests on these being BLS's numbers, so a typo that
+        # reverses a direction should fail here rather than in the prose.
         assert c["people_per_respondent_now"] > c["people_per_respondent_then"]
         assert max(c["response_rate_now"]) < min(c["response_rate_then"])
-        assert c["ci90_change_now"] > c["detectable_change_then"]
+        assert c["months_needed_now"] > 1
+
+    def test_every_figure_carries_the_sentence_it_came_from(self):
+        # The reason this file stores quotes at all: a number without its wording
+        # lost its conditions, and the conditions were where the error was.
+        for key in ("households_eligible", "response_rate", "people_per_respondent",
+                    "responses", "detectable_change", "parallel_survey",
+                    "ci90_change"):
+            quote = ul.CPS_2026[f"{key}_quote"]
+            assert isinstance(quote, str) and len(quote) > 40
+
+    def test_the_conditional_rate_is_stored_with_the_interval(self):
+        # +/-0.3 is stated at a 6.0 percent unemployment rate. Losing that is
+        # what made two consistent documents look like a 1.67x degradation.
+        assert ul.CPS_2026["ci90_change_stated_at_rate"] == 6.0
+        assert "6.0 percent" in ul.CPS_2026["ci90_change_quote"]
+
+    def test_the_naive_ratio_is_not_the_degradation(self):
+        c = ul.CPS_2026
+        naive = c["ci90_change"] / c["detectable_change_then"]
+        assert naive == pytest.approx(1.667, abs=0.01)      # the wrong number
+        corrected = ul.cps_detectable_now(rate=4.2)["degradation"]
+        assert corrected == pytest.approx(1.41, abs=0.03)   # the right one
+        assert corrected < naive
+
+    def test_the_two_documents_agree_once_made_comparable(self):
+        # This agreement is the evidence that the reading is right: two
+        # independent routes to the current threshold land within a percent.
+        d = ul.cps_detectable_now(rate=4.2)
+        assert d["from_technical_note"] == pytest.approx(d["from_report"],
+                                                        rel=0.02)
+        assert 0.24 < d["mean"] < 0.27
+
+    def test_the_rate_must_be_supplied(self):
+        with pytest.raises(ValueError):
+            ul.cps_detectable_now()
+
+    def test_the_rescaling_moves_the_figure_the_right_way(self):
+        # Lower unemployment rate -> smaller sampling error for a proportion.
+        from standarderror.ts.noisescale import rescale_for_rate
+        assert rescale_for_rate(0.30, stated_at=6.0, actual=4.2) < 0.30
+        assert rescale_for_rate(0.30, stated_at=6.0, actual=8.0) > 0.30
+        assert rescale_for_rate(0.30, stated_at=6.0, actual=6.0) == pytest.approx(0.30)
+        for bad in (0.0, 100.0, -1.0):
+            with pytest.raises(ValueError):
+                rescale_for_rate(0.30, stated_at=6.0, actual=bad)
+
+    def test_the_outside_estimate_is_stored_as_a_check_not_a_source(self):
+        s = ul.STLOUISFED_2026
+        assert s["threshold_end"] > s["threshold_start"]
+        assert "St. Louis" in s["source"]
 
 
 class TestNoiseScale:
@@ -220,17 +270,43 @@ class TestNoiseScale:
         panel = ns.detectable_change(0.13, overlap=ul.CPS_2026["monthly_overlap"])
         assert panel == pytest.approx(indep / 2.0, rel=1e-9)
 
-    def test_the_published_claim_and_the_panel_overlap_agree(self):
-        # BLS says a 0.18 pp monthly change used to be detectable. At 90%
-        # confidence with three-quarters overlap that implies a level noise of
-        # about 0.155 pp, which is the number the post has to reproduce from the
-        # series itself. If this arithmetic ever stops closing, the post's
-        # cross-check is measuring something else.
-        sigma = 0.155
-        got = ns.detectable_change(sigma, alpha=0.10,
+    def test_the_household_overlap_reading_of_the_published_claim(self):
+        # Arithmetic check on `detectable_change`, not a physical claim: read the
+        # 0.75 household overlap as if it were the error correlation and a 0.18 pp
+        # detectable change implies a level noise near 0.155 pp. The reading is
+        # optimistic — the error correlation is lower than the household overlap
+        # (see CPS_ERROR_CORRELATION) — so this is a bound, and it is labelled as
+        # one rather than used as the estimate.
+        got = ns.detectable_change(0.155, alpha=0.10,
                                    overlap=ul.CPS_2026["monthly_overlap"])
         assert got == pytest.approx(ul.CPS_2026["detectable_change_then"],
                                     abs=0.015)
+
+    def test_the_overlap_and_the_error_correlation_are_not_the_same_number(self):
+        lo, hi = ns.CPS_ERROR_CORRELATION
+        assert 0.0 < lo < hi < ul.CPS_2026["monthly_overlap"]
+
+    def test_implied_detectable_barely_moves_with_rho(self):
+        # The point of stating the result this way: rho enters twice, in opposite
+        # directions, so not knowing it costs a few percent rather than a factor.
+        vals = [ns.implied_detectable(0.0825, rho=r)
+                for r in (0.0, 0.2, 0.35, 0.5, 0.6, 0.75)]
+        assert all(b > a for a, b in zip(vals, vals[1:]))   # monotone, mildly
+        assert max(vals) / min(vals) < 1.20
+
+    def test_implied_detectable_recovers_a_planted_sigma(self):
+        rng = np.random.default_rng(3)
+        n = 900
+        sigma = 0.12
+        x = np.linspace(6.0, 4.0, n) + rng.normal(0, sigma, n)
+        # With iid noise the rho=0 reading is the correct one.
+        expected = ns.detectable_change(sigma, alpha=0.10, overlap=0.0)
+        got = ns.implied_detectable(ns.second_difference_scale(x), rho=0.0)
+        assert got == pytest.approx(expected, rel=0.12)
+
+    def test_implied_detectable_rejects_a_degenerate_rho(self):
+        with pytest.raises(ValueError):
+            ns.implied_detectable(0.1, rho=0.999)
 
     def test_an_impossible_overlap_raises(self):
         with pytest.raises(ValueError):

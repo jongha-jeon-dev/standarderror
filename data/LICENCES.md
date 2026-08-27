@@ -87,3 +87,4 @@ the same bytes:
 | `data/worldbank/API_SP.DYN.TFRT.IN_DS2_EN_csv_v2_33381.zip` | 73,845 | `0eb0d9430eec710154f7193f9dd765fc174169c58b50cc397d955e23ca3857f9` |
 | `data/worldbank/API_SP.URB.TOTL.IN.ZS_DS2_en_csv_v2_33901.zip` | 159,234 | `b518ecc9b8eb37437183acc2316d9e55a45146c411a39b2741cfdd046e8043e2` |
 | `data/us_labor/LNS14000000.xlsx` | 10,531 | `a2b17fead3cbe080d8b3e8129aaff61e1a3119e3dccccbbe9a63bef58a992047` |
+| `data/us_labor/LNU04000000.xlsx` | 10,818 | `3d83a4d319c86a3e1bf1ec473dfe4e635a24bb410df0e8b65e36f51755df7e12` |

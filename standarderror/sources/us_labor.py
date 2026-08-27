@@ -73,26 +73,130 @@ MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
 #: so retroactively, so this month is permanently absent from the series.
 MISSING_MONTHS = {"2025-10": "not collected; lapse in appropriations"}
 
-#: Figures BLS states about the survey itself, from its April 2026 report to the
-#: Appropriations Committees on modernising the CPS, and from the Employment
-#: Situation technical note. Kept as data so the post cannot drift from them.
+#: Figures BLS states about the survey itself, kept as data with the sentence
+#: each one came from, because an earlier version of this file stored the numbers
+#: without their wording and that produced a wrong result.
+#:
+#: The mistake is worth recording. `detectable_change_then` (0.18) and the
+#: technical note's confidence interval (0.30) were stored side by side and their
+#: ratio, 1.67, was read as how much the survey had degraded. Both halves are
+#: wrong. The 0.30 is stated *at an unemployment rate of around 6.0 percent* and
+#: has to be rescaled by sqrt(p(1-p)) to the rate actually prevailing; and the
+#: report never gives a current one-month threshold at all — it says a 0.18 point
+#: change now needs *two months* of data, which implies about 0.18*sqrt(2).
+#: Corrected, the two documents agree: 0.253 and 0.255. There is no 1.67.
+#:
+#: So every figure below carries `quote`, and anything derived from two of them
+#: has to state what makes them comparable.
+CPS_REPORT_2026 = (
+    "Bureau of Labor Statistics Report to the Appropriations Committees on "
+    "Modernizing the Current Population Survey, April 2026"
+)
+CPS_TECHNICAL_NOTE = "BLS Employment Situation, Technical Note"
+
 CPS_2026 = {
-    "households_eligible": 60_000,          # unchanged since 1981
-    "population_growth_since_1981": 0.61,
-    "response_rate_then": (0.90, 0.93),     # "low 90 percent range", ~15y ago
-    "response_rate_now": (0.66, 0.69),      # "upper 60 percent range"
+    # --- from the April 2026 report to the Appropriations Committees ----------
+    "households_eligible": 60_000,
+    "households_eligible_quote": (
+        "The CPS sample size in 2026, which consists of 60,000 eligible "
+        "households, is the same as it was in 1981"),
+    "response_rate_then": (0.90, 0.93),
+    "response_rate_now": (0.66, 0.69),
+    "response_rate_quote": (
+        "Response rates have historically been very high but have declined from "
+        "the low 90 percent range to the upper 60 percent range over the last 15 "
+        "years"),
     "people_per_respondent_then": 2_100,
     "people_per_respondent_now": 3_500,
-    "responses_for_one_tenth_point": 50,    # "fewer than 50 survey responses"
-    "detectable_change_then": 0.18,         # pp, one month, 20 years ago
-    "ci90_change_now": 0.30,                # pp, Employment Situation tech note
+    "people_per_respondent_quote": (
+        "In just the last 20 years, a single respondent has gone from "
+        "representing about 2,100 people to about 3,500 people."),
+    "responses_for_one_tenth_point": 50,
+    "responses_quote": (
+        "At current sample sizes, a net change of fewer than 50 survey responses "
+        "could move the headline unemployment rate by 0.1 percentage point."),
+    #: The one figure the whole exercise turns on. Note what it does *not* say:
+    #: there is no current one-month threshold here, only that the same change
+    #: now takes two months.
+    "detectable_change_then": 0.18,
+    "detectable_change_then_years_ago": 20,
+    "months_needed_now": 2,
+    "detectable_change_quote": (
+        "For example, 20 years ago the CPS could detect that an over-the-month "
+        "change in the unemployment rate as small as 0.18 percentage point was "
+        "statistically significant, while now it would take two months of data "
+        "before one could determine that this same change is statistically "
+        "significant."),
     "parallel_survey_households": 45_000,
     "parallel_survey_eligible": 40_000,
     "parallel_survey_months": 18,
     "parallel_survey_cost_usd": 60_000_000,
-    "parallel_survey_detectable": 0.25,     # pp, over two months
-    "monthly_overlap": 0.75,                # share of the sample carried over
+    "parallel_survey_detectable": 0.25,
+    "parallel_survey_quote": (
+        "At this sample size, the CPS will be able to detect differences in the "
+        "unemployment rate between the parallel survey and the official CPS of "
+        "0.25 percentage point over 2 months of data."),
+
+    # --- from the Employment Situation technical note -------------------------
+    "ci90_change": 0.30,
+    #: The condition, which is the part that gets dropped when this number is
+    #: quoted. Without it the figure is not comparable to anything.
+    "ci90_change_stated_at_rate": 6.0,
+    "ci90_change_quote": (
+        "At an unemployment rate of around 6.0 percent, the 90-percent "
+        "confidence interval for the monthly change in the unemployment rate is "
+        "about +/- 0.3 percentage point."),
+
+    # --- survey design -------------------------------------------------------
+    "monthly_overlap": 0.75,
 }
+
+#: A third published estimate of the same quantity, from outside BLS, useful as a
+#: check on the series-implied value rather than as a source for it.
+STLOUISFED_2026 = {
+    "source": ("Federal Reserve Bank of St. Louis, On the Economy, March 2026, "
+               "'Understanding Statistical Significance in Monthly "
+               "Unemployment Data'"),
+    "threshold_start": 0.18,
+    "threshold_end": 0.21,
+    "window": ("2022-02", "2025-06"),
+    "response_rate_fall_pp": 6.3,
+    "quote": ("the significance threshold rose from 0.18 percentage points to "
+              "0.21 percentage points"),
+}
+
+
+def cps_detectable_now(rate: float | None = None) -> dict:
+    """The current one-month detectable change, from both documents, comparably.
+
+    Returns both routes and their agreement, because the agreement is the
+    evidence that the reading is right:
+
+    * the technical note's interval, rescaled from the 6.0 percent it is stated
+      at to `rate`;
+    * the report's "two months for a 0.18 point change", converted to one month.
+
+    `rate` defaults to nothing and must be supplied by the caller from the data,
+    so that the prevailing unemployment rate used for the rescaling is the one in
+    the window being discussed rather than a number chosen here.
+    """
+    from ..ts.noisescale import rescale_for_rate
+
+    if rate is None:
+        raise ValueError(
+            "supply the prevailing unemployment rate for the window; the "
+            "technical note's figure is conditional on it")
+    note = rescale_for_rate(CPS_2026["ci90_change"],
+                            stated_at=CPS_2026["ci90_change_stated_at_rate"],
+                            actual=float(rate))
+    report = CPS_2026["detectable_change_then"] * float(
+        CPS_2026["months_needed_now"]) ** 0.5
+    return {"rate": float(rate), "from_technical_note": float(note),
+            "from_report": float(report),
+            "ratio": float(report / note),
+            "mean": float(0.5 * (note + report)),
+            "degradation": float(0.5 * (note + report)
+                                 / CPS_2026["detectable_change_then"])}
 
 
 def _load_excel(path: Path) -> pd.DataFrame:

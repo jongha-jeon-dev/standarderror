@@ -332,3 +332,66 @@ def detectable_change(sigma: float, *, alpha: float = 0.05,
 #: because the number changes a month-on-month standard error by a factor of two
 #: and is easy to leave out.
 CPS_MONTHLY_OVERLAP = 0.75
+
+
+#: The household overlap and the *error* correlation are different numbers and
+#: get confused constantly. Three quarters of CPS households carry over from one
+#: month to the next, but the sampling errors of the two monthly rates are less
+#: correlated than that: households change labour-force state, rotation groups
+#: enter and leave, and the composite estimator mixes months. Published
+#: variance work on the CPS puts the lag-1 error correlation for the
+#: unemployment rate in the neighbourhood of 0.3 to 0.4 rather than at 0.75, so
+#: anything that depends on it should be reported across a range.
+CPS_ERROR_CORRELATION = (0.30, 0.40)
+
+
+def implied_detectable(sigma_second_diff: float, *, rho: float = 0.35,
+                       alpha: float = 0.10) -> float:
+    """Detectable one-month change implied by a series' own second differences.
+
+    This is the bridge between what a published series *does* and what an agency
+    *says* about its own precision, and it exists so the two can be put in the
+    same units.
+
+    `rho` is the lag-1 autocorrelation of the noise and enters twice, in opposite
+    directions. A positive rho means the second difference understates the level
+    noise, so `sigma` goes *up* — and it also means a month-on-month difference
+    of two positively correlated estimates is less noisy, so the detectable
+    change comes *down*. The two effects very nearly cancel, which is the reason
+    a result stated this way survives not knowing rho: sweep it from 0 to 0.75
+    and the answer moves by a few percent.
+
+    `alpha` is 0.10 because agencies quote 90 percent intervals.
+    """
+    #: 6 - 8r + 2r^2 = 2(1-r)(3-r) stays positive for every valid correlation,
+    #: so there is no degenerate value to catch — but it goes to zero as r goes
+    #: to one, and the amplification sqrt(6/factor) is 5.4x already at r = 0.95.
+    #: Past that the second difference carries almost nothing about the level
+    #: noise and the answer is mostly the assumed r, so the domain stops here
+    #: rather than returning a number the input cannot support.
+    if not -1.0 < float(rho) < 0.95:
+        raise ValueError(
+            f"rho must lie in (-1, 0.95), got {rho}; at higher autocorrelation "
+            f"the second difference does not identify the level noise")
+    factor = ar1_factor(float(rho))
+    sigma = float(sigma_second_diff) * np.sqrt(SECOND_DIFF_FACTOR / factor)
+    return detectable_change(sigma, alpha=float(alpha), overlap=float(rho))
+
+
+def rescale_for_rate(value: float, *, stated_at: float, actual: float) -> float:
+    """Rescale a precision figure quoted at one rate to another rate.
+
+    The sampling standard error of a proportion goes as sqrt(p(1-p)), so a
+    confidence interval published "at an unemployment rate of around 6.0
+    percent" is not the interval that applies at 4.2 percent. The correction is
+    small — about 16 percent between those two rates — and it is the difference
+    between an agency's two figures agreeing and appearing to contradict each
+    other.
+
+    Rates are given in percent, as they are published.
+    """
+    for name, p in (("stated_at", stated_at), ("actual", actual)):
+        if not 0.0 < float(p) < 100.0:
+            raise ValueError(f"{name} must be a percentage in (0, 100), got {p}")
+    a, b = float(actual) / 100.0, float(stated_at) / 100.0
+    return float(value) * np.sqrt(a * (1.0 - a)) / np.sqrt(b * (1.0 - b))
