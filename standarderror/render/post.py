@@ -46,7 +46,13 @@ class Section:
     level: int = 2
 
     def markdown(self, image_base: str = "") -> str:
-        parts = [f"{'#' * self.level} {self.heading}", "", self.body.strip(), ""]
+        # An empty heading is a continuation of the section above it — a code
+        # block and its discussion, say. Emitting "###" with nothing after it
+        # produces a bare hash in Hugo and an empty heading block in Notion,
+        # so the line is dropped rather than rendered blank.
+        parts = ([f"{'#' * self.level} {self.heading}", ""] if self.heading.strip()
+                 else [])
+        parts += [self.body.strip(), ""]
         for f in self.figures:
             parts += [f.markdown(image_base), ""]
         return "\n".join(parts)

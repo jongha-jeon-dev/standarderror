@@ -895,3 +895,25 @@ class TestAiDisclosure:
         long_label = "AI " + "word " * 60
         assert (self._post(disclosure=long_label).word_count()
                 == self._post(disclosure="AI assisted.").word_count())
+
+
+class TestContinuationSections:
+    """A section with no heading is a continuation, not an empty heading."""
+
+    def test_empty_heading_emits_no_heading_line(self):
+        from standarderror.render.post import Section
+
+        md = Section("", "body text", level=3).markdown()
+        assert "###" not in md
+        assert md.strip() == "body text"
+
+    def test_heading_is_still_emitted_when_present(self):
+        from standarderror.render.post import Section
+
+        md = Section("Real heading", "body text", level=3).markdown()
+        assert md.startswith("### Real heading")
+
+    def test_whitespace_only_heading_counts_as_empty(self):
+        from standarderror.render.post import Section
+
+        assert "#" not in Section("   ", "body").markdown()
