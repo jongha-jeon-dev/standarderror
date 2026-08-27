@@ -72,6 +72,7 @@ can see exactly how much the specification choice is worth.
 
 from __future__ import annotations
 
+from datetime import date
 import hashlib
 import json
 import os
@@ -88,6 +89,12 @@ from standarderror.sources import korea_files as kf
 from standarderror.ts import bend as bd
 from standarderror.ts import detect as dt
 from standarderror.viz import charts, theme
+
+#: Pinned so a rebuild cannot silently re-date a published post. This one
+#: had no record to pin from -- its Hugo page was never committed and the
+#: manifests had already drifted -- so the date comes from the creation
+#: date of the post's Notion page, the only surviving evidence.
+POST_DATE = date(2026, 8, 25)
 
 IMG = se.SETTINGS.build_dir / "img"
 EXT = os.environ.get("SERR_FIG_EXT", "png")
@@ -1256,6 +1263,7 @@ search over pairs of dates costs more than most people expect.
     ]
 
     post = Post(
+        date=POST_DATE,
         title=("A Step Fitted to a Bend Lands Forty Months Off, and More Data "
                "Does Not Help"),
         slug="step-fitted-to-a-bend",

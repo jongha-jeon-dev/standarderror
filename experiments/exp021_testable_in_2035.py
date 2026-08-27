@@ -71,6 +71,7 @@ comparable across years rather than against a figure built from generation.
 
 from __future__ import annotations
 
+from datetime import date
 import hashlib
 import json
 import os
@@ -85,6 +86,12 @@ from standarderror.sources import korea_power as kp
 from standarderror.ts import bend as bd
 from standarderror.ts import detect as dt
 from standarderror.viz import charts, theme
+
+#: Pinned so a rebuild cannot silently re-date a published post. This one
+#: had no record to pin from -- its Hugo page was never committed and the
+#: manifests had already drifted -- so the date comes from the creation
+#: date of the post's Notion page, the only surviving evidence.
+POST_DATE = date(2026, 8, 25)
 
 IMG = se.SETTINGS.build_dir / "img"
 EXT = os.environ.get("SERR_FIG_EXT", "png")
@@ -1289,6 +1296,7 @@ pairs of dates costs more than most people expect.
     ]
 
     post = Post(
+        date=POST_DATE,
         # Spelled out: a bare numeral reads as a version number in a title, and
         # "5 Years Early" next to two four-digit years is three numbers in a row.
         title=(f"Korea's {TARGET_YEAR} Power Forecast Becomes Checkable in "

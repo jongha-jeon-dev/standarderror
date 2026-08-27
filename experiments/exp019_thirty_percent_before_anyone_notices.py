@@ -56,6 +56,7 @@ them. That chain is reported in full rather than stopped at the flattering step.
 
 from __future__ import annotations
 
+from datetime import date
 import hashlib
 import json
 import os
@@ -71,6 +72,12 @@ from standarderror.render.post import Post, Section
 from standarderror.sources import korea_files as kf
 from standarderror.ts import detect as dt
 from standarderror.viz import charts, theme
+
+#: Pinned so a rebuild cannot silently re-date a published post. This one
+#: had no record to pin from -- its Hugo page was never committed and the
+#: manifests had already drifted -- so the date comes from the creation
+#: date of the post's Notion page, the only surviving evidence.
+POST_DATE = date(2026, 8, 25)
 
 IMG = se.SETTINGS.build_dir / "img"
 EXT = os.environ.get("SERR_FIG_EXT", "png")
@@ -1016,6 +1023,7 @@ what it costs to look for one when you do not know where it starts.
     ]
 
     post = Post(
+        date=POST_DATE,
         title="Korea's Chip Exports Would Have to Fall 35% Before Anyone Could Prove It",
         slug="korea-chip-exports-thirty-five-percent",
         subtitle=("Twenty-six years of monthly data, worth twenty-eight "

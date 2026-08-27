@@ -924,15 +924,18 @@ class TestPublishedPostsPinTheirDate:
 
     Rebuilding a post that is already on the site therefore re-dates it, which
     reorders the index and misstates when the work was done. Caught the first
-    time a rebuild moved a post from 19 to 27 August. The invariant is narrow on
-    purpose: a post that has never been published has no date to preserve, so
-    only posts with a Hugo page are required to pin one.
+    time a rebuild moved a post from 19 to 27 August, and again when four posts
+    turned out to have been published to Notion with no Hugo page, leaving no
+    record of their dates anywhere in the repository.
     """
 
     @staticmethod
     def _experiments():
+        # Every experiment module, not only the exp* ones: the lecture episodes
+        # are posts with dates too, and an exp*-only glob would exempt them.
         from pathlib import Path
-        return sorted(Path("experiments").glob("exp*.py"))
+        return sorted(p for p in Path("experiments").glob("*.py")
+                      if not p.name.startswith("_"))
 
     @staticmethod
     def _slug(text):
@@ -940,20 +943,67 @@ class TestPublishedPostsPinTheirDate:
         m = re.search(r'^\s*slug="([^"]+)",\s*$', text, flags=re.M)
         return m.group(1) if m else None
 
-    def test_every_post_with_a_page_pins_its_date(self):
-        from pathlib import Path
+    def test_every_experiment_pins_its_date(self):
+        """Not just the ones with a Hugo page.
 
-        missing = []
-        for path in self._experiments():
-            text = path.read_text()
-            slug = self._slug(text)
-            if slug is None:
-                continue
-            page = Path("site/content/posts") / slug / "index.md"
-            if page.exists() and "date=POST_DATE" not in text:
-                missing.append(path.name)
+        The first version of this test only required a pinned date where
+        `site/content/posts/<slug>/index.md` existed, on the reasoning that an
+        unpublished post has no date to preserve. Four posts then went to Notion
+        without a Hugo page ever being committed, so they were published, they
+        were exempt from this check, and their publication dates survived
+        nowhere in the repository at all -- they had to be recovered from the
+        creation timestamps of their Notion pages. Pinning a date costs a draft
+        nothing; not pinning one costs a published post its date. So the rule is
+        now every experiment, and the narrow version is the bug it caught.
+        """
+        missing = [p.name for p in self._experiments()
+                   if "date=POST_DATE" not in p.read_text()]
         assert not missing, (
-            f"published posts that would be re-dated by a rebuild: {missing}")
+            f"experiments whose post date is whatever day it is rebuilt: "
+            f"{missing}")
+
+    def test_no_experiment_relies_on_an_unrecognised_escape(self):
+        """`\\;` in a non-raw f-string is a DeprecationWarning today.
+
+        Python currently leaves the backslash of an unrecognised escape in
+        place, so LaTeX written as `\\;` inside an ordinary f-string renders
+        correctly -- until the version where it becomes a SyntaxError. One of
+        these was already a hard error once (`\\underbrace`), which is the
+        reason not to leave the rest sitting there. Doubling the backslash
+        produces the identical string and stops depending on the behaviour.
+        """
+        import ast
+        import warnings
+
+        offenders = {}
+        for path in self._experiments():
+            with warnings.catch_warnings(record=True) as caught:
+                warnings.simplefilter("always")
+                ast.parse(path.read_text())
+                if caught:
+                    offenders[path.name] = sorted(
+                        {str(w.message) for w in caught})
+        assert not offenders, offenders
+
+    def test_the_pin_is_a_module_level_constant(self):
+        """An earlier repair inserted POST_DATE inside prose strings.
+
+        The insertion anchor matched a line beginning `import` or `from` -- and
+        matched it inside the body text of thirteen posts, burying the
+        assignment mid-paragraph where it parsed fine and did nothing. Reading
+        it back with `ast` is the check that the constant is where it looks.
+        """
+        import ast
+
+        bad = []
+        for path in self._experiments():
+            tree = ast.parse(path.read_text())
+            if not any(isinstance(n, ast.Assign)
+                       and any(getattr(t, "id", "") == "POST_DATE"
+                               for t in n.targets)
+                       for n in tree.body):
+                bad.append(path.name)
+        assert not bad, f"POST_DATE is not a module-level assignment in: {bad}"
 
     def test_the_pinned_date_matches_the_page(self):
         import re

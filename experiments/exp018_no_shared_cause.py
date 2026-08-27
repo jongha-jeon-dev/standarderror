@@ -55,6 +55,7 @@ striking pair and presenting it as a discovery.
 
 from __future__ import annotations
 
+from datetime import date
 import hashlib
 import json
 import os
@@ -66,6 +67,12 @@ import standarderror as se
 from standarderror.render.post import Post, Section
 from standarderror.ts import nonstationary as ns
 from standarderror.viz import charts, theme
+
+#: Pinned so a rebuild cannot silently re-date a published post. This one
+#: had no record to pin from -- its Hugo page was never committed and the
+#: manifests had already drifted -- so the date comes from the creation
+#: date of the post's Notion page, the only surviving evidence.
+POST_DATE = date(2026, 8, 25)
 
 IMG = se.SETTINGS.build_dir / "img"
 EXT = os.environ.get("SERR_FIG_EXT", "png")
@@ -1048,6 +1055,7 @@ came for.
     ]
 
     post = Post(
+        date=POST_DATE,
         title="Bhutan's Life Expectancy Tracks Belgium's Urban Population at 0.9995",
         slug="bhutan-belgium-no-shared-cause",
         subtitle=("Two series with no mechanism between them, R² of 0.9991 and a "

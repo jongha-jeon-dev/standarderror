@@ -739,7 +739,7 @@ auction. The tenant's claim pays
 
 which is fully covered as long as the home is worth at least
 
-**V\* = (M + D) / lambda**
+**V\\* = (M + D) / lambda**
 
 Note what is *not* in that expression: no volatility, no expected return, no horizon,
 no model. The deposit ratio is 전세가율 — deposit over sale price. The liquidation
