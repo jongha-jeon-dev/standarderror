@@ -20,6 +20,24 @@ from datetime import date
 from ..viz.charts import Figure
 
 
+#: Medium requires a plain-language label on any story written with AI assistance,
+#: placed "within the first two paragraphs". The stated consequence of omitting it
+#: is not removal but Network Only distribution — the story publishes, an alert
+#: appears on it, and nobody outside your followers sees it. That failure mode is
+#: silent from the author's side, which is exactly the kind of thing that belongs
+#: in the audit gate rather than in a checklist someone remembers.
+#:
+#: Keep it accurate rather than minimal. "Assistance" that wrote the code, ran the
+#: experiment and drafted the prose is not a grammar checker, and describing it as
+#: one would be the dishonest version of complying.
+AI_DISCLOSURE = (
+    "Disclosure: this post was written with the assistance of an AI system "
+    "(Claude), which wrote the analysis code, ran the experiments and drafted "
+    "the text. The topic, the constraints, the data choices and the final review "
+    "are the author's."
+)
+
+
 @dataclass
 class Section:
     heading: str
@@ -49,6 +67,10 @@ class Post:
     author: str = ""
     reproducibility: dict = field(default_factory=dict)
     canonical_url: str = ""
+    # Defaulted rather than required, because the failure mode of an empty
+    # disclosure is a post that publishes and then quietly reaches nobody. Set it
+    # to something else if the process changes; `audit()` refuses an empty one.
+    disclosure: str = AI_DISCLOSURE
     # Drafts are the default. In a single public repo the source of an unfinished
     # post is visible on GitHub but `draft: true` keeps it off the built site, so
     # the only way a half-written post reaches readers is if you deliberately
@@ -113,6 +135,8 @@ class Post:
         line-anchored on leading and trailing pipes, so a sentence that happens to
         contain a pipe is still counted.
         """
+        # The sections only, so a required platform label never counts towards a
+        # length target the author is being held to.
         text = "\n".join(s.body for s in self.sections)
         text = re.sub(r"```.*?```", " ", text, flags=re.S)     # exclude code
         text = re.sub(r"\$[^$]*\$", " ", text)                 # exclude math
@@ -123,6 +147,11 @@ class Post:
 
     def body_markdown(self, image_base: str = "") -> str:
         parts: list[str] = []
+        # First paragraph, before the lede: Medium counts from the top of the
+        # body, and the crosspost adds a canonical note above this, so anything
+        # placed after the lede risks landing in paragraph three.
+        if self.disclosure:
+            parts += [self.disclosure.strip(), ""]
         if self.summary:
             parts += [f"*{self.summary.strip()}*", ""]
         for s in self.sections:
@@ -216,6 +245,36 @@ class Post:
                 f"{len(self.table_figures)} table figure(s) declared but no markdown "
                 "table in the body — the image has nothing to substitute for and "
                 "will not appear in any output")
+        # A table image listed *both* in `table_figures` and in a section's figures is
+        # emitted twice everywhere the table is substituted — once in place of the
+        # markdown table, once at the end of the section. Two identical images, and
+        # nothing else notices.
+        table_paths = {f.path for f in self.table_figures}
+        for s_i, s in enumerate(self.sections, 1):
+            for f in s.figures:
+                if f.path in table_paths:
+                    problems.append(
+                        f"section {s_i} ({s.heading!r}): {f.path} is both a table "
+                        f"figure and a section figure, so it will appear twice "
+                        f"wherever the table is substituted for an image")
+        # A markdown table whose rows disagree on column count is not a table:
+        # Goldmark rejects the whole block and renders it as a paragraph of pipes.
+        # This shipped once, from a cell containing `ACF1 of |r|` — an unescaped pipe
+        # splits one cell into two and the header stops matching the separator.
+        for s_i, s in enumerate(self.sections, 1):
+            for start, end in self.find_markdown_tables(s.body):
+                rows = s.body.split("\n")[start:end]
+                # An escaped `\|` is a literal pipe inside a cell, not a separator,
+                # so it has to come out before counting fields — otherwise this check
+                # fires on the very tables that fixed the bug it exists to catch.
+                widths = {len(re.sub(r"\\\|", "", r).strip().strip("|").split("|"))
+                          for r in rows}
+                if len(widths) > 1:
+                    problems.append(
+                        f"section {s_i} ({s.heading!r}): markdown table has "
+                        f"inconsistent column counts {sorted(widths)} — an "
+                        f"unescaped '|' inside a cell will silently unrender the "
+                        f"whole table")
         body = " ".join(s.body for s in self.sections)
 
         # Word-bounded, because a substring match here is worse than useless: the
@@ -248,6 +307,18 @@ class Post:
                 "persistence/naive/chance-level comparison is not falsifiable")
         if not self.reproducibility:
             problems.append("no reproducibility block (seed, versions, commit)")
+        # An AI-assistance label is a platform requirement, not a stylistic
+        # choice, and omitting it is punished by silence rather than by an error.
+        if not self.disclosure.strip():
+            problems.append(
+                "no AI-assistance disclosure — Medium restricts an undisclosed "
+                "story to Network Only distribution, which looks like a "
+                "successful publication and reaches nobody")
+        elif not re.search(r"\b(ai|artificial intelligence)\b",
+                           self.disclosure, re.I):
+            problems.append(
+                f"the disclosure {self.disclosure[:40]!r}... never says AI, so it "
+                f"does not disclose anything")
 
         # Placeholder URLs are the single most embarrassing thing to ship, because
         # they survive every other check and only become visible to readers.

@@ -549,7 +549,12 @@ class TestMediumTables:
 
     def _post(self, tmp_path, *, with_figure: bool):
         fig = good_figure(tmp_path)
-        table_fig = Figure(str(tmp_path / "f1.png"), alt="the table as an image",
+        # A path of its own, not the chart's: sharing one made every table figure
+        # look like a duplicate of the section figure once the audit started
+        # comparing paths.
+        table_path = tmp_path / "t1.png"
+        table_path.write_bytes(b"not really a png")
+        table_fig = Figure(str(table_path), alt="the table as an image",
                            caption="Table 1.")
         post = Post(title="T", slug="s", summary="x", draft=False,
                     data_sources=["d"], reproducibility={"seed": 1},
@@ -586,6 +591,35 @@ class TestMediumTables:
         assert len(post.figures) == 2
         post.table_figures[0].alt = ""
         assert any("alt text" in p for p in post.audit())
+
+    def test_a_table_image_listed_twice_fails_the_audit(self, tmp_path):
+        """Once in `table_figures`, once as a section figure: two identical images."""
+        post = self._post(tmp_path, with_figure=True)
+        post.sections[0].figures.append(post.table_figures[0])
+        assert any("appear twice" in p for p in post.audit())
+
+    def test_the_normal_arrangement_passes(self, tmp_path):
+        post = self._post(tmp_path, with_figure=True)
+        assert not any("appear twice" in p for p in post.audit())
+
+    def test_an_unescaped_pipe_in_a_cell_fails_the_audit(self, tmp_path):
+        """The bug this check exists for: `ACF1 of |r|` unrenders the whole table.
+
+        Goldmark counts the extra pipes as extra fields, the header stops matching
+        the separator row, and the block renders as a paragraph of pipe characters.
+        Nothing else in the pipeline notices — the markdown is present, the table
+        image is declared, the word count is right.
+        """
+        post = self._post(tmp_path, with_figure=True)
+        post.sections[0].body = "| ACF1 of |r| | b |\n|---|---|\n| 1 | 2 |"
+        problems = post.audit()
+        assert any("inconsistent column counts" in p for p in problems), problems
+
+    def test_an_escaped_pipe_in_a_cell_passes(self, tmp_path):
+        """And the fix must not trip the alarm, which the first version of it did."""
+        post = self._post(tmp_path, with_figure=True)
+        post.sections[0].body = r"| ACF1 of \|r\| | b |" + "\n|---|---|\n| 1 | 2 |"
+        assert not any("inconsistent column counts" in p for p in post.audit())
 
 
 class TestTableImage:
@@ -813,3 +847,51 @@ class TestCardFamily:
         for _meta, (_fig, ax) in cards:
             ys = [t.get_position()[1] for t in ax.texts]
             assert min(ys) >= 0.05 and max(ys) <= 0.95
+
+
+class TestAiDisclosure:
+    """The label Medium requires, and the gate that stops it being forgotten.
+
+    Worth pinning because the failure mode is invisible from the author's side:
+    the story publishes, an in-product alert appears on it, and the distribution
+    is silently cut to the author's own followers. Nothing errors.
+    """
+
+    def _post(self, **kw):
+        from quantpost.render.post import Post, Section
+        return Post(title="t", slug="t", summary="s",
+                    sections=[Section("h", "body text here")], **kw)
+
+    def test_the_default_post_already_carries_a_disclosure(self):
+        from quantpost.render.post import AI_DISCLOSURE
+        assert self._post().disclosure == AI_DISCLOSURE
+        assert "AI" in AI_DISCLOSURE
+
+    def test_it_is_the_first_paragraph_of_the_body(self):
+        # Medium counts "within the first two paragraphs" from the top of the
+        # body, and the crosspost puts a canonical note above it, so after the
+        # lede is already too late.
+        body = self._post().body_markdown()
+        first = [p for p in body.split("\n\n") if p.strip()][0]
+        assert "AI" in first
+
+    def test_an_empty_disclosure_fails_the_audit(self):
+        problems = self._post(disclosure="").audit(min_words=1)
+        assert any("disclosure" in p for p in problems)
+
+    def test_a_disclosure_that_does_not_mention_ai_fails_the_audit(self):
+        problems = self._post(
+            disclosure="Written with the help of some tools.").audit(min_words=1)
+        assert any("does not disclose" in p for p in problems)
+
+    def test_a_real_disclosure_passes(self):
+        problems = self._post(
+            disclosure="Written with AI assistance.").audit(min_words=1)
+        assert not any("disclos" in p for p in problems)
+
+    def test_it_does_not_count_towards_the_length_target(self):
+        # Otherwise a required platform label would pad every post by 40 words and
+        # a length gate would quietly get easier to pass.
+        long_label = "AI " + "word " * 60
+        assert (self._post(disclosure=long_label).word_count()
+                == self._post(disclosure="AI assisted.").word_count())

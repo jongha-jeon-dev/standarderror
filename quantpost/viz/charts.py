@@ -687,7 +687,13 @@ def sensitivity_surface(
         r, c = np.unravel_index(idx, M.shape)
         ax.plot([c], [r], marker="o", ms=11, mfc="none",
                 markeredgecolor=m.ink, markeredgewidth=1.8)
-        ax.annotate(f"best {M[r, c]:.3g}", (c, r), xytext=(10, 8),
+        # Place the label on whichever side of the ring has room. A fixed
+        # rightward offset runs off the axes whenever the optimum lands in the
+        # last column, which is exactly where an optimum often lands.
+        right = c < (M.shape[1] - 1) / 2
+        ax.annotate(f"best {M[r, c]:.3g}", (c, r),
+                    xytext=(10 if right else -10, 8),
+                    ha="left" if right else "right",
                     textcoords="offset points", fontsize=8.0, color=m.ink)
     cb = fig.colorbar(im, ax=ax, pad=0.02, fraction=0.04)
     cb.outline.set_visible(False)

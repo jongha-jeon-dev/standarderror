@@ -11,3 +11,8 @@ site/resources/
 .ruff_cache/
 *.egg-info/
 .DS_Store
+
+# Hand-downloaded source data. Not redistributable: FRED index series carry the
+# provider's terms, and this repository's rule is to publish statistics and never
+# values. Keeping the files out of git is how that rule survives a `git add -A`.
+data/

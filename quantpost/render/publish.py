@@ -174,6 +174,41 @@ def _rich(text: str) -> list[dict]:
             for i in range(0, max(len(text), 1), 2000)]
 
 
+# Notion's code block takes a fixed vocabulary of language names, and rejects the
+# whole request rather than falling back when given one it does not know.
+_NOTION_LANG = {"text": "plain text", "txt": "plain text", "out": "plain text",
+                "output": "plain text", "sh": "shell", "": "plain text"}
+
+
+def _paragraphs(body: str) -> list[str]:
+    """Split on blank lines, except inside a fenced block.
+
+    A blank line between two code blocks is a paragraph break; a blank line
+    *inside* one is part of the code. Splitting on "\n\n" alone cuts a snippet in
+    half at its first blank line and sends the tail through as prose, which is
+    invisible in the source and obvious on the published page.
+    """
+    out, buf, fence = [], [], False
+    for line in body.split("\n"):
+        if line.lstrip().startswith("```"):
+            buf.append(line)
+            if fence:
+                out.append("\n".join(buf).strip())
+                buf, fence = [], False
+            else:
+                fence = True
+            continue
+        if not fence and not line.strip():
+            if buf:
+                out.append("\n".join(buf).strip())
+            buf = []
+            continue
+        buf.append(line)
+    if buf:
+        out.append("\n".join(buf).strip())
+    return [p for p in out if p]
+
+
 def _to_notion_blocks(post: Post) -> list[dict]:
     blocks: list[dict] = []
     if post.summary:
@@ -183,13 +218,14 @@ def _to_notion_blocks(post: Post) -> list[dict]:
         key = f"heading_{min(max(s.level, 1), 3)}"
         blocks.append({"object": "block", "type": key,
                        key: {"rich_text": _rich(s.heading)}})
-        for para in [p for p in s.body.split("\n\n") if p.strip()]:
-            if para.strip().startswith("```"):
-                code = para.strip().strip("`")
-                lang, _, rest = code.partition("\n")
+        for para in _paragraphs(s.body):
+            if para.startswith("```"):
+                lang, _, rest = para[3:].partition("\n")
+                rest = rest.rsplit("```", 1)[0].rstrip("\n")
+                lang = (lang.strip() or "python")
                 blocks.append({"object": "block", "type": "code",
                                "code": {"rich_text": _rich(rest),
-                                        "language": (lang or "python").strip()}})
+                                        "language": _NOTION_LANG.get(lang, lang)}})
             else:
                 blocks.append({"object": "block", "type": "paragraph",
                                "paragraph": {"rich_text": _rich(para.strip())}})

@@ -22,6 +22,8 @@ from __future__ import annotations
 import pathlib as _pathlib
 from dataclasses import dataclass
 
+import os as _os
+
 import matplotlib as mpl
 import matplotlib.font_manager as _fm
 import matplotlib.pyplot as plt
@@ -142,9 +144,20 @@ def diverging_cmap(mode: str = "light"):
 
 def apply(mode: str = "light", *, figsize: tuple[float, float] = (7.2, 4.0),
           dpi: int = 200) -> Mode:
-    """Install the theme into matplotlib rcParams. Returns the Mode."""
+    """Install the theme into matplotlib rcParams. Returns the Mode.
+
+    `QUANTPOST_SVG_FONTS=reference` makes SVG output point at font *names* instead of
+    embedding every glyph as an outline. That is not the right default — an embedded
+    outline renders identically everywhere, which is what a published figure needs —
+    but it cuts an SVG from about 83 KB to 13 KB, and 13 KB is small enough to hand to
+    a destination that will only accept inline text (Notion's attachment API, which
+    caps at 200 KiB). The cost is that the viewer substitutes its own font, so check a
+    rasterised copy before shipping anything sized this way.
+    """
     m = MODES[mode]
     mpl.rcParams.update({
+        "svg.fonttype": ("none" if _os.environ.get("QUANTPOST_SVG_FONTS") ==
+                         "reference" else "path"),
         "figure.figsize": figsize,
         "figure.dpi": dpi,
         "savefig.dpi": dpi,
