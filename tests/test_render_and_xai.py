@@ -1092,3 +1092,51 @@ class TestLectureSeries:
                           slug="linear-algebra-2-x",
                           prerequisites=["linear-algebra-1-condition-number"])
         assert p.prerequisites == ["linear-algebra-1-condition-number"]
+
+
+class TestBaselineRequirementCanBeDeclared:
+    """The gate keeps its teeth where it was written for, and gets out of the way
+    where the comparison is numerical rather than predictive.
+
+    Added after two false positives fired in one lecture episode: "cannot be
+    known better than kappa times epsilon" and "the relative accuracy of the
+    answer" are precision bounds, and there is no persistence model to compare a
+    condition number against. The escape hatch is declared on the post so the
+    exemption is reviewable.
+    """
+
+    @staticmethod
+    def _post(body, **kw):
+        from standarderror.render.post import Post
+        from standarderror.viz.charts import Figure
+
+        p = Post(title="T", slug="t", summary="s",
+                 data_sources=["d"], min_words=1, **kw)
+        p.add("H", body, figures=[Figure("f.png", "alt text here", "a caption")])
+        return p
+
+    def test_a_performance_claim_still_needs_a_baseline(self):
+        p = self._post("Our model beats the alternative on held-out data.")
+        assert any("no baseline" in x for x in p.audit())
+
+    def test_a_baseline_satisfies_it(self):
+        p = self._post("Our model beats the persistence baseline.")
+        assert not any("no baseline" in x for x in p.audit())
+
+    def test_declaring_false_exempts_the_post(self):
+        p = self._post("The relative accuracy of the answer is worse than this.",
+                       requires_baseline=False)
+        assert not any("no baseline" in x for x in p.audit())
+
+    def test_declaring_true_demands_one_even_with_no_trigger_phrase(self):
+        p = self._post("A quiet sentence with no comparison in it.",
+                       requires_baseline=True)
+        assert any("no baseline" in x for x in p.audit())
+
+    def test_the_argument_still_overrides_the_field(self):
+        p = self._post("Our model beats everything.", requires_baseline=False)
+        assert any("no baseline" in x for x in p.audit(require_baseline=True))
+
+    def test_the_default_is_still_auto_detection(self):
+        quiet = self._post("Nothing comparative here at all.")
+        assert not any("no baseline" in x for x in quiet.audit())

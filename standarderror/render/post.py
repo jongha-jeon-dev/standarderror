@@ -106,6 +106,15 @@ class Post:
     #: therefore part of the title string, and `audit()` enforces that.
     series_tag: str = ""
     episode: int | None = None
+    #: Whether the baseline rule applies. `None` auto-detects from the body, which
+    #: is right for a post claiming predictive performance and wrong for one whose
+    #: comparisons are numerical: "the relative error cannot fall below kappa
+    #: times epsilon" is a precision bound with no baseline to compare against,
+    #: and the auto-detect matches it. Declare `False` there rather than rewording
+    #: the sentence until the pattern stops firing — an exemption stated on the
+    #: post is reviewable, and prose bent around a regex is not.
+    requires_baseline: bool | None = None
+
     #: Slugs an episode assumes the reader has. Recorded rather than rendered —
     #: a series that quietly requires episode 4 in episode 2 is a broken series,
     #: and this is where that becomes visible.
@@ -378,8 +387,15 @@ class Post:
             r"\b(beats?|beaten|outperform\w*|better than|worse than|"
             r"lower (?:rmse|mae|error)|accuracy of|r-?squared|MASE|"
             r"out-of-sample|state of the art)\b", body, re.I))
-        needs_baseline = (claims_performance if require_baseline is None
-                          else require_baseline)
+        declared = (self.requires_baseline if require_baseline is None
+                    else require_baseline)
+        needs_baseline = claims_performance if declared is None else declared
+        # Known false positives: "better than", "worse than" and "accuracy of"
+        # also appear in numerical-precision statements, which are bounds rather
+        # than performance claims and have no baseline to compare against. Two
+        # of them fired in one 1,300-word lecture, so the escape hatch is a
+        # declared `requires_baseline=False` on the post rather than a looser
+        # regex here — the gate keeps its teeth on the posts it was written for.
         # For a classifier, the reference point is chance level, not persistence —
         # "flipping a coin" is a baseline, and demanding the word "naive" from a
         # post whose entire subject is the chance distribution is a false positive.
