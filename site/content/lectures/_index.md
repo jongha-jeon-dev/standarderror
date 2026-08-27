@@ -18,7 +18,7 @@ arrives to explain the wrong answer, not before it.
 
 ### How an episode is built
 
-Four rules, in the order they get applied.
+Five rules, in the order they get applied.
 
 **The failure comes first, at a size that fits in your head.** Before any
 general result there is a two-by-two version you can check by hand. If the
@@ -40,6 +40,12 @@ follow every line — not skim it, follow it.
 an episode, enough to run the failure and check the claim, never enough to become
 the subject. If something can be explained in a sentence or in a loop, it gets
 the sentence.
+
+**Every claim that has a shape gets drawn.** Five or six figures an episode, and
+each one has to be the argument rather than an illustration of it: the ellipse a
+matrix turns the circle into, the two bases side by side, the spectrum before and
+after a squaring. A picture that could be deleted without weakening the argument
+is deleted.
 
 ---
 

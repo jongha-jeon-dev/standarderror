@@ -210,6 +210,99 @@ def figures(res: dict) -> dict:
                  "why the residual cannot warn you."),
         path=str(IMG / f"lec01-f0-sliver.{EXT}"))[0]
 
+    # --- fA: the unit circle, and what a matrix does to it -----------------
+    # Built from its own SVD so the semi-axes are exactly the numbers labelled.
+    # kappa = 5 rather than the episode's 4002, because a 4002:1 ellipse is a
+    # line at any size a page can hold -- which is itself worth saying in the
+    # caption rather than silently drawing a gentler matrix.
+    SIG = (2.0, 0.4)
+
+    def _rot(deg):
+        r = np.radians(deg)
+        return np.array([[np.cos(r), -np.sin(r)], [np.sin(r), np.cos(r)]])
+
+    U_ill, V_ill = _rot(22.0), _rot(-35.0)
+    A_ill = U_ill @ np.diag(SIG) @ V_ill.T
+
+    def draw_ellipse(ax, m):
+        th = np.linspace(0.0, 2 * np.pi, 400)
+        circle = np.column_stack([np.cos(th), np.sin(th)])
+        image = circle @ A_ill.T
+        ax.plot(circle[:, 0], circle[:, 1], color=m.series[0], lw=1.8,
+                label="the unit circle: every vector of length 1")
+        ax.plot(image[:, 0], image[:, 1], color=m.series[1], lw=2.0,
+                label="its image after multiplying by A")
+        for k, (sig, name) in enumerate(zip(SIG, ("σ₁", "σ₂"))):
+            axis = sig * U_ill[:, k]
+            ax.annotate("", xy=axis, xytext=(0, 0),
+                        arrowprops=dict(arrowstyle="-|>", lw=1.6,
+                                        color=m.series[7], shrinkA=0,
+                                        shrinkB=0))
+            ax.annotate(f"{name} = {sig:g}", axis * 1.06,
+                        xytext=(6, 6), textcoords="offset points",
+                        fontsize=9, color=m.series[7])
+        ax.axhline(0.0, color="0.85", lw=0.8, zorder=0)
+        ax.axvline(0.0, color="0.85", lw=0.8, zorder=0)
+        for spine in ax.spines.values():
+            spine.set_visible(False)
+        ax.set_xlim(-2.4, 2.4)
+        ax.set_ylim(-2.4, 2.4)
+
+    out["fA"] = charts.diagram(
+        draw_ellipse,
+        title="Every matrix turns the unit circle into an ellipse",
+        subtitle=("The semi-axes of that ellipse are the singular values: the "
+                  "most and the least a unit vector can be stretched. Their "
+                  "ratio is the condition number."),
+        equal=True, ticks=False,
+        source="A diagram, not a measurement.",
+        alt=("A circle and a tilted ellipse sharing a centre, with two arrows "
+             "marking the ellipse's long and short semi-axes, labelled sigma "
+             "one and sigma two."),
+        caption=(f"Drawn with σ₁/σ₂ = {SIG[0] / SIG[1]:.0f}, which is about as "
+                 f"eccentric as fits on a page. The 2 × 2 matrix in the code "
+                 f"above has a ratio of {tt['kappa']:.0f} — its ellipse would "
+                 f"be {tt['kappa'] / (SIG[0] / SIG[1]):.0f} times thinner than "
+                 f"this one, which is why the sliver in the previous figure "
+                 f"looked like a line."),
+        path=str(IMG / f"lec01-fA-ellipse.{EXT}"))[0]
+
+    # --- fB: why the monomial basis is a bad basis --------------------------
+    # The analogy in the last section, drawn: near-identical directions.
+    def _normalised(fn, t):
+        v = fn(t)
+        return v / np.max(np.abs(v))
+
+    t_grid = np.linspace(0.0, 1.0, 400)
+    from numpy.polynomial import legendre as _leg
+    eye = np.eye(9)
+    frameB = pd.DataFrame(
+        {f"t^{k}": _normalised(lambda tt_, k=k: tt_ ** k, t_grid)
+         for k in (5, 6, 7, 8)}
+        | {f"Legendre P{k}": _normalised(
+            lambda tt_, k=k: _leg.legval(2 * tt_ - 1, eye[k]), t_grid)
+           for k in (5, 6, 7, 8)},
+        index=pd.Index(t_grid, name="t"))
+
+    out["fB"] = charts.lines(
+        frameB,
+        title="Four columns that say the same thing, and four that do not",
+        subtitle=("The basis functions of a degree-8 polynomial fit on [0, 1], "
+                  "each scaled to unit height so only their shapes are being "
+                  "compared."),
+        xlabel="t", ylabel="basis function, scaled to unit height",
+        source="Simulated; standarderror/linalg/conditioning.py.",
+        direct_labels=False,
+        alt=("Four curves lying almost on top of one another near the right "
+             "edge, and four oscillating curves that are clearly distinct."),
+        caption=("The monomials are the north-east and north-north-east of the "
+                 "text: on this interval t⁵ through t⁸ are nearly the same "
+                 "function, so the coefficients that use them must be large "
+                 "and nearly cancelling. The Legendre polynomials of the same "
+                 "degrees are mutually orthogonal — each one carries "
+                 "information the others cannot."),
+        path=str(IMG / f"lec01-fB-basis.{EXT}"))[0]
+
     # --- f1: the prediction, against what happened -------------------------
     solves = res["solves"]
     frame = pd.DataFrame(
@@ -587,10 +680,10 @@ wide — not an ellipse so much as a needle.
 Now run it backwards, because solving is the backwards direction. If the matrix
 squashes one direction by a factor of {tt['sigma_min']:.4f}, then *un*-squashing
 it — which is what a solve does — multiplies anything in that direction by
-{1 / tt['sigma_min']:.0f}. Errors included. That is why the sliver in the figure
+{1 / tt['sigma_min']:.0f}. Errors included. That is why the sliver in the previous figure
 has the shape it has: it is a small square of tolerance, pushed backwards through
 the matrix, stretched by 1/*σ* in each direction. Its aspect ratio is therefore
-*σ*ₘₐₓ/*σ*ₘᵢₙ — which is the number the figure labels, and which finally has a
+*σ*ₘₐₓ/*σ*ₘᵢₙ — which is the number that figure labels, and which finally has a
 name:
 
 $$\\kappa(A) = \\frac{{\\sigma_{{\\max}}}}{{\\sigma_{{\\min}}}}$$
@@ -599,7 +692,8 @@ $$\\kappa(A) = \\frac{{\\sigma_{{\\max}}}}{{\\sigma_{{\\min}}}}$$
 every direction treated alike, nothing amplified. A thousand means a thousand-fold
 difference between the direction the matrix handles best and the direction it
 handles worst — and a solve amplifies error in the worst direction by exactly
-that ratio more than in the best one.""")
+that ratio more than in the best one.""",
+        figures=[figs["fA"]])
 
     # ------------------------------------------------------------------ 2c
     post.add(
@@ -660,6 +754,38 @@ error is one lost decimal digit, log₁₀ *κ* counts the digits directly: a ma
 with *κ* = 10⁸ eats eight of your {res['digits_available']:.0f} marks and hands
 you the rest.""", level=3)
 
+    # ------------------------------------------------------------------ 2d
+    post.add(
+        "The same failure, measured",
+        f"""All of that is checkable in six lines, and the check is one you can
+run on any matrix you are about to solve with — it costs one call.""")
+
+    post.add(
+        "",
+        f"""{snip['explain'].markdown()}
+
+Note the second and third lines together. The ruler has
+{res['digits_available']:.0f} marks; this matrix consumes
+{head['digits_lost']:.1f} of them. There is nothing left, which is why the
+answer came back with entries near {res['headline_hi']:.1f} instead of 1, and why
+no better algorithm would have helped.
+
+Run that across sizes and the whole story is one table. The residual column is
+the check that gets run in practice; the error column is the quantity anybody
+cares about; and they move in opposite directions.""",
+        figures=[figs["t1"]], level=3)
+
+    post.add(
+        "",
+        f"""The last two columns of that table are the ones to keep. **Digits
+kept** reaches zero by *n* = {HEADLINE_SIZE}, and the prediction
+{res['digits_available']:.1f} − log₁₀ *κ* falls with it — not fitted to it,
+computed from the matrix alone before the system was ever solved. Plotting the
+two together is the whole claim of this episode in one picture: a measurement and
+a closed form, agreeing — while the residual, noted on the same chart, sits at
+machine precision across the entire range and reports that everything is fine.""",
+        figures=[figs["f1"]], level=3)
+
     # ------------------------------------------------------------------ 3
     post.add(
         "Is the bound real, or just an inequality?",
@@ -713,10 +839,14 @@ space** as the monomials of degree ≤ {HEADLINE_DEGREE}. Same model, same
 achievable fits, same predictions — the last line confirms the fitted values
 agree to {res['fit_agreement']:.0e}. All that changed is which basis the
 coefficients are expressed in, and the condition number went from
-{hb['monomial']:.1e} to {hb['legendre']:.0f}. Figure 2 is that comparison across
-degrees.
+{hb['monomial']:.1e} to {hb['legendre']:.0f}. The comparison across degrees is
+plotted below.""",
+        figures=[figs["f2"]], level=3)
 
-Why does that help so much? Because of what the columns of *X* are being asked
+    # ------------------------------------------------------------------ 4b
+    post.add(
+        "",
+        f"""Why does that help so much? Because of what the columns of *X* are being asked
 to do. Suppose you have to describe a position using two given directions. If
 they are *north* and *east*, every position has one obvious, stable pair of
 coefficients. If instead you are handed *north-east* and
@@ -731,15 +861,18 @@ barely moved.
 functions on that interval they are almost the same shape, so the coefficients
 that use them are large, opposite and unstable. Legendre polynomials are north
 and east: mutually orthogonal, each contributing something the others cannot, so
-each coefficient answers a question the others do not.
+each coefficient answers a question the others do not.""",
+        figures=[figs["fB"]], level=3)
 
-That is the general lesson, and it is bigger than polynomials: **conditioning is
+    # ------------------------------------------------------------------ 4c
+    post.add(
+        "",
+        f"""That is the general lesson, and it is bigger than polynomials: **conditioning is
 a property of the parameterisation, not of the problem.** A design matrix whose
 columns are a duration in seconds, a probability and a currency amount is badly
 conditioned for reasons that have nothing to do with the statistics of the data,
 and centring and scaling the columns is not cosmetic tidying — it is the cheapest
-available reduction in the error bar on your coefficients.""",
-        figures=[figs["f2"]], level=3)
+available reduction in the error bar on your coefficients.""", level=3)
 
     # ------------------------------------------------------------------ 5
     post.add(

@@ -100,6 +100,20 @@ def compute() -> dict:
     out["eps"] = cn.MACHINE_EPS
     out["digits_available"] = cn.DIGITS_AVAILABLE
 
+    # --- the spectrum that gets squared ------------------------------------
+    # kappa(X'X) = kappa(X)^2 is a statement about every singular value, not
+    # just the ratio of the extremes, and the spectrum is the only way to see
+    # that. Computed here rather than in the figure so the prose can quote it.
+    Xh = cn.design_matrix(HEADLINE_DEGREE, n_points=N_POINTS)
+    sv = np.linalg.svd(Xh, compute_uv=False)
+    sv_gram = np.linalg.svd(Xh.T @ Xh, compute_uv=False)
+    out["spectrum"] = {
+        "degree": HEADLINE_DEGREE,
+        "X": [float(v) for v in sv],
+        "gram": [float(v) for v in sv_gram],
+        "max_relative_gap": float(np.max(np.abs(sv_gram / sv ** 2 - 1.0))),
+    }
+
     # --- the collinear case ------------------------------------------------
     rng = np.random.default_rng(5)
     A = rng.standard_normal((80, 3))
@@ -220,6 +234,73 @@ def figures(res: dict) -> dict:
                  f"{head['methods']['qr']['error']:.0e}. The gap is not "
                  f"cleverness; it is one squaring."),
         path=str(IMG / f"lec02-f1-methods.{EXT}"))[0]
+
+    # --- fA: the spectrum, before and after the squaring -------------------
+    sp = res["spectrum"]
+    spectrum = pd.DataFrame(
+        {"singular values of X": sp["X"],
+         "singular values of X'X": sp["gram"]},
+        index=pd.Index(range(1, len(sp["X"]) + 1), name="index i"))
+
+    def span(fig, ax):
+        # Bottom-left is the only empty region of this chart, and both labels
+        # belong together anyway: the point is that one number is the other
+        # squared.
+        ax.annotate(f"κ(X)   = {sp['X'][0] / sp['X'][-1]:.1e}   "
+                    f"— {np.log10(sp['X'][0] / sp['X'][-1]):.1f} decades",
+                    (0.02, 0.10), xycoords="axes fraction", ha="left",
+                    va="bottom", fontsize=9, color="0.30")
+        ax.annotate(f"κ(X'X) = {sp['gram'][0] / sp['gram'][-1]:.1e}   "
+                    f"— {np.log10(sp['gram'][0] / sp['gram'][-1]):.1f} decades, "
+                    f"exactly twice",
+                    (0.02, 0.03), xycoords="axes fraction", ha="left",
+                    va="bottom", fontsize=9, color="0.30")
+
+    out["fA"] = charts.lines(
+        spectrum,
+        title="Forming X'X squares every singular value",
+        subtitle=(f"The {len(sp['X'])} singular values of the degree-"
+                  f"{sp['degree']} design matrix, and of its Gram matrix, in "
+                  f"descending order. Same matrix, one multiplication apart."),
+        xlabel="index i (largest first)",
+        ylabel="singular value, log scale",
+        source="Simulated; standarderror/linalg/leastsquares.py.",
+        logy=True, decorate=span, direct_labels=False,
+        alt=("Two descending lines on a log scale, the lower one falling twice "
+             "as steeply, and a note giving the total span of each spectrum "
+             "in decades."),
+        caption=("On a log axis, squaring doubles the slope: the Gram "
+                 "spectrum falls twice as far, because σ_i(X'X) = σ_i(X)². "
+                 "That is the whole of κ(X'X) = κ(X)², and it is why one "
+                 "multiplication costs half the digits — nothing the solver "
+                 "does afterwards can undo it. The crossing near 1 is the same "
+                 "fact from the other side: squaring pushes values above 1 up "
+                 "and values below 1 down, and a condition number is exactly "
+                 "how far apart those two ends are."),
+        path=str(IMG / f"lec02-fA-spectrum.{EXT}"))[0]
+
+    # --- fB: episode one's exercise, as digits ----------------------------
+    names = ["raw", "centred", "scaled", "standardised"]
+    out["fB"] = charts.ranked_bars(
+        list(reversed(names)),
+        [np.log10(res["scaling"][n]) for n in reversed(names)],
+        title="Centring is almost free; scaling does the work",
+        subtitle=("Decimal digits lost to conditioning, log10 κ(X), for one "
+                  "design matrix under four preprocessing choices. Same model, "
+                  "same fitted values, same data."),
+        xlabel="decimal digits lost (log10 of the condition number)",
+        source="Simulated; standarderror/linalg/leastsquares.py.",
+        sort="none", value_fmt=",.2f",
+        alt=("Four horizontal bars of digits lost, the first two long and "
+             "nearly equal, the third short and the fourth almost zero."),
+        caption=("The answer to episode one's exercise, read as digits. "
+                 "Centring removes "
+                 f"{np.log10(res['scaling']['raw'] / res['scaling']['centred']):.2f} "
+                 "of a digit; scaling removes "
+                 f"{np.log10(res['scaling']['centred'] / res['scaling']['scaled']):.2f}. "
+                 "The order they are usually taught in is the reverse of the "
+                 "order of their effect."),
+        path=str(IMG / f"lec02-fB-scaling.{EXT}"))[0]
 
     # --- t1: the table ----------------------------------------------------
     rows = []
@@ -449,7 +530,8 @@ And the dummy? Nothing. At a 20 percent rate its standardised design gives
 {sc['standardised']:.2f}; drop it to 1 percent and you get
 {rare['standardised']:.2f}. A rare dummy is a real problem, but it is not a
 conditioning problem — it is a leverage problem, and it arrives in episode
-six.""", level=3)
+six.""",
+        figures=[figs["fB"]], level=3)
 
     # ------------------------------------------------------------------ 1
     post.add(
@@ -519,7 +601,18 @@ Householder QR does — roughly *np*² against 2*np*². That is a real saving, i
 why the route survives in production code, and it is almost never worth taking:
 you are buying a factor of two in time with half of your significant digits, and
 if *κ*(X) is small enough for that to be safe then the fit was never the
-expensive part of your pipeline anyway.""", level=3)
+expensive part of your pipeline anyway.
+
+The identity is worth looking at rather than only believing, because
+*κ* = *σ*ₘₐₓ/*σ*ₘᵢₙ hides that the squaring happens to *every* singular value,
+not just to the two at the ends. Plotted on a log axis, squaring is a doubling of
+slope, and the two spectra below are the same shape drawn at two scales. One
+detail in that figure is not decoration: the computed Gram spectrum matches the
+exact squares only to
+{res['spectrum']['max_relative_gap'] * 100:.1f} percent. The identity is exact in
+arithmetic; the discrepancy is the floating-point damage, already visible in the
+matrix before any solver has touched it.""",
+        figures=[figs["fA"]], level=3)
 
     # ------------------------------------------------------------------ 3
     post.add(
