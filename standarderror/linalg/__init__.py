@@ -5,6 +5,6 @@ would write returns the wrong answer, and the piece of theory that explains why
 is worth more than the definition it came from.
 """
 
-from . import conditioning
+from . import conditioning, leastsquares
 
-__all__ = ["conditioning"]
+__all__ = ["conditioning", "leastsquares"]
