@@ -8,6 +8,8 @@ author: "Jongha Jeon"
 tags: ["forecasting", "machine-learning", "semiconductors", "dynamical-systems", "data-science"]
 ---
 
+Disclosure: this post was written with the assistance of an AI system (Claude), which wrote the analysis code, ran the experiments and drafted the text. The topic, the constraints, the data choices and the final review are the author's.
+
 *Memory is short, and the statements being made about it run to years. So I built the loop that generates the cycle — supply responds to price with a lag, inventory integrates the imbalance, price responds to inventory — and tried to measure how far ahead it can be forecast. Three things came out, and the one I expected was wrong. The cycle's period is set by inventory and utilisation, which move in months, and is completely insensitive to the four-to-six-year fab construction delay that dominates every discussion of chip supply. Shifting a fifth of wafers onto memory that consumes three times as much of them per gigabyte costs 40% more wafers to deliver the bits that already existed. Saturation makes the cycle a limit cycle, so it is not hard to forecast at all: a ridge regression on twelve monthly lags of price holds skill out to the 144-month limit of the experiment, and a reservoir does no better. And one change breaks it — a single step in the demand growth *trend* takes the same model to 3 months and makes it worse than doing nothing. Which means a multi-year claim about a shortage is a demand-trend claim, not a cycle claim, and the two fail in completely different ways.*
 
 ## A question about a shortage, and what kind of question it is
@@ -299,4 +301,4 @@ leans on.
 - **forecast**: direct multi-horizon ridge, one fit per horizon, trained on months 0-456 and tested on 486-600; horizon is the largest h with RMSE below 0.5 training standard deviations
 - **reservoir**: 400 units, {'n_reservoir': 400, 'spectral_radius': 0.9, 'sparsity': 0.05, 'input_scaling': 0.15, 'leak_rate': 0.5, 'ridge': 1e-06, 'seed': 2}; the multi-channel views need the small input scaling to work at all, which is reported in the post rather than tuned away quietly
 
-Code: <https://github.com/jonghajeon/standarderror>
+Code: <https://github.com/jongha-jeon-dev/standarderror>

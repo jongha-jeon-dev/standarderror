@@ -8,6 +8,8 @@ author: "Jongha Jeon"
 tags: ["investing", "quantitative-finance", "statistics", "data-science", "behavioral-economics"]
 ---
 
+Disclosure: this post was written with the assistance of an AI system (Claude), which wrote the analysis code, ran the experiments and drafted the text. The topic, the constraints, the data choices and the final review are the author's.
+
 *On 31 July 2026 the KOSPI rose 17.91%, the largest one-day gain in its history, and Korean individuals net sold a record 8.2543 trillion won into it. So I priced the rule: selling every 15% drawdown cost 2.40 percentage points a year in my simulations. I expected the cost to be missed rebounds, and a matched control says it is not — five sixths of it is simply being out of a rising market for 10 of 20 years, and the rest comes from a re-entry rule that will not buy back until the index has risen 12%.*
 
 ## Two records, one session
@@ -264,4 +266,4 @@ one has a formula too, and the answer is a much smaller number than 800.
 - **money-weighted return**: IRR by bisection on the terminal-value identity, annualised; a rule's own reallocation between the index and cash is not a cash flow, because the money never leaves the investor
 - **cash rate**: 0% in the headline figures; at 3% the panic rule's gap is -1.11pp instead of -2.40pp
 
-Code: <https://github.com/jonghajeon/standarderror>
+Code: <https://github.com/jongha-jeon-dev/standarderror>

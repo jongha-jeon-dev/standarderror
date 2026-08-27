@@ -8,6 +8,8 @@ author: "Jongha Jeon"
 tags: ["machine-learning", "generative-models", "quantitative-finance", "time-series", "data-science"]
 ---
 
+Disclosure: this post was written with the assistance of an AI system (Claude), which wrote the analysis code, ran the experiments and drafted the text. The topic, the constraints, the data choices and the final review are the author's.
+
 *A survey posted this month collects the work applying diffusion models — the class behind image generators — to financial data: time series, limit order books, tabular data and other structured objects. Models like these are almost always judged on a table of stylised facts. This post summarises the survey, then runs the experiment a survey cannot, on a process whose answers are known, with the two generators that belong in every such table and are almost never in it. Shuffling the training returns reproduces the fat tails *exactly* and destroys every trace of volatility clustering; a small diffusion model does the opposite. Neither dominates, no weighting of the columns is neutral, and a hyperparameter that is not part of the model moved the table further than 250 times the training compute did.*
 
 ## A survey, and the question attached to it
@@ -330,4 +332,4 @@ and would have been worth running whatever the survey says.
 - **block_sweep**: block 2: ACF1(|r|) +0.098, block 4: ACF1(|r|) +0.143, block 8: ACF1(|r|) +0.154, block 16: ACF1(|r|) +0.156, block 32: ACF1(|r|) +0.146
 - **cost**: about 36 minutes of fitting on two CPUs for the ladder plus the three schedule runs; cached under a hash of the configuration, and each rung cached separately, so the post re-renders in seconds
 
-Code: <https://github.com/jonghajeon/standarderror>
+Code: <https://github.com/jongha-jeon-dev/standarderror>

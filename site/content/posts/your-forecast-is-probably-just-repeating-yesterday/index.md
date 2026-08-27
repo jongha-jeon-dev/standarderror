@@ -8,6 +8,8 @@ author: "Jongha Jeon"
 tags: ["data-science", "statistics", "machine-learning", "forecasting", "analytics"]
 ---
 
+Disclosure: this post was written with the assistance of an AI system (Claude), which wrote the analysis code, ran the experiments and drafted the text. The topic, the constraints, the data choices and the final review are the author's.
+
 *I built a forecast for a series that is provably impossible to forecast — cumulative coin flips — and it scored R² = 0.99. The chart looks superb. The model knows nothing. This happens constantly, it is not a trick, and one substitution fixes it.*
 
 ## A chart that should make you suspicious
@@ -166,4 +168,4 @@ and did not have.
 - **protocol**: fit on the first half, score on the second; the naive scale for MASE comes from the training half only
 - **series length**: 1500
 
-Code: <https://github.com/jonghajeon/standarderror>
+Code: <https://github.com/jongha-jeon-dev/standarderror>

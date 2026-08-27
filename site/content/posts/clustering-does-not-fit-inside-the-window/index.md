@@ -8,6 +8,8 @@ author: "Jongha Jeon"
 tags: ["quantitative-finance", "time-series", "generative-models", "volatility", "data-science"]
 ---
 
+Disclosure: this post was written with the assistance of an AI system (Claude), which wrote the analysis code, ran the experiments and drafted the text. The topic, the constraints, the data choices and the final review are the author's.
+
 *Volatility clustering is the second thing anyone says about financial returns, and it is normally quoted as the lag-1 autocorrelation of absolute returns: **+0.32** for the NASDAQ Composite over 14,000 trading days since 1971, **+0.28** for the Nikkei 225 over 19,181 since 1949. Measured *inside* a 64-day window — the horizon generative models are trained and judged on — the same two series give +0.041 and +0.059, against a shuffled baseline near -0.016. About **18%** of the effect fits in the window. A previous post predicted this from a simulation; this is the real data, and it also says the number those models are matched against is unstable by a factor of 12 across decades and, on a ten-year sample, is decided by whether one Monday in 1987 is inside it.*
 
 ## A prediction from a simulation, and 33,000 days to test it on
@@ -269,4 +271,4 @@ that is only visible if both are on the record.
 - **vix_check**: VIX level lag-1 autocorrelation +0.977 over 9,254 days, an independent read on the persistence the simulated version of this experiment assumed
 - **cost**: about 6 seconds, cached under a hash of the configuration and of the input file bytes, so a new data vintage recomputes automatically
 
-Code: <https://github.com/jonghajeon/standarderror>
+Code: <https://github.com/jongha-jeon-dev/standarderror>

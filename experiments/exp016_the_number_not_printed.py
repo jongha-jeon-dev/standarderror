@@ -938,7 +938,7 @@ def build() -> Post:
             "security, and nothing here is medical or investment advice. A bound "
             "that permits a modest effect is not evidence of a modest effect.",
         ],
-        code_url="https://github.com/jonghajeon/standarderror",
+        code_url="https://github.com/jongha-jeon-dev/standarderror",
         author="Jongha Jeon",
         reproducibility={
             "seed": SEED,

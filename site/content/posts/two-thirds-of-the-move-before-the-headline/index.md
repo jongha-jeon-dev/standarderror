@@ -8,6 +8,8 @@ author: "Jongha Jeon"
 tags: ["machine-learning", "quantitative-finance", "market-microstructure", "nlp", "data-science"]
 ---
 
+Disclosure: this post was written with the assistance of an AI system (Claude), which wrote the analysis code, ran the experiments and drafted the text. The topic, the constraints, the data choices and the final review are the author's.
+
 *'It's already priced in' and 'buy the rumour, sell the news' are two of the oldest things anyone says about markets, and both put the price move before the headline rather than after it. A paper posted this month tested them on **4.57 million** news articles across about 3,000 US stocks. Pooled over 1.68 million events the news-aligned move reaches +0.58% by the closing bell on publication day and +0.20% twenty days later — two thirds handed back. For rumours, the rumour day carries the whole move and the confirmation carries +0.01%. Underneath that, quantified news keeps drifting and story-driven news reverses. This post walks through the study and then does the one thing it deliberately does not: works out what effects of this size are worth, which turns on a single number neither of us measured.*
 
 ## Two sayings, and someone finally measured them
@@ -280,4 +282,4 @@ my section is wrong in exactly the same direction.
 - **ceiling**: at rho = 0.05 the ceiling is 20 independent bets and is 90% reached by 171 positions
 - **not_reanalysis**: the paper's data is not public; nothing here recomputes its effects, and the effect sizes are taken as reported
 
-Code: <https://github.com/jonghajeon/standarderror>
+Code: <https://github.com/jongha-jeon-dev/standarderror>

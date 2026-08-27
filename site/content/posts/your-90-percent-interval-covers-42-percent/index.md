@@ -8,6 +8,8 @@ author: "Jongha Jeon"
 tags: ["data-science", "statistics", "machine-learning", "quantitative-finance"]
 ---
 
+Disclosure: this post was written with the assistance of an AI system (Claude), which wrote the analysis code, ran the experiments and drafted the text. The topic, the constraints, the data choices and the final review are the author's.
+
 *Conformal prediction gives you a distribution-free coverage guarantee, and the theorem is correct: my intervals covered 91.0% against a promised 90%. They also covered the hardest fifth of the inputs 69% of the time, and after a volatility regime change they covered 42%. Neither is a bug. Both are what the guarantee always said, read carefully.*
 
 ## A guarantee you can actually check
@@ -259,4 +261,4 @@ one-line formula.
 - **regime change**: volatility 0.6 -> 1.8 at t=900; calibration ends at t=600
 - **ACI**: gamma = 0.02, window = 300; the first interval is unbounded by construction (19 of 1200), so widths are quoted as medians
 
-Code: <https://github.com/jonghajeon/standarderror>
+Code: <https://github.com/jongha-jeon-dev/standarderror>

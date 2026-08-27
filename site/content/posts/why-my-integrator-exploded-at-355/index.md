@@ -8,6 +8,8 @@ author: "Jongha Jeon"
 tags: ["numerical-analysis", "scientific-computing", "python", "software-testing", "machine-learning"]
 ---
 
+Disclosure: this post was written with the assistance of an AI system (Claude), which wrote the analysis code, ran the experiments and drafted the text. The topic, the constraints, the data choices and the final review are the author's.
+
 *A spectral solver that blew up at the same moment whatever I changed. Across 24 configurations, a tenfold change in timestep moved the failure by 5%, a finer grid by 5%, and swapping the entire time-stepping scheme by 3%. That invariance was the clue. Plus a Lyapunov exponent 27% too high for a reason that survives a convergence study. Neither bug is visible to a test that checks shapes; both are obvious to a test that checks a physical identity.*
 
 ## A bug that ignores your timestep is not a stability problem
@@ -261,4 +263,4 @@ nominal 90% interval realising under 60%, along with what to use instead.
 - **fixed integrator verified to**: t = 20000
 - **ETDRK4 vs implicit reference at t=8**: relative error 2.19e-07
 
-Code: <https://github.com/jonghajeon/standarderror>
+Code: <https://github.com/jongha-jeon-dev/standarderror>

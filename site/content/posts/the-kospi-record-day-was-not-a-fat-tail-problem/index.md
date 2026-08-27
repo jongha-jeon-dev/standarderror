@@ -8,6 +8,8 @@ author: "Jongha Jeon"
 tags: ["investing", "quantitative-finance", "risk-management", "statistics", "data-science"]
 ---
 
+Disclosure: this post was written with the assistance of an AI system (Claude), which wrote the analysis code, ran the experiments and drafted the text. The topic, the constraints, the data choices and the final review are the author's.
+
 *On 31 July 2026 the KOSPI rose 17.91% in a single session, the largest one-day gain in its history, days after a circuit breaker halted trading and inside the second-worst month the index has ever had. Under a Gaussian at 1.5% daily volatility that is an 11.9-sigma move with a return period of 10^30 years. Fat tails fix that in one line. What they do not fix is that the best day landed next to the worst — which under any i.i.d. model has a probability of exactly 2/n, or 1.3% for this year.*
 
 ## A day that no risk model contains
@@ -251,4 +253,4 @@ trajectory.
 - **simulation**: GARCH(1,1), omega=0.02, arch=0.1, garch=0.88, t(5) shocks, 6,000 sessions (24 years), unconditional daily sd 1.19%
 - **VaR backtest**: two static VaR models at 1% — a Gaussian quantile and the empirical 1st percentile — both estimated on the first 3,000 sessions and tested on the next 3,000
 
-Code: <https://github.com/jonghajeon/standarderror>
+Code: <https://github.com/jongha-jeon-dev/standarderror>

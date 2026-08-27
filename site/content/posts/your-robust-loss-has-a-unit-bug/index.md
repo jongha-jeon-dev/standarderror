@@ -8,6 +8,8 @@ author: "Jongha Jeon"
 tags: ["machine-learning", "gradient-boosting", "robust-statistics", "regression", "data-science"]
 ---
 
+Disclosure: this post was written with the assistance of an AI system (Claude), which wrote the analysis code, ran the experiments and drafted the text. The topic, the constraints, the data choices and the final review are the author's.
+
 *XGBoost's robust option is a Huber loss, and a Huber loss is a function of the residual **divided by a scale**. XGBoost's default for that scale is the number 1. So multiply your response by a constant — metres to centimetres, dollars to thousands — refit, divide the predictions back, and you get a different model. On a synthetic regression with 10% corrupted responses, that transformation moves the error from 0.66 to 17.54: at one end of the sweep the loss is fully robust, at the other it is no better than squared error. Squared error and absolute error do not move at all, because their losses contain no constant to be wrong about. A paper posted this summer fixes XGBoost's robustness with M-, S-, tau-estimators from robust regression; this post is the measurement that says why estimating the scale, rather than assuming it, is the part that matters.*
 
 ## A paper about making XGBoost robust
@@ -268,4 +270,4 @@ would have been worth making whatever they turn out to be.
 - **leverage_construction**: a fraction of rows moved to +/- `distance` standard deviations in the first feature only, with y set to the true mean at the new location plus 20, so the points are bad leverage rather than merely unusual
 - **cost**: about 30 seconds of fitting for every grid in the post, cached under a hash of the configuration
 
-Code: <https://github.com/jonghajeon/standarderror>
+Code: <https://github.com/jongha-jeon-dev/standarderror>

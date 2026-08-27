@@ -8,6 +8,8 @@ author: "Jongha Jeon"
 tags: ["data-science", "statistics", "machine-learning", "quantitative-finance", "analytics"]
 ---
 
+Disclosure: this post was written with the assistance of an AI system (Claude), which wrote the analysis code, ran the experiments and drafted the text. The topic, the constraints, the data choices and the final review are the author's.
+
 *I generated a target that cannot be predicted, gave 60 pure-noise variables to 2,000 models, and kept the best one. It called 55.3% correctly, which taken at face value is significant at p = 0.0008. Out of sample it got 49.9%. The interesting part is that its winning score was predictable before I started — from the number of models alone.*
 
 ## A result I can guarantee is fake
@@ -229,4 +231,4 @@ guarantee quietly fails. I will show a nominal 90% interval realising under 60%.
 - **chance sd of one model's accuracy**: 1.67pp (observed across models: 1.68pp)
 - **order statistics**: exact, from the Binomial(900, 1/2) CDF — not the normal approximation, which is off by ~1.5x in the tail the trials table lives in
 
-Code: <https://github.com/jonghajeon/standarderror>
+Code: <https://github.com/jongha-jeon-dev/standarderror>

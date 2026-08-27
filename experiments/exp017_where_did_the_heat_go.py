@@ -768,7 +768,7 @@ def build() -> Post:
             "that follows is about what that number implies, not about whether it is "
             "true.",
         ],
-        code_url="https://github.com/jonghajeon/standarderror",
+        code_url="https://github.com/jongha-jeon-dev/standarderror",
         author="Jongha Jeon",
         reproducibility={
             "seed": SEED,

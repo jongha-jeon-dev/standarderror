@@ -8,6 +8,8 @@ author: "Jongha Jeon"
 tags: ["metabolism", "thermodynamics", "obesity", "mouse physiology", "measurement"]
 ---
 
+Disclosure: this post was written with the assistance of an AI system (Claude), which wrote the analysis code, ran the experiments and drafted the text. The topic, the constraints, the data choices and the final review are the author's.
+
 *On 21 August 2026, Berkeley announced that TOFA, an oral small molecule, made obese mice lose fat and not muscle, with energy expenditure **18% higher** and body temperature unchanged. A mouse in a metabolic cage does almost no external work, so that is a statement about heat **produced** beside a statement about heat **stored** — and heat produced but not stored has left. The required increase in heat loss equals the reported increase in expenditure **exactly**, independent of every physiological constant. Below its thermoneutral point a mouse also defends its temperature by making heat, so extra heat should displace that rather than add to it: the model predicts a rise of 0%, 0% and 18% at the paper's 4, 23 and 30 °C. Reported: 4%, 18%, 18%. The warm point matches exactly and **23 °C is 18 points out** — a gap that constant heat loss could only close with 2.3–3.2 °C of warming, which the paper's own thermometer excludes.*
 
 ## The claim, and the credit it deserves
@@ -305,4 +307,4 @@ then stopped.
 - **config hash**: f9d37db85ea2c06f
 - **runtime**: 2.1s
 
-Code: <https://github.com/jonghajeon/standarderror>
+Code: <https://github.com/jongha-jeon-dev/standarderror>

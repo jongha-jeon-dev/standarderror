@@ -3,7 +3,7 @@
 # One-time setup: put this repo on GitHub, wire up Hugo + Pages, publish.
 #
 #   ./scripts/setup_github.sh                       # interactive, safe defaults
-#   GH_USER=jonghajeon REPO=standarderror ./scripts/setup_github.sh
+#   GH_USER=jongha-jeon-dev REPO=standarderror ./scripts/setup_github.sh
 #   ./scripts/setup_github.sh --check               # verify only, change nothing
 #
 # Idempotent: every step checks whether it is already done and skips if so, so

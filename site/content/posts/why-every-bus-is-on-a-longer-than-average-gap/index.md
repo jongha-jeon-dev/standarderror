@@ -8,6 +8,8 @@ author: "Jongha Jeon"
 tags: ["statistics", "data-science", "mathematics", "public-transport"]
 ---
 
+Disclosure: this post was written with the assistance of an AI system (Claude), which wrote the analysis code, ran the experiments and drafted the text. The topic, the constraints, the data choices and the final review are the author's.
+
 *Buses that average a 10-minute gap will, if the gaps are uneven, leave the average passenger sitting in a 20-minute gap and waiting 10 minutes instead of 5. Nobody is misremembering. The same arithmetic makes the average student's class bigger than the average class, and it has a one-line formula that says exactly how much bigger.*
 
 ## Two true statements that sound like a contradiction
@@ -161,4 +163,4 @@ learned physics, and how to tell that apart from having memorised a trajectory.
 - **closed forms checked**: E[experienced] = E[X] + Var(X)/E[X] and E[wait] = E[X²]/(2E[X]); largest simulation-vs-formula disagreement across all four timetables and both quantities: 0.19%
 - **control**: the equal-gap timetable, where the predicted penalty is exactly zero and the measured one is 0.00%
 
-Code: <https://github.com/jonghajeon/standarderror>
+Code: <https://github.com/jongha-jeon-dev/standarderror>

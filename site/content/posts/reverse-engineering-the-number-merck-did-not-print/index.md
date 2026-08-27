@@ -8,6 +8,8 @@ author: "Jongha Jeon"
 tags: ["statistics", "clinical trials", "survival analysis", "disclosure", "oncology"]
 ---
 
+Disclosure: this post was written with the assistance of an AI system (Claude), which wrote the analysis code, ran the experiments and drafted the text. The topic, the constraints, the data choices and the final review are the author's.
+
 *On 19 August 2026, Merck and Moderna said their individualised mRNA cancer vaccine plus pembrolizumab beat pembrolizumab alone on both recurrence-free and distant metastasis-free survival in 1,137 patients with resected melanoma — the first phase 3 win for this class of therapy. The release is full of numbers and prints two hazard ratios, both of them from a different trial. About the phase 3 it gives the total randomised, the allocation ratio and the dose: no hazard ratio, no confidence interval, no p-value, no event count. It turns out that the width of a confidence interval is a statement about the number of events and nothing else, so on 7 earlier trials that published both, the event count can be read back out of the interval to **2.5%**. Run backwards, the same identity turns "statistically significant" into an upper bound on the hazard ratio — but the bound depends on the event count, so all the announcement pins down is a range from **0.57 to 0.72**. Against a prior built from the phase 2b, the whole announcement is worth **0.27 bits**, spent almost entirely on ruling out no effect.*
 
 ## The announcement
@@ -362,4 +364,4 @@ setting with heavier competing risks or crossover is worth checking separately.
 - **config hash**: e289e7f0c9159529
 - **runtime**: 5.0s
 
-Code: <https://github.com/jonghajeon/standarderror>
+Code: <https://github.com/jongha-jeon-dev/standarderror>

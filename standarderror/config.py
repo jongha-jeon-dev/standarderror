@@ -73,11 +73,11 @@ class Settings:
 
     # --- site identity (used for canonical URLs on Medium crossposts) ---
     site_base_url: str = field(default_factory=lambda: os.environ.get(
-        "SITE_BASE_URL", "https://jonghajeon.github.io/standarderror"))
+        "SITE_BASE_URL", "https://jongha-jeon-dev.github.io/standarderror"))
     author: str = field(default_factory=lambda: os.environ.get(
         "POST_AUTHOR", "Jongha Jeon"))
     code_repo_url: str = field(default_factory=lambda: os.environ.get(
-        "CODE_REPO_URL", "https://github.com/jonghajeon/standarderror"))
+        "CODE_REPO_URL", "https://github.com/jongha-jeon-dev/standarderror"))
 
     # --- HTTP ---
     user_agent: str = field(default_factory=lambda: os.environ.get(

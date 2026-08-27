@@ -8,6 +8,8 @@ author: "Jongha Jeon"
 tags: ["investing", "quantitative-finance", "risk-management", "statistics", "data-science"]
 ---
 
+Disclosure: this post was written with the assistance of an AI system (Claude), which wrote the analysis code, ran the experiments and drafted the text. The topic, the constraints, the data choices and the final review are the author's.
+
 *The ten largest S&P 500 companies are around 41% of the index against roughly 19% in 1990, and the usual conclusion is that index investors are no longer diversified. There is a formula for that. It says the effective number of *holdings* has indeed collapsed — 503 companies, at most 57 of them in effect. It also says the number of independent *bets* is 2.77 at a typical correlation, that a perfectly equally weighted portfolio of the same 503 names would be 2.85 — so the whole concentration argument is worth 0.08 of one bet at that correlation, and less than that in a crisis.*
 
 ## A question with five correct answers
@@ -233,4 +235,4 @@ learned physics, and how to tell that apart from having memorised a trajectory.
 - **insensitivity**: March 2026 (itemised): at most 57, end 2025: at most 48, July 2026: at most 44
 - **verification**: one-factor Monte Carlo, 500,000 draws at rho in (0.05, 0.12, 0.35, 0.70); largest disagreement with the closed form 0.25%
 
-Code: <https://github.com/jonghajeon/standarderror>
+Code: <https://github.com/jongha-jeon-dev/standarderror>

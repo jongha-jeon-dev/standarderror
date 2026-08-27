@@ -8,6 +8,8 @@ author: "Jongha Jeon"
 tags: ["reservoir-computing", "time-series", "explainable-ai", "machine-learning", "quantitative-finance"]
 ---
 
+Disclosure: this post was written with the assistance of an AI system (Claude), which wrote the analysis code, ran the experiments and drafted the text. The topic, the constraints, the data choices and the final review are the author's.
+
 *On Lorenz-63 a 600-unit echo state network holds a closed-loop forecast for 8.0 Lyapunov times. A 55-term polynomial model you can print on one line gets 7.8. A static random-feature map with no memory at all gets 7.6. Linear AR gets 0.11. Here is what that ordering actually tells you — and what it means for anyone putting a recurrent model into a risk system.*
 
 ## The question people actually mean
@@ -291,4 +293,4 @@ closed-loop predictability there at all, or does persistence win?
 - **rollout origins**: 8
 - **fit time**: ESN 3.41s, NG-RC 0.01s
 
-Code: <https://github.com/jonghajeon/standarderror>
+Code: <https://github.com/jongha-jeon-dev/standarderror>

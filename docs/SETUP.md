@@ -40,7 +40,7 @@ gh auth login          # once, if you have gh
 
 ```bash
 git clone <this-repo> standarderror && cd standarderror
-GH_USER=jonghajeon REPO=standarderror ./scripts/setup_github.sh
+GH_USER=jongha-jeon-dev REPO=standarderror ./scripts/setup_github.sh
 ```
 
 Three things must agree, and this is the single most common way the site ends up
@@ -94,16 +94,16 @@ git -C site/themes/PaperMod checkout v9.0     # then commit the submodule bump
 python -m pip install -e ".[dev]"
 pytest                                  # ~110 tests, no network
 git branch -M main                      # the Pages workflow triggers on main
-gh repo create jonghajeon/standarderror --public --source=. --remote=origin
+gh repo create jongha-jeon-dev/standarderror --public --source=. --remote=origin
 git push -u origin main
-gh api -X POST repos/jonghajeon/standarderror/pages -f build_type=workflow
+gh api -X POST repos/jongha-jeon-dev/standarderror/pages -f build_type=workflow
 ```
 
 Without `gh`: create the repo at <https://github.com/new> (public, **no** README
 or .gitignore — you have both), then
 
 ```bash
-git remote add origin https://github.com/jonghajeon/standarderror.git
+git remote add origin https://github.com/jongha-jeon-dev/standarderror.git
 git push -u origin main
 ```
 

@@ -8,6 +8,8 @@ author: "Jongha Jeon"
 tags: ["housing", "korea", "risk-management", "quantitative-finance", "data-science"]
 ---
 
+Disclosure: this post was written with the assistance of an AI system (Claude), which wrote the analysis code, ran the experiments and drafted the text. The topic, the constraints, the data choices and the final review are the author's.
+
 *Under Korea's jeonse system a tenant hands the landlord a lump sum worth half to four fifths of the home, pays no monthly rent for two years, and receives it back at the end. It is a secured loan, and secured loans have a safety margin you can compute: how far the home can fall before the deposit stops being fully covered. It is the deposit plus any registered mortgage, divided by what that kind of property fetches at a court auction — two figures Korea publishes monthly, and a number that appears on no contract. For a Seoul apartment at January 2026 ratios it is about 50%. For a Seoul villa at December 2022 ratios it was under a point. This post works out how to compute it, how much of it is arithmetic and how much is modelling, and the one mechanism it misses entirely.*
 
 ## A contract with a number missing
@@ -327,4 +329,4 @@ printed on the contract.
 - **decomposition**: of the 49.1pp gap between the January 2026 Seoul apartment and December 2022 Seoul villa triggers, the deposit ratio contributes 27.4pp and the auction clearing ratio 21.7pp
 - **guarantee_experience**: HUG's 2020-2024 figures are quoted for scale only: 50,941 incidents, 24.9% recovered on claims taken over. The pool is not the cohorts modelled here, recovery from landlords is not lien recovery, and fraud is not priced above, so no comparison against premium income is drawn
 
-Code: <https://github.com/jonghajeon/standarderror>
+Code: <https://github.com/jongha-jeon-dev/standarderror>
