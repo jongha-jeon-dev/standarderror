@@ -113,7 +113,7 @@ def cmd_run(args) -> int:
         return 1
     print("  audit: clean")
     if args.publish:
-        page = publish.hugo_page_bundle(post)
+        page = publish.hugo_page_bundle(post, section=post.section)
         print(f"  hugo: {page}")
         if post.draft:
             print("  (draft: true — commit it, preview with `make serve`, then "

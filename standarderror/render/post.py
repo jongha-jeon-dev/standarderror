@@ -13,6 +13,8 @@ claim with no data citation, or a source you are not licensed to redistribute.
 
 from __future__ import annotations
 
+from ..config import SETTINGS
+
 import re
 from dataclasses import dataclass, field
 from datetime import date
@@ -92,12 +94,44 @@ class Post:
     # substitutes these images. The Hugo page keeps the real table.
     table_figures: list[Figure] = field(default_factory=list)
 
+    # ---------- lecture series ----------
+    # Hugo content section. Lectures live under their own section so the site can
+    # offer them as a menu item; the crosspost does not care.
+    section: str = "posts"
+    #: Full series name, for the syllabus page and the front matter taxonomy.
+    series: str = ""
+    #: Short tag that *opens the title*. On Medium there is no site navigation and
+    #: no section, so a reader sees one line of text and nothing else: the only
+    #: place "which lecture is this" can live is the title itself. The tag is
+    #: therefore part of the title string, and `audit()` enforces that.
+    series_tag: str = ""
+    episode: int | None = None
+    #: Slugs an episode assumes the reader has. Recorded rather than rendered —
+    #: a series that quietly requires episode 4 in episode 2 is a broken series,
+    #: and this is where that becomes visible.
+    prerequisites: list[str] = field(default_factory=list)
+
     # ---------- assembly ----------
 
     def add(self, heading: str, body: str = "", *,
             figures: list[Figure] | None = None, level: int = 2) -> Post:
         self.sections.append(Section(heading, body, list(figures or []), level))
         return self
+
+    @property
+    def series_note(self) -> str:
+        """One line telling a reader with no site navigation where they are.
+
+        Medium and Notion strip the site away, so an episode arriving there has
+        to carry its own position: which series, which number, and where the rest
+        of it is. Empty for a standalone post.
+        """
+        if not (self.series and self.episode):
+            return ""
+        base = SETTINGS.site_base_url.rstrip("/")
+        url = f"{base}/{self.section}/" if base else ""
+        where = f" The syllabus and the other episodes: {url}" if url else ""
+        return (f"Episode {self.episode} of *{self.series}*.{where}")
 
     @property
     def figures(self) -> list[Figure]:
@@ -160,6 +194,10 @@ class Post:
             parts += [self.disclosure.strip(), ""]
         if self.summary:
             parts += [f"*{self.summary.strip()}*", ""]
+        # After the lede rather than before it: the disclosure has to stay in the
+        # first two paragraphs, and the lede is what makes a reader continue.
+        if self.series_note:
+            parts += [self.series_note, ""]
         for s in self.sections:
             parts.append(s.markdown(image_base))
         parts += self._footer()
@@ -200,6 +238,12 @@ class Post:
             lines.append(f'author: "{esc(self.author)}"')
         if self.tags:
             lines.append("tags: [" + ", ".join(f'"{t}"' for t in self.tags) + "]")
+        if self.series:
+            lines.append(f'series: ["{esc(self.series)}"]')
+        if self.episode:
+            # Ascending weight orders a Hugo section by episode instead of by
+            # date, which is what a curriculum needs.
+            lines.append(f"weight: {self.episode}")
         if self.canonical_url:
             lines.append(f'canonicalURL: "{self.canonical_url}"')
         lines.append("---")
@@ -209,6 +253,41 @@ class Post:
         return self.front_matter() + "\n\n" + self.body_markdown(image_base)
 
     # ---------- audit ----------
+
+    def _series_problems(self) -> list[str]:
+        """Consistency of the series fields, and of the title against them.
+
+        The title check is the one that matters. A lecture crossposted to Medium
+        is one line of text with no section, no menu and no neighbours, so if the
+        title does not open with the series tag and the episode number the reader
+        cannot tell what they are looking at or what order it goes in. Enforcing
+        it here means the failure is a build error rather than a published
+        orphan.
+        """
+        out: list[str] = []
+        declared = [bool(self.series), bool(self.series_tag),
+                    self.episode is not None]
+        if any(declared) and not all(declared):
+            out.append("series, series_tag and episode must be set together "
+                       f"(got series={self.series!r}, tag={self.series_tag!r}, "
+                       f"episode={self.episode!r})")
+            return out
+        if not any(declared):
+            return out
+        if self.episode < 1:
+            out.append(f"episode must be 1 or greater, got {self.episode}")
+        prefix = f"{self.series_tag} {self.episode}: "
+        if not self.title.startswith(prefix):
+            out.append(f"title must start with {prefix!r} so the episode is "
+                       f"identifiable with no site around it; got {self.title!r}")
+        slug_prefix = re.sub(r"[^a-z0-9]+", "-",
+                             self.series_tag.lower()).strip("-")
+        if not self.slug.startswith(f"{slug_prefix}-{self.episode}-"):
+            out.append(f"slug must start with {slug_prefix}-{self.episode}- ; "
+                       f"got {self.slug!r}")
+        if self.section == "posts":
+            out.append("an episode belongs in its own section, not 'posts'")
+        return out
 
     def audit(self, *, min_words: int | None = None,
               max_words: int | None = None,
@@ -228,6 +307,7 @@ class Post:
             problems.append(f"{wc} words (target <= {hi}) — cut or split")
         if not self.slug or not re.fullmatch(r"[a-z0-9-]+", self.slug):
             problems.append(f"slug {self.slug!r} must be lowercase-kebab")
+        problems += self._series_problems()
         if not self.summary:
             problems.append("no summary (needed for description/meta and Medium)")
         if not self.figures:

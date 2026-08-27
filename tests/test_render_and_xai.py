@@ -982,3 +982,113 @@ class TestPublishedPostsPinTheirDate:
     def test_the_guard_finds_the_experiments_at_all(self):
         # A path typo would make both tests above pass by testing nothing.
         assert len(self._experiments()) > 10
+
+
+class TestLectureSeries:
+    """The series fields, and the title rule that exists because of Medium.
+
+    A crossposted episode arrives as one line of text with no section, no menu
+    and no neighbours. If the title does not open with the series tag and the
+    number, a reader cannot tell what the piece is or what order it goes in —
+    so the tag lives in the title string and `audit()` refuses a post where it
+    does not.
+    """
+
+    @staticmethod
+    def _episode(**kw):
+        from standarderror.render.post import Post
+
+        base = dict(
+            title="Linear Algebra 1: The Condition Number Is the Error Bar",
+            slug="linear-algebra-1-condition-number",
+            section="lectures",
+            series="Linear Algebra for Data Science, Taught Through What Breaks",
+            series_tag="Linear Algebra",
+            episode=1,
+            summary="a lede",
+        )
+        base.update(kw)
+        return Post(**base)
+
+    def test_a_well_formed_episode_has_no_series_problems(self):
+        assert self._episode()._series_problems() == []
+
+    def test_a_standalone_post_is_unaffected(self):
+        from standarderror.render.post import Post
+
+        assert Post(title="T", slug="t")._series_problems() == []
+
+    def test_the_three_fields_must_be_set_together(self):
+        from standarderror.render.post import Post
+
+        p = Post(title="T", slug="t", series="S")
+        problems = p._series_problems()
+        assert len(problems) == 1 and "together" in problems[0]
+
+    def test_the_title_must_open_with_the_tag_and_number(self):
+        p = self._episode(title="The Condition Number Is the Error Bar")
+        assert any("must start with" in x for x in p._series_problems())
+
+    def test_the_wrong_episode_number_in_the_title_is_caught(self):
+        p = self._episode(
+            title="Linear Algebra 2: The Condition Number Is the Error Bar")
+        assert any("must start with" in x for x in p._series_problems())
+
+    def test_the_slug_must_carry_the_series_and_number(self):
+        p = self._episode(slug="condition-number")
+        assert any("slug must start with" in x for x in p._series_problems())
+
+    def test_an_episode_may_not_sit_in_posts(self):
+        p = self._episode(section="posts")
+        assert any("own section" in x for x in p._series_problems())
+
+    def test_episode_zero_is_rejected(self):
+        p = self._episode(title="Linear Algebra 0: Nope",
+                          slug="linear-algebra-0-nope", episode=0)
+        assert any("1 or greater" in x for x in p._series_problems())
+
+    def test_audit_surfaces_the_series_problems(self):
+        p = self._episode(title="Nope")
+        assert any("must start with" in x for x in p.audit())
+
+    def test_the_note_places_the_reader_with_no_site_around_them(self):
+        note = self._episode(episode=3,
+                             title="Linear Algebra 3: X",
+                             slug="linear-algebra-3-x").series_note
+        assert "Episode 3" in note
+        assert "Linear Algebra for Data Science" in note
+        assert "/lectures/" in note
+
+    def test_a_standalone_post_has_no_note(self):
+        from standarderror.render.post import Post
+
+        assert Post(title="T", slug="t").series_note == ""
+
+    def test_the_note_follows_the_lede_and_the_disclosure_leads(self):
+        body = self._episode().body_markdown()
+        paras = [b for b in body.split("\n\n") if b.strip()]
+        assert paras[0].startswith("Disclosure:")
+        assert paras[1].startswith("*a lede")
+        assert paras[2].startswith("Episode 1 of")
+
+    def test_the_note_is_not_counted_as_prose(self):
+        p = self._episode()
+        p.add("A heading", "one two three four five")
+        assert p.word_count() == 5
+
+    def test_the_front_matter_carries_the_series_and_orders_by_episode(self):
+        fm = self._episode(episode=4, title="Linear Algebra 4: X",
+                           slug="linear-algebra-4-x").front_matter()
+        assert 'series: ["Linear Algebra for Data Science' in fm
+        assert "weight: 4" in fm
+
+    def test_a_standalone_post_gets_no_weight(self):
+        from standarderror.render.post import Post
+
+        assert "weight:" not in Post(title="T", slug="t").front_matter()
+
+    def test_prerequisites_are_recorded(self):
+        p = self._episode(episode=2, title="Linear Algebra 2: X",
+                          slug="linear-algebra-2-x",
+                          prerequisites=["linear-algebra-1-condition-number"])
+        assert p.prerequisites == ["linear-algebra-1-condition-number"]

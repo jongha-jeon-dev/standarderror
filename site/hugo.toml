@@ -29,6 +29,10 @@ theme = "PaperMod"
   url = "/posts/"
   weight = 1
 [[menu.main]]
+  name = "Lectures"
+  url = "/lectures/"
+  weight = 2
+[[menu.main]]
   name = "Code"
   url = "https://github.com/jongha-jeon-dev/standarderror"
-  weight = 2
+  weight = 3
