@@ -102,6 +102,31 @@ def compute() -> dict:
     out["eps"] = cn.MACHINE_EPS
     out["digits_available"] = cn.DIGITS_AVAILABLE
 
+    # A 2 x 2 system a reader can check by hand. Two lines that meet at 0.03
+    # degrees: the intersection is the answer, and a hair's change in one
+    # coefficient slides it a long way while leaving it almost exactly on both
+    # lines. Both of the episode's mysteries, at a size that fits in the head.
+    A2 = np.array([[1.0, 1.0], [1.0, 1.001]])
+    b2 = np.array([2.0, 2.001])
+    b2p = np.array([2.0, 2.002])
+    x2, x2p = np.linalg.solve(A2, b2), np.linalg.solve(A2, b2p)
+    sig = np.linalg.svd(A2, compute_uv=False)
+    n1, n2 = A2[0], A2[1]
+    rel_b = float(np.linalg.norm(b2p - b2) / np.linalg.norm(b2))
+    rel_x = float(np.linalg.norm(x2p - x2) / np.linalg.norm(x2))
+    out["two_by_two"] = {
+        "A": A2.tolist(), "b": b2.tolist(), "b_perturbed": b2p.tolist(),
+        "x": x2.tolist(), "x_perturbed": x2p.tolist(),
+        "kappa": cn.condition_number(A2),
+        "sigma_max": float(sig[0]), "sigma_min": float(sig[-1]),
+        "angle_deg": float(np.degrees(np.arccos(
+            n1 @ n2 / np.linalg.norm(n1) / np.linalg.norm(n2)))),
+        "relative_change_b": rel_b, "relative_change_x": rel_x,
+        "amplification": rel_x / rel_b,
+        "stale_residual": float(np.linalg.norm(A2 @ x2 - b2p)
+                                / np.linalg.norm(b2p)),
+    }
+
     # The vivid version of "the answer is wrong": every entry should be 1.
     H = cn.hilbert(HEADLINE_SIZE)
     x = np.ones(HEADLINE_SIZE)
@@ -127,6 +152,63 @@ def compute() -> dict:
 
 def figures(res: dict) -> dict:
     out = {}
+    tt = res["two_by_two"]
+
+    # --- f0: why the answer moves and the residual does not ----------------
+    # The set of points that satisfy both equations to within a tolerance is the
+    # image of a small square under A-inverse: a parallelogram whose semi-axes
+    # are tau / sigma_i. So its aspect ratio *is* kappa, exactly, which makes the
+    # picture and the number the same statement rather than two illustrations of
+    # one idea.
+    TOL = 0.002
+    A2 = np.asarray(tt["A"], dtype=float)
+    b2 = np.asarray(tt["b"], dtype=float)
+    inv = np.linalg.inv(A2)
+    band = np.array([inv @ (b2 + np.array([sx * TOL, sy * TOL]))
+                     for sx, sy in ((1, 1), (1, -1), (-1, -1), (-1, 1))])
+
+    def draw_band(ax, m):
+        ax.fill(band[:, 0], band[:, 1], color=m.series[0], alpha=0.30, lw=0)
+        ax.plot(np.append(band[:, 0], band[0, 0]),
+                np.append(band[:, 1], band[0, 1]),
+                color=m.series[0], lw=1.2)
+        for point, label, off in ((tt["x"], "the answer\n(1, 1)", (14, 14)),
+                                  (tt["x_perturbed"],
+                                   "after changing one digit\nof one input: (0, 2)",
+                                   (-18, 26))):
+            ax.plot([point[0]], [point[1]], "o", color=m.ink, ms=6, zorder=5)
+            ax.annotate(label, (point[0], point[1]), xytext=off,
+                        textcoords="offset points", fontsize=8.5, color=m.ink,
+                        ha="left" if off[0] > 0 else "right",
+                        arrowprops=dict(arrowstyle="-", lw=0.8, color="0.55"))
+        # Semi-axes of the parallelogram are tau / sigma_i, so the full length
+        # and width are these, and their ratio is kappa by construction.
+        length = 2 * TOL / tt["sigma_min"]
+        width = 2 * TOL / tt["sigma_max"]
+        ax.annotate(f"this sliver is {length:.2f} long and {width:.3f} wide\n"
+                    f"— an aspect ratio of {length / width:.0f}, which is κ(A)",
+                    (0.5, 0.06), xycoords="axes fraction", ha="center",
+                    va="bottom", fontsize=9, color="0.35")
+        ax.set_xlim(-4.0, 6.0)
+        ax.set_ylim(-4.0, 6.0)
+
+    out["f0"] = charts.diagram(
+        draw_band,
+        title="Every point in this sliver solves the system to three decimals",
+        subtitle=(f"The shaded region is every (x, y) satisfying both equations "
+                  f"of a 2 x 2 system to within {TOL:g}. It is drawn to scale: "
+                  f"it really is that thin, and that long."),
+        xlabel="x", ylabel="y", equal=True,
+        source="Simulated; standarderror/linalg/conditioning.py.",
+        alt=("A very long, very thin shaded sliver running diagonally across "
+             "the plane, with two marked points on it several units apart."),
+        caption=("Solving a 2 x 2 system is finding where two lines cross. When "
+                 "they cross at a shallow angle the near-solutions form a "
+                 "sliver instead of a point — so the answer is barely pinned "
+                 "down along the sliver, and a point at the far end of it is "
+                 "still, to three decimals, a solution. That second fact is "
+                 "why the residual cannot warn you."),
+        path=str(IMG / f"lec01-f0-sliver.{EXT}"))[0]
 
     # --- f1: the prediction, against what happened -------------------------
     solves = res["solves"]
@@ -253,6 +335,27 @@ def _snippets(res: dict) -> dict:
               f"{np.linalg.norm(H @ x_hat - b) / np.linalg.norm(b):.1e}")
     """, expect=["x_hat ranges from    -4.87 to 8.49"])
 
+    out["lines"] = s.run("""
+        # Two equations. The second is the first with a hair added to one
+        # coefficient, so the two lines they describe are almost parallel.
+        A = np.array([[1.0, 1.0],
+                      [1.0, 1.001]])
+        b = np.array([2.0, 2.001])
+        print("solution        ", np.linalg.solve(A, b))
+
+        # Now change the last digit of one number on the right. That is a
+        # relative change of 0.00035 -- three and a half parts in ten thousand.
+        b_new = np.array([2.0, 2.002])
+        x_new = np.linalg.solve(A, b_new)
+        print("after the change", x_new)
+
+        # And the *old* answer, on the *new* system: still almost a solution.
+        x_old = np.array([1.0, 1.0])
+        print("old answer's relative residual on the new system  "
+              f"{np.linalg.norm(A @ x_old - b_new) / np.linalg.norm(b_new):.1e}")
+        print(f"kappa(A) {np.linalg.cond(A):.0f}")
+    """, expect=["after the change [0. 2.]", "kappa(A) 4002"])
+
     out["explain"] = s.run("""
         kappa = np.linalg.cond(H)
         eps = np.finfo(float).eps
@@ -324,6 +427,7 @@ def build() -> Post:
     solves = {s["n"]: s for s in res["solves"]}
     invs = {s["n"]: s for s in res["inv"]}
     head = solves[HEADLINE_SIZE]
+    tt = res["two_by_two"]
     bases = {b["degree"]: b for b in res["bases"]}
     hb = bases[HEADLINE_DEGREE]
     worst = res["perturb"][-1]
@@ -361,7 +465,7 @@ def build() -> Post:
               "lectures", "data-science"],
         author=se.SETTINGS.author,
         code_url=se.SETTINGS.code_repo_url,
-        min_words=1200, max_words=1900,
+        min_words=1900, max_words=2800,
         # Every comparison in this episode is between two numerical methods on a
         # problem whose exact answer is known. There is no predictive claim and
         # so no baseline to compare against; the auto-detect reads "the relative
@@ -424,51 +528,137 @@ property of the matrix.""", level=3)
 
     # ------------------------------------------------------------------ 2
     post.add(
-        "The number that connects them",
-        f"""Write the singular values of *A* as *σ*₁ ≥ … ≥ *σ*ₙ. The **condition
-number** is their ratio:
+        "Two lines that almost agree",
+        f"""Before any of that matrix, here is the same failure at a size that
+fits in your head.
 
-$$\\kappa(A) = \\frac{{\\sigma_{{\\max}}}}{{\\sigma_{{\\min}}}} = \\lVert A
-\\rVert \\, \\lVert A^{{-1}} \\rVert$$
-
-and the reason to care about it is a single inequality. Perturb the right-hand
-side and the solution moves by at most
-
-$$\\frac{{\\lVert \\delta x \\rVert}}{{\\lVert x \\rVert}} \;\\le\;
-\\kappa(A) \\, \\frac{{\\lVert \\delta b \\rVert}}{{\\lVert b \\rVert}}$$
-
-Read that with no data error in mind at all. Storing *b* in double precision
-already perturbs it, by about {res['eps']:.1e} — that is what a double *is*. So
-even with perfect measurements, perfect arithmetic and a perfect solver, the
-relative error in the answer cannot be pushed below *κ*(A) × {res['eps']:.0e}.
-The condition number is not a diagnostic of your data. It is an error bar that the
-matrix puts on your answer before your data arrives.""")
+Two equations in two unknowns are two straight lines on a page, and solving them
+means finding the point where the lines cross. Usually that is a perfectly
+definite place. But suppose the two lines are *almost the same line* — they cross
+at an angle of {tt['angle_deg']:.3f} degrees, three hundredths of one degree.
+Now ask where they cross. There is still exactly one answer, and you can still
+compute it. But the crossing is barely pinned down: nudge either line by a hair
+and the point where they meet slides a long way along their shared direction.""")
 
     post.add(
         "",
-        f"""Where does *κ* come from? Three lines, and they are worth doing once
-rather than taking the definition on trust. Solve the perturbed system,
-*A*(*x* + *δx*) = *b* + *δb*, subtract the unperturbed one, and you get
-*δx* = *A*⁻¹ *δb*, so ‖*δx*‖ ≤ ‖*A*⁻¹‖ ‖*δb*‖. Separately, *b* = *A**x* gives
-‖*b*‖ ≤ ‖*A*‖ ‖*x*‖, or 1/‖*x*‖ ≤ ‖*A*‖/‖*b*‖. Multiply the two and ‖*A*‖ ‖*A*⁻¹‖
-falls out on its own. That product *is* the condition number, and for the
-two-norm it equals *σ*ₘₐₓ/*σ*ₘᵢₙ. Nothing was chosen; it is what is left when you
-ask how much a solution can move.
+        f"""{snip['lines'].markdown()}
 
-{snip['explain'].markdown()}
+Read what happened. The right-hand side changed by
+{tt['relative_change_b']:.5f} — three and a half parts in ten thousand, the kind
+of change you would get from rounding — and the answer went from (1, 1) to
+(0, 2). It moved by {tt['relative_change_x'] * 100:.0f} percent.
 
-A double carries about {res['digits_available']:.1f} decimal digits and this
-matrix costs {head['digits_lost']:.1f} of them, so there are none left. That is
-the {head['error'] * 100:.0f} percent, derived from the matrix rather than
-observed from the failure.
+And then the third line, which is the one to sit with. The *old* answer, (1, 1),
+evaluated on the *new* system, has a relative residual of
+{tt['stale_residual']:.1e}. It is wrong by 100 percent and it still satisfies the
+equations to four decimal places.
 
-Figure 1 does this across sizes, and the point of it is that nothing was fitted.
-The line labelled *predicted* is {res['digits_available']:.1f} − log₁₀ *κ*, an
-arithmetic operation on the matrix; the line labelled *kept* is a measurement.
-The measurement sits about two digits above the bound the whole way, which is
-the only direction a worst-case bound is allowed to be wrong in — and the
-residual stays at machine precision under both of them throughout.""",
-        figures=[figs["f1"], figs["t1"]], level=3)
+That is not a paradox once you look at the picture. "Satisfies both equations to
+within a hair" does not describe a point when the lines are nearly parallel — it
+describes a long thin sliver running along them. The true answer is somewhere in
+that sliver, the perturbed answer is somewhere else in the same sliver, and both
+of them are, to four decimals, solutions. A residual asks *does my answer satisfy
+the equations?* An error asks *is my answer right?* Those come apart exactly when
+the sliver is long, and nothing about the first question can tell you about the
+second.""",
+        figures=[figs["f0"]], level=3)
+
+    # ------------------------------------------------------------------ 2b
+    post.add(
+        "What a matrix does to a circle",
+        f"""So the quantity we want is *how long and thin is the sliver*. There is
+a standard name for it, and getting to it geometrically is worth the two
+paragraphs, because the definition on its own explains nothing.
+
+Take the unit circle — every vector of length one — and apply your matrix to all
+of it. Multiplying by a matrix stretches some directions and squashes others, and
+the result is always an **ellipse**. (In *n* dimensions: the unit sphere goes to
+an ellipsoid. This is a theorem, not a picture — it is what the singular value
+decomposition says.) The lengths of that ellipse's semi-axes are the **singular
+values** *σ*₁ ≥ *σ*₂ ≥ … ≥ *σ*ₙ: the biggest is how much the matrix can stretch a
+unit vector, the smallest is how much it can shrink one.
+
+For the 2 × 2 matrix above, those two numbers are
+{tt['sigma_max']:.4f} and {tt['sigma_min']:.4f}. The matrix takes a circle and
+returns something {tt['sigma_max'] / tt['sigma_min']:.0f} times longer than it is
+wide — not an ellipse so much as a needle.
+
+Now run it backwards, because solving is the backwards direction. If the matrix
+squashes one direction by a factor of {tt['sigma_min']:.4f}, then *un*-squashing
+it — which is what a solve does — multiplies anything in that direction by
+{1 / tt['sigma_min']:.0f}. Errors included. That is why the sliver in the figure
+has the shape it has: it is a small square of tolerance, pushed backwards through
+the matrix, stretched by 1/*σ* in each direction. Its aspect ratio is therefore
+*σ*ₘₐₓ/*σ*ₘᵢₙ — which is the number the figure labels, and which finally has a
+name:
+
+$$\\kappa(A) = \\frac{{\\sigma_{{\\max}}}}{{\\sigma_{{\\min}}}}$$
+
+**The condition number is how eccentric the ellipse is.** One means a circle:
+every direction treated alike, nothing amplified. A thousand means a thousand-fold
+difference between the direction the matrix handles best and the direction it
+handles worst — and a solve amplifies error in the worst direction by exactly
+that ratio more than in the best one.""")
+
+    # ------------------------------------------------------------------ 2c
+    post.add(
+        "The inequality, one line at a time",
+        f"""The geometric statement turns into an algebraic one in three steps,
+and they are short enough to do here rather than cite.
+
+Start with the true system, *A**x* = *b*, and a perturbed one where the
+right-hand side is slightly off: *A*(*x* + *δx*) = *b* + *δb*. Subtract the first
+from the second. The *A**x* and *b* cancel and you are left with
+
+$$A \, \\delta x = \\delta b \\qquad \\text{{so}} \\qquad \\delta x = A^{{-1}}
+\\delta b$$
+
+The error in the answer is the error in the input, run through the inverse. Take
+norms — a norm is just a length, and any consistent choice works — and the
+definition of a matrix norm gives
+
+$$\\lVert \\delta x \\rVert \;\\le\; \\lVert A^{{-1}} \\rVert \, \\lVert
+\\delta b \\rVert$$
+
+That is the whole mechanism: *how much can the inverse stretch things*. Second
+step, and it is only there to make the statement *relative* rather than absolute,
+because a relative error is what anybody actually cares about. From *b* = *A**x*,
+the same inequality the other way round gives ‖*b*‖ ≤ ‖*A*‖ ‖*x*‖, or
+
+$$\\frac{{1}}{{\\lVert x \\rVert}} \;\\le\; \\frac{{\\lVert A
+\\rVert}}{{\\lVert b \\rVert}}$$
+
+Multiply the two together and the constant that falls out is not a choice
+somebody made:
+
+$$\\frac{{\\lVert \\delta x \\rVert}}{{\\lVert x \\rVert}} \;\\le\;
+\\underbrace{{\\lVert A \\rVert \, \\lVert A^{{-1}}
+\\rVert}}_{{\\kappa(A)}} \; \\frac{{\\lVert \\delta b \\rVert}}{{\\lVert b
+\\rVert}}$$
+
+‖*A*‖ ‖*A*⁻¹‖ is what is left over when you ask how far a solution can move, and
+in the two-norm it is exactly *σ*ₘₐₓ/*σ*ₘᵢₙ. The geometry and the algebra are the
+same fact.""")
+
+    post.add(
+        "",
+        f"""Here is the part that makes this a practical matter rather than a
+theoretical one. Read the inequality with **no data error in mind at all**.
+
+A double-precision float is a ruler with about {res['digits_available']:.0f}
+significant marks on it. Writing a number down as a double already moves it, by
+roughly {res['eps']:.1e} of its own size — that is not a defect, that is what a
+float *is*. So *δb*/*b* is never smaller than about
+{res['eps']:.0e}, however good your instruments are, and the inequality says the
+relative error in the answer cannot be pushed below *κ*(A) ×
+{res['eps']:.0e}.
+
+The condition number is not a diagnostic of your data. It is an error bar the
+matrix puts on your answer before your data arrives. And since a factor of ten in
+error is one lost decimal digit, log₁₀ *κ* counts the digits directly: a matrix
+with *κ* = 10⁸ eats eight of your {res['digits_available']:.0f} marks and hands
+you the rest.""", level=3)
 
     # ------------------------------------------------------------------ 3
     post.add(
@@ -525,6 +715,23 @@ agree to {res['fit_agreement']:.0e}. All that changed is which basis the
 coefficients are expressed in, and the condition number went from
 {hb['monomial']:.1e} to {hb['legendre']:.0f}. Figure 2 is that comparison across
 degrees.
+
+Why does that help so much? Because of what the columns of *X* are being asked
+to do. Suppose you have to describe a position using two given directions. If
+they are *north* and *east*, every position has one obvious, stable pair of
+coefficients. If instead you are handed *north-east* and
+*north-north-east* — two directions three degrees apart — you can still describe
+any position in the plane, because they still span it. But now the coefficients
+are enormous and nearly cancel: reaching somewhere due east means going a long
+way along one and almost as far back along the other. Move the target a
+millimetre and those two large numbers change a lot, even though the position
+barely moved.
+
+*t*⁷ and *t*⁸ on the interval [0, 1] are north-east and north-north-east. As
+functions on that interval they are almost the same shape, so the coefficients
+that use them are large, opposite and unstable. Legendre polynomials are north
+and east: mutually orthogonal, each contributing something the others cannot, so
+each coefficient answers a question the others do not.
 
 That is the general lesson, and it is bigger than polynomials: **conditioning is
 a property of the parameterisation, not of the problem.** A design matrix whose

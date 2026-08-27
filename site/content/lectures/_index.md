@@ -16,6 +16,31 @@ material rots; this is the cheapest defence against it I know of.
 Each episode opens with a computation that returns the wrong answer. The theory
 arrives to explain the wrong answer, not before it.
 
+### How an episode is built
+
+Four rules, in the order they get applied.
+
+**The failure comes first, at a size that fits in your head.** Before any
+general result there is a two-by-two version you can check by hand. If the
+smallest honest example does not already show the problem, the episode has not
+found the problem yet.
+
+**Every object is introduced before it is used.** A singular value is not a
+definition to be accepted; it is the length of a semi-axis of the ellipse your
+matrix turns the unit circle into. Notation that arrives without its picture is
+notation the reader will skip, and then the rest of the episode is decoration.
+
+**The derivations are here, and they are slow.** This is where a lecture differs
+from a post: a post cites the three lines, an episode does them, one displayed
+step at a time, with a sentence afterwards saying what the step bought. The
+target is that a reader with first-year calculus and no linear algebra can
+follow every line — not skim it, follow it.
+
+**The code is short and does not carry the explanation.** Twenty to thirty lines
+an episode, enough to run the failure and check the claim, never enough to become
+the subject. If something can be explained in a sentence or in a loop, it gets
+the sentence.
+
 ---
 
 ## Linear Algebra for Data Science, Taught Through What Breaks

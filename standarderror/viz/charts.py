@@ -575,6 +575,60 @@ def table_image(
     return fig, ax
 
 
+def diagram(
+    draw,
+    *,
+    title: str = "",
+    subtitle: str = "",
+    xlabel: str = "",
+    ylabel: str = "",
+    source: str = "",
+    alt: str = "",
+    caption: str = "",
+    mode: str = "light",
+    ticks: bool = True,
+    equal: bool = False,
+    figsize: tuple[float, float] = (7.2, 4.2),
+    path: str | None = None,
+):
+    """A geometric picture, drawn by the caller, framed like every other figure.
+
+    The chart functions above all take *data* and choose a form for it. A lecture
+    needs the other thing: a picture of a mechanism in the plane — two lines
+    meeting at a shallow angle, a vector projected onto a subspace, a circle
+    mapped to an ellipse — where the shape *is* the explanation and there is no
+    series to plot.
+
+    Distinct from `sketch_card`, which is hand-drawn, deliberately has no axes
+    and refuses to carry numbers, precisely so nobody reads a value off it. This
+    one keeps real axes and real coordinates, because in a lecture the reader is
+    supposed to check the picture against the arithmetic in the code block above
+    it. `equal=True` when the geometry only reads correctly at equal aspect —
+    an angle looks like a different angle on stretched axes, which for a figure
+    whose subject is an angle would be the one mistake that matters.
+
+    `draw(ax, m)` receives the axes and the mode's palette.
+    """
+    m = theme.apply(mode, figsize=figsize)
+    fig, ax = plt.subplots()
+    draw(ax, m)
+    if equal:
+        ax.set_aspect("equal", adjustable="datalim")
+    if not ticks:
+        ax.set_xticks([])
+        ax.set_yticks([])
+    if xlabel:
+        ax.set_xlabel(xlabel)
+    if ylabel:
+        ax.set_ylabel(ylabel)
+    theme.finish(ax, title=title, subtitle=subtitle, source=source, mode=mode,
+                 legend=bool(ax.get_legend_handles_labels()[0]))
+    if path:
+        theme.save(fig, path, mode=mode, close=False)
+        return Figure(path, alt or title, caption, title, mode), (fig, ax)
+    return fig, ax
+
+
 def coefficient_matrix(
     matrix,
     *,

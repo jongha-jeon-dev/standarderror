@@ -67,72 +67,161 @@ neither would LAPACK, MATLAB or R. What has happened is that the residual and
 the error are different quantities, and the thing that connects them is a
 property of the matrix.
 
-## The number that connects them
+## Two lines that almost agree
 
-Write the singular values of *A* as *σ*₁ ≥ … ≥ *σ*ₙ. The **condition
-number** is their ratio:
+Before any of that matrix, here is the same failure at a size that
+fits in your head.
 
-$$\kappa(A) = \frac{\sigma_{\max}}{\sigma_{\min}} = \lVert A
-\rVert \, \lVert A^{-1} \rVert$$
-
-and the reason to care about it is a single inequality. Perturb the right-hand
-side and the solution moves by at most
-
-$$\frac{\lVert \delta x \rVert}{\lVert x \rVert} \;\le\;
-\kappa(A) \, \frac{\lVert \delta b \rVert}{\lVert b \rVert}$$
-
-Read that with no data error in mind at all. Storing *b* in double precision
-already perturbs it, by about 2.2e-16 — that is what a double *is*. So
-even with perfect measurements, perfect arithmetic and a perfect solver, the
-relative error in the answer cannot be pushed below *κ*(A) × 2e-16.
-The condition number is not a diagnostic of your data. It is an error bar that the
-matrix puts on your answer before your data arrives.
-
-Where does *κ* come from? Three lines, and they are worth doing once
-rather than taking the definition on trust. Solve the perturbed system,
-*A*(*x* + *δx*) = *b* + *δb*, subtract the unperturbed one, and you get
-*δx* = *A*⁻¹ *δb*, so ‖*δx*‖ ≤ ‖*A*⁻¹‖ ‖*δb*‖. Separately, *b* = *A**x* gives
-‖*b*‖ ≤ ‖*A*‖ ‖*x*‖, or 1/‖*x*‖ ≤ ‖*A*‖/‖*b*‖. Multiply the two and ‖*A*‖ ‖*A*⁻¹‖
-falls out on its own. That product *is* the condition number, and for the
-two-norm it equals *σ*ₘₐₓ/*σ*ₘᵢₙ. Nothing was chosen; it is what is left when you
-ask how much a solution can move.
+Two equations in two unknowns are two straight lines on a page, and solving them
+means finding the point where the lines cross. Usually that is a perfectly
+definite place. But suppose the two lines are *almost the same line* — they cross
+at an angle of 0.029 degrees, three hundredths of one degree.
+Now ask where they cross. There is still exactly one answer, and you can still
+compute it. But the crossing is barely pinned down: nudge either line by a hair
+and the point where they meet slides a long way along their shared direction.
 
 ```python
-kappa = np.linalg.cond(H)
-eps = np.finfo(float).eps
+# Two equations. The second is the first with a hair added to one
+# coefficient, so the two lines they describe are almost parallel.
+A = np.array([[1.0, 1.0],
+              [1.0, 1.001]])
+b = np.array([2.0, 2.001])
+print("solution        ", np.linalg.solve(A, b))
 
-print(f"kappa(H)             {kappa:.2e}")
-print(f"digits available     {-np.log10(eps):.1f}")
-print(f"digits lost to kappa {np.log10(kappa):.1f}")
-print(f"error bound          {kappa * eps:.1e}")
+# Now change the last digit of one number on the right. That is a
+# relative change of 0.00035 -- three and a half parts in ten thousand.
+b_new = np.array([2.0, 2.002])
+x_new = np.linalg.solve(A, b_new)
+print("after the change", x_new)
+
+# And the *old* answer, on the *new* system: still almost a solution.
+x_old = np.array([1.0, 1.0])
+print("old answer's relative residual on the new system  "
+      f"{np.linalg.norm(A @ x_old - b_new) / np.linalg.norm(b_new):.1e}")
+print(f"kappa(A) {np.linalg.cond(A):.0f}")
 ```
 
 ```text
-kappa(H)             3.22e+17
-digits available     15.7
-digits lost to kappa 17.5
-error bound          7.1e+01
+solution         [1. 1.]
+after the change [0. 2.]
+old answer's relative residual on the new system  3.5e-04
+kappa(A) 4002
 ```
 
-A double carries about 15.7 decimal digits and this
-matrix costs 17.5 of them, so there are none left. That is
-the 302 percent, derived from the matrix rather than
-observed from the failure.
+Read what happened. The right-hand side changed by
+0.00035 — three and a half parts in ten thousand, the kind
+of change you would get from rounding — and the answer went from (1, 1) to
+(0, 2). It moved by 100 percent.
 
-Figure 1 does this across sizes, and the point of it is that nothing was fitted.
-The line labelled *predicted* is 15.7 − log₁₀ *κ*, an
-arithmetic operation on the matrix; the line labelled *kept* is a measurement.
-The measurement sits about two digits above the bound the whole way, which is
-the only direction a worst-case bound is allowed to be wrong in — and the
-residual stays at machine precision under both of them throughout.
+And then the third line, which is the one to sit with. The *old* answer, (1, 1),
+evaluated on the *new* system, has a relative residual of
+3.5e-04. It is wrong by 100 percent and it still satisfies the
+equations to four decimal places.
 
-![Two nearly coincident falling lines showing correct digits against system size, with a note that the residual stays at machine precision throughout.](lec01-f1-digits.png)
+That is not a paradox once you look at the picture. "Satisfies both equations to
+within a hair" does not describe a point when the lines are nearly parallel — it
+describes a long thin sliver running along them. The true answer is somewhere in
+that sliver, the perturbed answer is somewhere else in the same sliver, and both
+of them are, to four decimals, solutions. A residual asks *does my answer satisfy
+the equations?* An error asks *is my answer right?* Those come apart exactly when
+the sliver is long, and nothing about the first question can tell you about the
+second.
 
-*The two lines are not a fit and a model; they are a measurement and a closed form, and the closed form is the lower one because it is a worst case. What the residual does over the same range is why this failure is silent.*
+![A very long, very thin shaded sliver running diagonally across the plane, with two marked points on it several units apart.](lec01-f0-sliver.png)
 
-![Table of condition number, residual and error against system size.](lec01-t1-digits.png)
+*Solving a 2 x 2 system is finding where two lines cross. When they cross at a shallow angle the near-solutions form a sliver instead of a point — so the answer is barely pinned down along the sliver, and a point at the far end of it is still, to three decimals, a solution. That second fact is why the residual cannot warn you.*
 
-*The last column is the cost of writing inv(A) @ b instead of solve(A, b): the same problem, between five and two hundred times worse.*
+## What a matrix does to a circle
+
+So the quantity we want is *how long and thin is the sliver*. There is
+a standard name for it, and getting to it geometrically is worth the two
+paragraphs, because the definition on its own explains nothing.
+
+Take the unit circle — every vector of length one — and apply your matrix to all
+of it. Multiplying by a matrix stretches some directions and squashes others, and
+the result is always an **ellipse**. (In *n* dimensions: the unit sphere goes to
+an ellipsoid. This is a theorem, not a picture — it is what the singular value
+decomposition says.) The lengths of that ellipse's semi-axes are the **singular
+values** *σ*₁ ≥ *σ*₂ ≥ … ≥ *σ*ₙ: the biggest is how much the matrix can stretch a
+unit vector, the smallest is how much it can shrink one.
+
+For the 2 × 2 matrix above, those two numbers are
+2.0005 and 0.0005. The matrix takes a circle and
+returns something 4002 times longer than it is
+wide — not an ellipse so much as a needle.
+
+Now run it backwards, because solving is the backwards direction. If the matrix
+squashes one direction by a factor of 0.0005, then *un*-squashing
+it — which is what a solve does — multiplies anything in that direction by
+2001. Errors included. That is why the sliver in the figure
+has the shape it has: it is a small square of tolerance, pushed backwards through
+the matrix, stretched by 1/*σ* in each direction. Its aspect ratio is therefore
+*σ*ₘₐₓ/*σ*ₘᵢₙ — which is the number the figure labels, and which finally has a
+name:
+
+$$\kappa(A) = \frac{\sigma_{\max}}{\sigma_{\min}}$$
+
+**The condition number is how eccentric the ellipse is.** One means a circle:
+every direction treated alike, nothing amplified. A thousand means a thousand-fold
+difference between the direction the matrix handles best and the direction it
+handles worst — and a solve amplifies error in the worst direction by exactly
+that ratio more than in the best one.
+
+## The inequality, one line at a time
+
+The geometric statement turns into an algebraic one in three steps,
+and they are short enough to do here rather than cite.
+
+Start with the true system, *A**x* = *b*, and a perturbed one where the
+right-hand side is slightly off: *A*(*x* + *δx*) = *b* + *δb*. Subtract the first
+from the second. The *A**x* and *b* cancel and you are left with
+
+$$A \, \delta x = \delta b \qquad \text{so} \qquad \delta x = A^{-1}
+\delta b$$
+
+The error in the answer is the error in the input, run through the inverse. Take
+norms — a norm is just a length, and any consistent choice works — and the
+definition of a matrix norm gives
+
+$$\lVert \delta x \rVert \;\le\; \lVert A^{-1} \rVert \, \lVert
+\delta b \rVert$$
+
+That is the whole mechanism: *how much can the inverse stretch things*. Second
+step, and it is only there to make the statement *relative* rather than absolute,
+because a relative error is what anybody actually cares about. From *b* = *A**x*,
+the same inequality the other way round gives ‖*b*‖ ≤ ‖*A*‖ ‖*x*‖, or
+
+$$\frac{1}{\lVert x \rVert} \;\le\; \frac{\lVert A
+\rVert}{\lVert b \rVert}$$
+
+Multiply the two together and the constant that falls out is not a choice
+somebody made:
+
+$$\frac{\lVert \delta x \rVert}{\lVert x \rVert} \;\le\;
+\underbrace{\lVert A \rVert \, \lVert A^{-1}
+\rVert}_{\kappa(A)} \; \frac{\lVert \delta b \rVert}{\lVert b
+\rVert}$$
+
+‖*A*‖ ‖*A*⁻¹‖ is what is left over when you ask how far a solution can move, and
+in the two-norm it is exactly *σ*ₘₐₓ/*σ*ₘᵢₙ. The geometry and the algebra are the
+same fact.
+
+Here is the part that makes this a practical matter rather than a
+theoretical one. Read the inequality with **no data error in mind at all**.
+
+A double-precision float is a ruler with about 16
+significant marks on it. Writing a number down as a double already moves it, by
+roughly 2.2e-16 of its own size — that is not a defect, that is what a
+float *is*. So *δb*/*b* is never smaller than about
+2e-16, however good your instruments are, and the inequality says the
+relative error in the answer cannot be pushed below *κ*(A) ×
+2e-16.
+
+The condition number is not a diagnostic of your data. It is an error bar the
+matrix puts on your answer before your data arrives. And since a factor of ten in
+error is one lost decimal digit, log₁₀ *κ* counts the digits directly: a matrix
+with *κ* = 10⁸ eats eight of your 16 marks and hands
+you the rest.
 
 ## Is the bound real, or just an inequality?
 
@@ -240,6 +329,23 @@ agree to 4e-14. All that changed is which basis the
 coefficients are expressed in, and the condition number went from
 1.6e+16 to 22. Figure 2 is that comparison across
 degrees.
+
+Why does that help so much? Because of what the columns of *X* are being asked
+to do. Suppose you have to describe a position using two given directions. If
+they are *north* and *east*, every position has one obvious, stable pair of
+coefficients. If instead you are handed *north-east* and
+*north-north-east* — two directions three degrees apart — you can still describe
+any position in the plane, because they still span it. But now the coefficients
+are enormous and nearly cancel: reaching somewhere due east means going a long
+way along one and almost as far back along the other. Move the target a
+millimetre and those two large numbers change a lot, even though the position
+barely moved.
+
+*t*⁷ and *t*⁸ on the interval [0, 1] are north-east and north-north-east. As
+functions on that interval they are almost the same shape, so the coefficients
+that use them are large, opposite and unstable. Legendre polynomials are north
+and east: mutually orthogonal, each contributing something the others cannot, so
+each coefficient answers a question the others do not.
 
 That is the general lesson, and it is bigger than polynomials: **conditioning is
 a property of the parameterisation, not of the problem.** A design matrix whose
