@@ -39,8 +39,8 @@ gh auth login          # once, if you have gh
 ## 1. Configure
 
 ```bash
-git clone <this-repo> quantpost && cd quantpost
-GH_USER=jonghajeon REPO=quantpost ./scripts/setup_github.sh
+git clone <this-repo> standarderror && cd standarderror
+GH_USER=jonghajeon REPO=standarderror ./scripts/setup_github.sh
 ```
 
 Three things must agree, and this is the single most common way the site ends up
@@ -94,16 +94,16 @@ git -C site/themes/PaperMod checkout v9.0     # then commit the submodule bump
 python -m pip install -e ".[dev]"
 pytest                                  # ~110 tests, no network
 git branch -M main                      # the Pages workflow triggers on main
-gh repo create jonghajeon/quantpost --public --source=. --remote=origin
+gh repo create jonghajeon/standarderror --public --source=. --remote=origin
 git push -u origin main
-gh api -X POST repos/jonghajeon/quantpost/pages -f build_type=workflow
+gh api -X POST repos/jonghajeon/standarderror/pages -f build_type=workflow
 ```
 
 Without `gh`: create the repo at <https://github.com/new> (public, **no** README
 or .gitignore — you have both), then
 
 ```bash
-git remote add origin https://github.com/jonghajeon/quantpost.git
+git remote add origin https://github.com/jonghajeon/standarderror.git
 git push -u origin main
 ```
 
@@ -122,7 +122,7 @@ This is the part you repeat.
 
 ```bash
 # 1. Draft. Writes site/content/posts/<slug>/index.md with draft: true.
-quantpost run exp001_chaos_horizon --publish
+standarderror run exp001_chaos_horizon --publish
 
 # 2. Preview. -D shows drafts; without it the post is correctly invisible.
 make serve                     # http://localhost:1313
@@ -132,12 +132,12 @@ git add -A && git commit -m "Draft: how far ahead can you forecast chaos"
 git push
 
 # 4. Publish when you are happy.
-quantpost run exp001_chaos_horizon --publish --live
+standarderror run exp001_chaos_horizon --publish --live
 git add -A && git commit -m "Publish: how far ahead can you forecast chaos"
 git push                       # Action deploys in ~2 minutes
 
 # 5. Crosspost, only after the site is live.
-quantpost run exp001_chaos_horizon --publish --live --medium
+standarderror run exp001_chaos_horizon --publish --live --medium
 # then import build/medium/<slug>.md at https://medium.com/p/import
 ```
 
@@ -145,7 +145,7 @@ Why step 5 comes last: Medium's importer fetches images from your live site by
 absolute URL. `medium_bundle()` refuses to run on a draft for that reason —
 building it early hands you URLs that 404.
 
-`--live` is required for `--medium`; `quantpost run ... --publish --medium` on a
+`--live` is required for `--medium`; `standarderror run ... --publish --medium` on a
 draft tells you so and skips the bundle rather than writing a broken one.
 
 ### What is committed
@@ -164,11 +164,11 @@ in the deploy; a few hundred KB per post is the right trade.
 
 ```bash
 make test                                       # the suite
-quantpost audit build/*.manifest.json           # re-check a written post
+standarderror audit build/*.manifest.json           # re-check a written post
 cd site && hugo --gc --minify                   # does it actually build?
 ```
 
-`Post.audit()` runs automatically inside `quantpost run` and returns a non-zero
+`Post.audit()` runs automatically inside `standarderror run` and returns a non-zero
 exit code on any problem, so `--publish` cannot ship a post with an untitled
 figure, missing alt text, a leftover TODO, a placeholder URL, or a forecasting
 claim that never mentions a baseline. `docs/../references/audit-checklist.md` in
@@ -188,7 +188,7 @@ network access — the adapter tests use recorded payloads, so a provider outage
 never turn your build red. To check the live APIs deliberately:
 
 ```bash
-QUANTPOST_NETWORK_TESTS=1 pytest -m network
+SERR_NETWORK_TESTS=1 pytest -m network
 ```
 
 ---
@@ -204,7 +204,7 @@ QUANTPOST_NETWORK_TESTS=1 pytest -m network
 | `partial "head.html" not found` | the submodule is empty: `git submodule update --init --recursive` |
 | Nothing deploys on push | you are on `master`; the workflow triggers on `main` |
 | Medium import shows broken images | site not live yet, or `SITE_BASE_URL` wrong |
-| `quantpost run` writes into the wrong clone | run it from inside the repo you mean, or set `QUANTPOST_ROOT` |
+| `standarderror run` writes into the wrong clone | run it from inside the repo you mean, or set `SERR_ROOT` |
 | `audit FAILED: placeholder 'YOURNAME'` | working as designed — set `CODE_REPO_URL` in `.env` |
 
 ## A note on what goes in a public repo

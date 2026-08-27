@@ -1,4 +1,4 @@
-"""Tests for quantpost.ts.bend.
+"""Tests for standarderror.ts.bend.
 
 Two kinds of test carry the weight here.
 
@@ -21,8 +21,8 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from quantpost.ts import bend as bd
-from quantpost.ts import detect as dt
+from standarderror.ts import bend as bd
+from standarderror.ts import detect as dt
 
 
 def ar1(n, rho, rng, sigma=1.0):

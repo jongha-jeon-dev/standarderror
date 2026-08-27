@@ -61,7 +61,7 @@ Everything is closed form or fixed-seed simulation calibrated to published scala
 No price series is used or redistributed, and there are no investment implications
 anywhere in it.
 
-Run: `quantpost run exp011_chip_cycle_horizon --publish`
+Run: `standarderror run exp011_chip_cycle_horizon --publish`
 """
 
 from __future__ import annotations
@@ -71,15 +71,15 @@ import os
 import numpy as np
 import pandas as pd
 
-import quantpost as qp
-from quantpost.dynamics import delay
-from quantpost.models import ESN, ESNConfig
-from quantpost.render import Post
-from quantpost.viz import charts, theme
+import standarderror as se
+from standarderror.dynamics import delay
+from standarderror.models import ESN, ESNConfig
+from standarderror.render import Post
+from standarderror.viz import charts, theme
 
-IMG = qp.SETTINGS.build_dir / "img"
-EXT = os.environ.get("QUANTPOST_FIG_EXT", "png")
-SEED = qp.SETTINGS.seed
+IMG = se.SETTINGS.build_dir / "img"
+EXT = os.environ.get("SERR_FIG_EXT", "png")
+SEED = se.SETTINGS.seed
 
 # --- published facts, every one sourced in `data_sources` ----------------------
 FAB_MONTHS = (48, 72)            # groundbreaking to volume production
@@ -472,7 +472,7 @@ def figures(res: dict) -> dict:
         note=("Same model, same features, same training window. A saturated "
               "capacity cycle is a limit cycle and limit cycles are easy. What is "
               "hard is not the cycle."),
-        footer="quantpost", mode="light",
+        footer="The Standard Error", mode="light",
         alt=(f"A hand-drawn card. A wavy line stops at a marked point, where a "
              f"dashed line continues the wave downward and a solid line breaks "
              f"sharply upward instead. Beside it, a forecast horizon of over "
@@ -541,8 +541,8 @@ def build() -> Post:
             f"ways."),
         tags=["forecasting", "machine-learning", "semiconductors", "dynamical-systems",
               "data-science"],
-        author=qp.SETTINGS.author,
-        code_url=qp.SETTINGS.code_repo_url,
+        author=se.SETTINGS.author,
+        code_url=se.SETTINGS.code_repo_url,
         min_words=1600, max_words=2500,
         table_figures=[figs["table"]],
         data_sources=[
@@ -589,8 +589,8 @@ def build() -> Post:
         reproducibility={
             "seed": SEED,
             "environment": ", ".join(
-                f"{k}={v}" for k, v in qp.environment().items()
-                if k in ("python", "numpy", "scipy", "quantpost")),
+                f"{k}={v}" for k, v in se.environment().items()
+                if k in ("python", "numpy", "scipy", "standarderror")),
             "characteristic_polynomial":
                 "z^L - (2-d) z^(L-1) + (1-d) z^(L-2) + kappa*theta*sum_k g_k "
                 "z^(L-L_k), roots taken exactly; d is the reversion of price "

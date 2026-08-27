@@ -23,7 +23,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from quantpost.physio import heat
+from standarderror.physio import heat
 
 
 class TestAgainstAnswersThatAreNotItself:

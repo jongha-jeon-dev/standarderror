@@ -10,19 +10,19 @@ test:  ## run the offline test suite
 	pytest
 
 test-network:  ## also hit the live public APIs
-	QUANTPOST_NETWORK_TESTS=1 pytest -m network
+	SERR_NETWORK_TESTS=1 pytest -m network
 
 lint:  ## ruff check
-	ruff check quantpost experiments tests
+	ruff check standarderror experiments tests
 
 doctor:  ## environment and credential check
-	quantpost doctor
+	standarderror doctor
 
 run:  ## run one experiment: make run EXP=exp001_chaos_horizon
-	quantpost run $(EXP)
+	standarderror run $(EXP)
 
 publish:  ## run + write the Hugo bundle and the Medium crosspost
-	quantpost run $(EXP) --publish --medium
+	standarderror run $(EXP) --publish --medium
 
 serve:  ## preview the site locally (needs hugo)
 	cd site && hugo server -D

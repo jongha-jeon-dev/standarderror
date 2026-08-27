@@ -18,10 +18,10 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from quantpost.models.monotone import (SIGNS, coverage_sweep, fit_pair,
+from standarderror.models.monotone import (SIGNS, coverage_sweep, fit_pair,
                                        make_credit_like, paired_bootstrap_pom,
                                        pom, split_variance, violation_sweep)
-from quantpost.models.monotone import _constraint
+from standarderror.models.monotone import _constraint
 
 
 class TestTheConstraintVector:

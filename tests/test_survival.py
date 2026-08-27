@@ -19,7 +19,7 @@ import numpy as np
 import pytest
 from scipy.stats import norm
 
-from quantpost.uq import survival as sv
+from standarderror.uq import survival as sv
 
 
 # name, allocation ratio, HR, CI low, CI high, CI level, events treated, events control

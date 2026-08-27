@@ -15,7 +15,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
           cache: pip
       - run: pip install -e ".[dev]"
-      - run: ruff check quantpost experiments tests
+      - run: ruff check standarderror experiments tests
       # No network in CI: the adapter tests run against recorded payloads, so a
       # provider outage can never turn the build red.
       - run: pytest -q

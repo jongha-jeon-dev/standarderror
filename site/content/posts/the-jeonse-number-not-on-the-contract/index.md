@@ -319,7 +319,7 @@ printed on the contract.
 ### Reproducibility
 
 - **seed**: 20260804
-- **environment**: quantpost=0.1.0, python=3.11.15, numpy=2.4.4, scipy=1.17.1
+- **environment**: standarderror=0.1.0, python=3.11.15, numpy=2.4.4, scipy=1.17.1
 - **attachment**: the tenant receives min(D, max(0, lambda·V_T - M)), so the tranche attaches at (M + D)/lambda — no volatility, drift or horizon enters it
 - **bound**: every headline figure sets M = 0, i.e. assumes no mortgage ranks ahead of the deposit, which makes the tenant's risk a floor rather than an estimate
 - **loss**: expected shortfall integrated in closed form against a lognormal terminal value over a two-year term, zero drift, volatility swept over [0.05, 0.12, 0.18]
@@ -327,4 +327,4 @@ printed on the contract.
 - **decomposition**: of the 49.1pp gap between the January 2026 Seoul apartment and December 2022 Seoul villa triggers, the deposit ratio contributes 27.4pp and the auction clearing ratio 21.7pp
 - **guarantee_experience**: HUG's 2020-2024 figures are quoted for scale only: 50,941 incidents, 24.9% recovered on claims taken over. The pool is not the cohorts modelled here, recovery from landlords is not lien recovery, and fraud is not priced above, so no comparison against premium income is drawn
 
-Code: <https://github.com/jonghajeon/quantpost>
+Code: <https://github.com/jonghajeon/standarderror>

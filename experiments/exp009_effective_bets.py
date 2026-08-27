@@ -48,7 +48,7 @@ Two things this is careful about:
    conclusion is stated across the whole range because it holds across the whole
    range.
 
-Run: `quantpost run exp009_effective_bets --publish`
+Run: `standarderror run exp009_effective_bets --publish`
 """
 
 from __future__ import annotations
@@ -58,13 +58,13 @@ import os
 import numpy as np
 import pandas as pd
 
-import quantpost as qp
-from quantpost.render import Post
-from quantpost.viz import charts, theme
+import standarderror as se
+from standarderror.render import Post
+from standarderror.viz import charts, theme
 
-IMG = qp.SETTINGS.build_dir / "img"
-EXT = os.environ.get("QUANTPOST_FIG_EXT", "png")
-SEED = qp.SETTINGS.seed
+IMG = se.SETTINGS.build_dir / "img"
+EXT = os.environ.get("SERR_FIG_EXT", "png")
+SEED = se.SETTINGS.seed
 
 # --- published facts, sourced in `data_sources` --------------------------------
 # S&P 500 top-10 index weights, March 2026.
@@ -317,7 +317,7 @@ def figures(res: dict) -> dict:
               f"rising concentration moved that one from "
               f"{res['history']['1990']['bets_at_typical']:.2f} to "
               f"{res['history']['end 2025']['bets_at_typical']:.2f}."),
-        footer="quantpost", mode="light",
+        footer="The Standard Error", mode="light",
         alt=(f"Card comparing {N_CONSTITUENTS} companies owned, at most "
              f"{res['n_eff_max']:.0f} effective holdings by weight, and "
              f"{a['long-run typical']['cap']:.1f} independent bets at typical "
@@ -357,8 +357,8 @@ def build() -> Post:
                  "that correlation, and less than that in a crisis."),
         tags=["investing", "quantitative-finance", "risk-management", "statistics",
               "data-science"],
-        author=qp.SETTINGS.author,
-        code_url=qp.SETTINGS.code_repo_url,
+        author=se.SETTINGS.author,
+        code_url=se.SETTINGS.code_repo_url,
         min_words=1400, max_words=2200,
         table_figures=[figs["table"]],
         data_sources=[
@@ -384,8 +384,8 @@ def build() -> Post:
         reproducibility={
             "seed": SEED,
             "environment": ", ".join(
-                f"{k}={v}" for k, v in qp.environment().items()
-                if k in ("python", "numpy", "quantpost")),
+                f"{k}={v}" for k, v in se.environment().items()
+                if k in ("python", "numpy", "standarderror")),
             "identity": "portfolio variance under equicorrelation is "
                         "rho + (1-rho)·HHI relative to one stock, so the "
                         "equivalent number of independent stocks is its reciprocal",

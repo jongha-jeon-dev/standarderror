@@ -1,4 +1,4 @@
-baseURL = "https://YOURNAME.github.io/quantpost/"
+baseURL = "https://YOURNAME.github.io/standarderror/"
 languageCode = "en-gb"
 title = "Notes on financial machine learning"
 theme = "PaperMod"
@@ -30,5 +30,5 @@ theme = "PaperMod"
   weight = 1
 [[menu.main]]
   name = "Code"
-  url = "https://github.com/YOURNAME/quantpost"
+  url = "https://github.com/YOURNAME/standarderror"
   weight = 2

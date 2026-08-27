@@ -29,7 +29,7 @@ Two design notes, both learned the hard way:
    bisection, so Fig 3's curve and Table 1 are literally the same function read in
    opposite directions.
 
-Run: `quantpost run exp004_winners_curse --publish`
+Run: `standarderror run exp004_winners_curse --publish`
 """
 
 from __future__ import annotations
@@ -41,14 +41,14 @@ import pandas as pd
 from scipy import stats
 from sklearn.linear_model import LogisticRegression
 
-import quantpost as qp
-from quantpost.render import Post
-from quantpost.uq import multiplicity
-from quantpost.viz import charts, theme
+import standarderror as se
+from standarderror.render import Post
+from standarderror.uq import multiplicity
+from standarderror.viz import charts, theme
 
-IMG = qp.SETTINGS.build_dir / "img"
-EXT = os.environ.get("QUANTPOST_FIG_EXT", "png")
-SEED = qp.SETTINGS.seed
+IMG = se.SETTINGS.build_dir / "img"
+EXT = os.environ.get("SERR_FIG_EXT", "png")
+SEED = se.SETTINGS.seed
 
 N_MODELS = 2000
 N_FEATURES = 60
@@ -107,7 +107,7 @@ def run_search(world: dict, n_models: int = N_MODELS, seed: int = 5) -> dict:
 def expected_max(n_models: int) -> float:
     """Expected best accuracy over `n_models` chance-level models, exactly.
 
-    Thin wrapper on `quantpost.uq.multiplicity` so the figures and the table read
+    Thin wrapper on `standarderror.uq.multiplicity` so the figures and the table read
     cleanly; the arithmetic, the reason it is exact rather than normal-approximate,
     and the Monte Carlo test all live in the package.
     """
@@ -320,7 +320,7 @@ def figures(search: dict, res: dict) -> dict:
         note=("Every model's score, and where the winner landed. There was no "
               "signal in the data at all — order statistics predicted "
               f"{res['expected_max'] * 100:.1f}% before I ran anything."),
-        footer="quantpost", mode="light",
+        footer="The Standard Error", mode="light",
         alt=(f"A histogram of 2,000 model scores centred on 50 percent, with a red "
              f"line marking the best score of "
              f"{res['val_best'] * 100:.1f} percent out in the right tail."),
@@ -355,8 +355,8 @@ def build() -> Post:
                  "from the number of models alone."),
         tags=["data-science", "statistics", "machine-learning", "quantitative-finance",
               "analytics"],
-        author=qp.SETTINGS.author,
-        code_url=qp.SETTINGS.code_repo_url,
+        author=se.SETTINGS.author,
+        code_url=se.SETTINGS.code_repo_url,
         min_words=1000, max_words=1800,
         table_figures=[figs["table"]],
         data_sources=[
@@ -367,8 +367,8 @@ def build() -> Post:
         reproducibility={
             "seed": SEED,
             "environment": ", ".join(
-                f"{k}={v}" for k, v in qp.environment().items()
-                if k in ("python", "numpy", "scipy", "scikit-learn", "quantpost")),
+                f"{k}={v}" for k, v in se.environment().items()
+                if k in ("python", "numpy", "scipy", "scikit-learn", "standarderror")),
             "design": f"{res['n_models']:,} logistic regressions, each on "
                       f"{K_PER_MODEL} of {N_FEATURES} noise features",
             "splits": f"{N_TRAIN} train / {N_VAL} validation / {N_TEST} test, "

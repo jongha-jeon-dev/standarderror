@@ -10,7 +10,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from quantpost.dynamics import delay
+from standarderror.dynamics import delay
 
 
 class TestValidation:

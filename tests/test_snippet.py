@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import pytest
 
-from quantpost.render.snippet import Session, Snippet, SnippetError
+from standarderror.render.snippet import Session, Snippet, SnippetError
 
 
 class TestRunning:
@@ -116,7 +116,7 @@ class TestRendering:
     def test_prose_word_count_excludes_the_whole_block(self):
         # `Post.word_count` strips fenced blocks, and a code-forward post lives or
         # dies on that being true for the output fence as well as the code one.
-        from quantpost.render.post import Post, Section
+        from standarderror.render.post import Post, Section
         s = Session()
         snip = s.run("print('alpha beta gamma delta')")
         p = Post(title="t", slug="t",
@@ -133,8 +133,8 @@ class TestNotionBlocks:
     """A code-forward post is the first thing to break the naive blank-line split."""
 
     def test_a_blank_line_inside_a_fence_does_not_cut_the_block_in_two(self):
-        from quantpost.render.post import Post, Section
-        from quantpost.render.publish import _to_notion_blocks
+        from standarderror.render.post import Post, Section
+        from standarderror.render.publish import _to_notion_blocks
         body = "```python\nimport numpy as np\n\nprint(np.arange(3).sum())\n```"
         p = Post(title="t", slug="t", sections=[Section("h", body)])
         kinds = [b["type"] for b in _to_notion_blocks(p)]
@@ -143,8 +143,8 @@ class TestNotionBlocks:
     def test_the_output_fence_becomes_a_plain_text_code_block(self):
         # Notion rejects the whole request on an unknown language name, and
         # "text" is not one it knows.
-        from quantpost.render.post import Post, Section
-        from quantpost.render.publish import _to_notion_blocks
+        from standarderror.render.post import Post, Section
+        from standarderror.render.publish import _to_notion_blocks
         s = Session()
         snip = s.run("print('4')")
         p = Post(title="t", slug="t", sections=[Section("h", snip.markdown())])
@@ -153,8 +153,8 @@ class TestNotionBlocks:
         assert langs == ["python", "plain text"]
 
     def test_prose_on_either_side_of_a_block_survives(self):
-        from quantpost.render.post import Post, Section
-        from quantpost.render.publish import _to_notion_blocks
+        from standarderror.render.post import Post, Section
+        from standarderror.render.publish import _to_notion_blocks
         body = "before\n\n```python\nx = 1\n\ny = 2\n```\n\nafter"
         p = Post(title="t", slug="t", sections=[Section("h", body)])
         kinds = [b["type"] for b in _to_notion_blocks(p)]

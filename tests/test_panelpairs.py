@@ -1,4 +1,4 @@
-"""Tests for quantpost.ts.panelpairs, on panels whose answer is known.
+"""Tests for standarderror.ts.panelpairs, on panels whose answer is known.
 
 The panels here are constructed so the right answer is arithmetic: series built
 to be identical must come back at r = 1, series built from independent noise
@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from quantpost.ts import panelpairs as pp
+from standarderror.ts import panelpairs as pp
 
 
 def _long(iso_values: dict, years) -> pd.DataFrame:

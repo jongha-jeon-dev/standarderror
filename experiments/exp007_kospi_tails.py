@@ -34,7 +34,7 @@ redistributed price series: there is no KOSPI history in this repo and none is
 needed, because every calculation here takes the reported move as its input and
 does mathematics to it. Everything else is simulated with a fixed seed.
 
-Run: `quantpost run exp007_kospi_tails --publish`
+Run: `standarderror run exp007_kospi_tails --publish`
 """
 
 from __future__ import annotations
@@ -46,14 +46,14 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
-import quantpost as qp
-from quantpost.models import metrics
-from quantpost.render import Post
-from quantpost.viz import charts, theme
+import standarderror as se
+from standarderror.models import metrics
+from standarderror.render import Post
+from standarderror.viz import charts, theme
 
-IMG = qp.SETTINGS.build_dir / "img"
-EXT = os.environ.get("QUANTPOST_FIG_EXT", "png")
-SEED = qp.SETTINGS.seed
+IMG = se.SETTINGS.build_dir / "img"
+EXT = os.environ.get("SERR_FIG_EXT", "png")
+SEED = se.SETTINGS.seed
 
 # --- published facts, each with a source in `data_sources` ---------------------
 RECORD_DAY = 17.91          # % — KOSPI, 31 July 2026, largest one-day gain ever
@@ -438,7 +438,7 @@ def figures(res: dict) -> dict:
         note=("And neither of them explains the part that mattered: the record "
               "gain landed next to the crash, which under any i.i.d. model — fat "
               f"tails included — has a probability of {res['adj_1'] * 100:.1f}%."),
-        footer="quantpost", mode="light",
+        footer="The Standard Error", mode="light",
         alt=(f"Card comparing two return periods for a +{RECORD_DAY}% day: ten to "
              f"the {res['gauss'][1.5]['log10_years']:.0f} years under a Gaussian "
              f"against {10 ** res['t'][(1.5, 4)]['log10_years']:,.0f} years with "
@@ -508,8 +508,8 @@ def build() -> Post:
                  "this year."),
         tags=["investing", "quantitative-finance", "risk-management", "statistics",
               "data-science"],
-        author=qp.SETTINGS.author,
-        code_url=qp.SETTINGS.code_repo_url,
+        author=se.SETTINGS.author,
+        code_url=se.SETTINGS.code_repo_url,
         min_words=1500, max_words=2400,
         table_figures=[figs["table"]],
         data_sources=[
@@ -539,8 +539,8 @@ def build() -> Post:
         reproducibility={
             "seed": SEED,
             "environment": ", ".join(
-                f"{k}={v}" for k, v in qp.environment().items()
-                if k in ("python", "numpy", "scipy", "quantpost")),
+                f"{k}={v}" for k, v in se.environment().items()
+                if k in ("python", "numpy", "scipy", "standarderror")),
             "closed forms": "Gaussian and rescaled Student-t survival functions "
                             "evaluated in logs (the probabilities underflow "
                             "float64 by tens of orders of magnitude); adjacency "

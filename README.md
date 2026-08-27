@@ -1,7 +1,20 @@
-# quantpost
+# The Standard Error
 
 A pipeline for research-grade blog posts: public data in, a published page out — with the parts that usually get skipped made mandatory
 rather than optional.
+
+The masthead is a pun and both readings are the brief. A standard error is the
+quantity every post here ends up reasoning about — the width of an interval, the
+bar a searched statistic has to clear, the noise level a claim has to beat. And
+*the standard error* is the mistake everybody makes: a step fitted to a bend, a
+residual standing in for a noise process it still contains, a monotone constraint
+on a truth that is not monotone, a saturating rank read as a property of the task.
+The posts run across machine learning, credit risk, energy and official
+statistics, because that second kind of standard error does not care which of
+those it is in.
+
+The repository and the Python package are `standarderror`; the publication is
+The Standard Error. Newspapers have always done this.
 
 The design bias throughout is **make the honest thing the easy thing**.
 Baselines are first-class objects, the split helpers physically cannot leak the
@@ -12,9 +25,9 @@ persistence.
 ```bash
 ./scripts/setup_github.sh --check    # verify prerequisites, change nothing
 ./scripts/setup_github.sh            # repo, theme, Pages, first push
-quantpost run exp001_chaos_horizon --publish          # writes a DRAFT
+standarderror run exp001_chaos_horizon --publish          # writes a DRAFT
 make serve                                            # preview at :1313
-quantpost run exp001_chaos_horizon --publish --live    # publish for real
+standarderror run exp001_chaos_horizon --publish --live    # publish for real
 ```
 
 Posts default to `draft: true`, so their source can sit in a public repo without
@@ -25,13 +38,13 @@ reaching readers; `--live` is the only thing that publishes. Full walkthrough in
 
 | Package | What is in it |
 |---|---|
-| `quantpost.sources` | FRED, ECB, Bank of Korea ECOS, BIS, HMDA, market, local-file adapters |
-| `quantpost.dynamics` | ODE / PDE / SDE generators with known ground truth, Lyapunov tooling |
-| `quantpost.models` | Echo state networks, NG-RC, and the baselines you are obliged to beat |
-| `quantpost.xai` | Attribution methods + reservoir-specific probes |
-| `quantpost.uq` | Conformal prediction (split, CQR, weighted, adaptive) + SCMs with closed-form causal effects |
-| `quantpost.viz` | One accessibility-validated chart style, light and dark |
-| `quantpost.render` | `Post` → Hugo page, Medium crosspost, Notion page |
+| `standarderror.sources` | FRED, ECB, Bank of Korea ECOS, BIS, HMDA, market, local-file adapters |
+| `standarderror.dynamics` | ODE / PDE / SDE generators with known ground truth, Lyapunov tooling |
+| `standarderror.models` | Echo state networks, NG-RC, and the baselines you are obliged to beat |
+| `standarderror.xai` | Attribution methods + reservoir-specific probes |
+| `standarderror.uq` | Conformal prediction (split, CQR, weighted, adaptive) + SCMs with closed-form causal effects |
+| `standarderror.viz` | One accessibility-validated chart style, light and dark |
+| `standarderror.render` | `Post` → Hugo page, Medium crosspost, Notion page |
 | `experiments/` | One file per post: `build() -> Post` |
 | `site/` | Hugo scaffold and the GitHub Pages workflow |
 | `scripts/` | `setup_github.sh` — idempotent one-time setup |
@@ -105,7 +118,7 @@ bundle early hands you URLs that 404.
 
 ```bash
 pytest                                     # ~148 tests, no network
-QUANTPOST_NETWORK_TESTS=1 pytest -m network # live API smoke tests
+SERR_NETWORK_TESTS=1 pytest -m network # live API smoke tests
 ```
 
 The tests check physics and statistics, not shapes: the Lyapunov spectrum against

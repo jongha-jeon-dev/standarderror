@@ -3,7 +3,7 @@
 # One-time setup: put this repo on GitHub, wire up Hugo + Pages, publish.
 #
 #   ./scripts/setup_github.sh                       # interactive, safe defaults
-#   GH_USER=jonghajeon REPO=quantpost ./scripts/setup_github.sh
+#   GH_USER=jonghajeon REPO=standarderror ./scripts/setup_github.sh
 #   ./scripts/setup_github.sh --check               # verify only, change nothing
 #
 # Idempotent: every step checks whether it is already done and skips if so, so
@@ -84,7 +84,7 @@ if [[ -z "$GH_USER" ]]; then
   read -rp "  GitHub username: " GH_USER
 fi
 [[ -n "$GH_USER" ]] || die "a GitHub username is required"
-REPO="${REPO:-quantpost}"
+REPO="${REPO:-standarderror}"
 ok "will use github.com/$GH_USER/$REPO"
 
 SITE_URL="https://${GH_USER}.github.io/${REPO}/"
@@ -112,7 +112,7 @@ elif [[ $CHECK_ONLY -eq 1 ]]; then
 else
   rewrite site/hugo.toml \
     -e "s|^baseURL = .*|baseURL = \"$SITE_URL\"|" \
-    -e "s|https://github.com/YOURNAME/quantpost|$CODE_URL|g" \
+    -e "s|https://github.com/YOURNAME/standarderror|$CODE_URL|g" \
     -e "s|^  name = \"Jongha Jeon\"|  name = \"${POST_AUTHOR:-Jongha Jeon}\"|"
   ok "site/hugo.toml baseURL -> $SITE_URL"
 fi
@@ -154,8 +154,8 @@ fi
 # ---------------------------------------------------------------- 5. python
 
 step "5. Python package"
-if python3 -c "import quantpost" 2>/dev/null; then
-  skip "quantpost importable"
+if python3 -c "import standarderror" 2>/dev/null; then
+  skip "standarderror importable"
 else
   run "python3 -m pip install -e '.[dev]'"
   ok "installed in editable mode"
@@ -254,14 +254,14 @@ cat <<EOF
   Actions     $CODE_URL/actions
 
   Next:
-    1. quantpost doctor                              # sanity check
-    2. quantpost run exp001_chaos_horizon --publish   # writes a DRAFT
+    1. standarderror doctor                              # sanity check
+    2. standarderror run exp001_chaos_horizon --publish   # writes a DRAFT
     3. make serve                                    # preview at :1313 (-D shows drafts)
-    4. quantpost run exp001_chaos_horizon --publish --live
+    4. standarderror run exp001_chaos_horizon --publish --live
     5. git add -A && git commit -m 'Publish: how far ahead can you forecast chaos'
        git push
     6. once the site is live:
-       quantpost run exp001_chaos_horizon --publish --live --medium
+       standarderror run exp001_chaos_horizon --publish --live --medium
        then import build/medium/<slug>.md at https://medium.com/p/import
 
   The first Pages deploy takes a few minutes. Full walkthrough: docs/SETUP.md

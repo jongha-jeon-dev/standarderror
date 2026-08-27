@@ -50,7 +50,7 @@ Licence: FRED index series are not redistributable, so this publishes statistics
 never values, and every figure is a statistic against a parameter rather than a
 series against time. Files are git-ignored; see `data/fred/README.md`.
 
-Run: `quantpost run exp015_clustering_between_windows --publish`
+Run: `standarderror run exp015_clustering_between_windows --publish`
 """
 
 from __future__ import annotations
@@ -64,16 +64,16 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-import quantpost as qp
-from quantpost.generative import stylised
-from quantpost.render import Post
-from quantpost.sources import prices
-from quantpost.sources.fred import MANDATORY_DISCLAIMER
-from quantpost.viz import charts, theme
+import standarderror as se
+from standarderror.generative import stylised
+from standarderror.render import Post
+from standarderror.sources import prices
+from standarderror.sources.fred import MANDATORY_DISCLAIMER
+from standarderror.viz import charts, theme
 
-IMG = qp.SETTINGS.build_dir / "img"
-EXT = os.environ.get("QUANTPOST_FIG_EXT", "png")
-SEED = qp.SETTINGS.seed
+IMG = se.SETTINGS.build_dir / "img"
+EXT = os.environ.get("SERR_FIG_EXT", "png")
+SEED = se.SETTINGS.seed
 DATA = Path("data/fred")
 
 # --- what exp013 predicted, so the post can be checked against it ---------------
@@ -102,7 +102,7 @@ N_DRAWS = 400
 EVENT_DATE, EVENT_NAME = "1987-10-19", "19 October 1987"
 EVENT_WINDOW = ("1987-10-15", "1987-10-26")
 HERO_POINTS = 130          # see the note in the hero drawing below
-CACHE = qp.SETTINGS.build_dir / "cache" / "exp015.json"
+CACHE = se.SETTINGS.build_dir / "cache" / "exp015.json"
 
 
 def _vintage() -> dict:
@@ -538,7 +538,7 @@ def figures(res: dict) -> dict:
               f"{nas['stats']['first_date'][:4]}-{nas['stats']['last_date'][:4]}. "
               f"Volatility clustering is real and large — and mostly a fact about "
               f"which window you are in, not what happens inside one."),
-        footer="quantpost", mode="light",
+        footer="The Standard Error", mode="light",
         alt=("A two-panel hand-drawn strip. The first frame shows a long return path "
              "with three visible bursts of volatility, marked "
              f"{nas['whole_series_acf1_abs']:+.2f}. The second shows the same path "
@@ -604,8 +604,8 @@ def build() -> Post:
             f"Monday in 1987 is inside it."),
         tags=["quantitative-finance", "time-series", "generative-models",
               "volatility", "data-science"],
-        author=qp.SETTINGS.author,
-        code_url=qp.SETTINGS.code_repo_url,
+        author=se.SETTINGS.author,
+        code_url=se.SETTINGS.code_repo_url,
         min_words=1500, max_words=2400,
         table_figures=[figs["battery"]],
         data_sources=[
@@ -623,17 +623,17 @@ def build() -> Post:
             "Every figure plots a statistic against a parameter rather than a series "
             "against time. Input files are git-ignored and recorded by sha256 in the "
             "reproducibility notes.",
-            "Loaded by `quantpost.sources.prices.load_prices`, which handles FRED's "
+            "Loaded by `standarderror.sources.prices.load_prices`, which handles FRED's "
             "bare '.' for non-trading days, and reduced to statistics by "
             "`publishable_statistics`. Battery and controls from "
-            "`quantpost.generative.stylised`, the same code the simulated version of "
+            "`standarderror.generative.stylised`, the same code the simulated version of "
             "this experiment used.",
         ],
         reproducibility={
             "seed": SEED,
             "environment": ", ".join(
-                f"{k}={v}" for k, v in qp.environment().items()
-                if k in ("python", "numpy", "scipy", "pandas", "quantpost")),
+                f"{k}={v}" for k, v in se.environment().items()
+                if k in ("python", "numpy", "scipy", "pandas", "standarderror")),
             "vintage_sha256": ", ".join(
                 f"{k}: {v['sha256'][:16]}" for k, v in res["vintage"].items()),
             "returns": ("log returns in percent, `100 * diff(log(close))`, with "
@@ -885,4 +885,4 @@ that is only visible if both are on the record.
 
 
 if __name__ == "__main__":
-    compute(force=bool(os.environ.get("QUANTPOST_FORCE")))
+    compute(force=bool(os.environ.get("SERR_FORCE")))

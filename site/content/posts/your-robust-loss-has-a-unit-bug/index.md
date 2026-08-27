@@ -253,13 +253,13 @@ would have been worth making whatever they turn out to be.
 ### Data
 
 - Iris Aragon Mladosich and Christophe Croux, 'Robust XGBoosting for Regression', arXiv:2608.13590 (cs.LG, stat.CO, stat.ML); v1 dated 14 July 2026 in the submission history, announced in the 2608 batch. Shows that XGBoost's performance is affected by vertical outliers and leverage points, explores losses based on M-, S-, tau-estimators from robust regression, and reports that a two-step procedure, MM-XGBoost, gives the best trade-off between robustness and prediction accuracy. 30 pages plus 15 of supplement, 3 figures. <https://arxiv.org/abs/2608.13590>. **Read from the abstract and the listing only**, so nothing here describes its experiments, its data, or how its estimators are implemented.
-- Everything measured in this post is simulated. n=2000 training rows, 800 clean test rows, 5 standard normal features of which two are irrelevant, mean function `3 sin(x1) + x2^2 - 2 x3`, Gaussian noise of standard deviation 1, seed 20260804. Contamination is constructed by `quantpost.robust.contamination`. No market data and no company appears.
+- Everything measured in this post is simulated. n=2000 training rows, 800 clean test rows, 5 standard normal features of which two are irrelevant, mean function `3 sin(x1) + x2^2 - 2 x3`, Gaussian noise of standard deviation 1, seed 20260804. Contamination is constructed by `standarderror.robust.contamination`. No market data and no company appears.
 - XGBoost 3.2.0, defaults as shipped except where stated: `max_depth=3`, `learning_rate=0.1`, `n_estimators=300`. The `huber_slope` default of 1 is XGBoost's, not a choice made here.
 
 ### Reproducibility
 
 - **seed**: 20260804
-- **environment**: quantpost=0.1.0, python=3.11.15, numpy=2.4.4, scipy=1.17.1, scikit-learn=1.8.0
+- **environment**: standarderror=0.1.0, python=3.11.15, numpy=2.4.4, scipy=1.17.1, scikit-learn=1.8.0
 - **equivariance_test**: fit on (X, s*y), predict, divide by s, compare across s; reported as the largest root-mean-square deviation from the s=1 predictions relative to their own root-mean-square, over s in (0.1, 1, 10, 100)
 - **equivariance_gaps**: squared error: 8.6e-07, Huber, slope 1 (the default): 0.26, Huber, slope from the data: 4.5e-07, absolute error: 7.8e-07
 - **error_measure**: RMSE against the true mean function on clean test points, never against held-out contaminated data, which would measure how well the outliers are reproduced
@@ -268,4 +268,4 @@ would have been worth making whatever they turn out to be.
 - **leverage_construction**: a fraction of rows moved to +/- `distance` standard deviations in the first feature only, with y set to the true mean at the new location plus 20, so the points are bad leverage rather than merely unusual
 - **cost**: about 30 seconds of fitting for every grid in the post, cached under a hash of the configuration
 
-Code: <https://github.com/jonghajeon/quantpost>
+Code: <https://github.com/jonghajeon/standarderror>

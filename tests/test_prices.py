@@ -18,7 +18,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from quantpost.sources import licence_warnings, prices
+from standarderror.sources import licence_warnings, prices
 
 
 def _levels(n=400, seed=0):
@@ -50,8 +50,8 @@ class TestLoadPrices:
         out = prices.load_prices(p)
         assert list(out.columns) == ["close"]
         assert len(out) == len(lv)
-        assert out.attrs["quantpost"]["close_column"] == "종가"
-        assert out.attrs["quantpost"]["date_column"] == "일자"
+        assert out.attrs["standarderror"]["close_column"] == "종가"
+        assert out.attrs["standarderror"]["date_column"] == "일자"
 
     def test_descending_export_is_sorted(self, krx_csv):
         """The bug with no symptom: unsorted, every return contradicts its date."""
@@ -72,14 +72,14 @@ class TestLoadPrices:
     def test_refuses_a_percentage_column_as_the_level(self, krx_csv):
         """등락률 and 대비 must never be picked; they sit right next to 종가."""
         p, _, _ = krx_csv
-        assert prices.load_prices(p).attrs["quantpost"]["close_column"] == "종가"
+        assert prices.load_prices(p).attrs["standarderror"]["close_column"] == "종가"
 
     def test_picks_an_adjusted_close_over_a_raw_one(self, tmp_path):
         dates, lv = _levels(120)
         pd.DataFrame({"Date": dates, "Close": lv,
                       "Adj Close": lv * 0.5}).to_csv(tmp_path / "y.csv", index=False)
         out = prices.load_prices(tmp_path / "y.csv")
-        assert out.attrs["quantpost"]["close_column"] == "Adj Close"
+        assert out.attrs["standarderror"]["close_column"] == "Adj Close"
         assert out["close"].iloc[0] == pytest.approx(lv[0] * 0.5, rel=1e-9)
 
     def test_handles_bare_yyyymmdd_dates(self, tmp_path):
@@ -150,12 +150,12 @@ class TestLoadPrices:
         p, _, _ = krx_csv
         out = prices.load_prices(p, close_column="등락률", date_column="일자",
                                  min_rows=10)
-        assert out.attrs["quantpost"]["close_column"] == "등락률"
+        assert out.attrs["standarderror"]["close_column"] == "등락률"
 
     def test_defaults_to_not_redistributable(self, krx_csv):
         p, _, _ = krx_csv
         out = prices.load_prices(p)
-        assert out.attrs["quantpost"]["redistributable"] is False
+        assert out.attrs["standarderror"]["redistributable"] is False
         warnings = licence_warnings(out)
         assert warnings and "NOT redistributable" in warnings[0]
 
@@ -187,7 +187,7 @@ class TestToLogReturns:
     def test_carries_provenance_through(self, krx_csv):
         p, _, _ = krx_csv
         r = prices.to_log_returns(prices.load_prices(p))
-        assert r.attrs["quantpost"]["source_file"] == "krx_kospi.csv"
+        assert r.attrs["standarderror"]["source_file"] == "krx_kospi.csv"
 
     def test_empty_input_raises(self):
         with pytest.raises(ValueError):
@@ -301,8 +301,8 @@ class TestFredShapedExport:
     def test_reads_it_without_being_told_the_columns(self, fred_csv):
         p, dates, lv = fred_csv
         out = prices.load_prices(p)
-        assert out.attrs["quantpost"]["date_column"] == "observation_date"
-        assert out.attrs["quantpost"]["close_column"] == "NASDAQCOM"
+        assert out.attrs["standarderror"]["date_column"] == "observation_date"
+        assert out.attrs["standarderror"]["close_column"] == "NASDAQCOM"
         assert len(out) == 600
 
     def test_holiday_dots_become_missing_not_zero(self, fred_csv):

@@ -37,7 +37,7 @@ Design notes:
   `[1-alpha, 1-alpha+1/(n_calib+1)]`, which is the actual theorem — not "about
   90%".
 
-Run: `quantpost run exp005_conformal_guarantee --publish`
+Run: `standarderror run exp005_conformal_guarantee --publish`
 """
 
 from __future__ import annotations
@@ -48,14 +48,14 @@ import numpy as np
 import pandas as pd
 from sklearn.ensemble import GradientBoostingRegressor
 
-import quantpost as qp
-from quantpost.render import Post
-from quantpost.uq import conformal
-from quantpost.viz import charts, theme
+import standarderror as se
+from standarderror.render import Post
+from standarderror.uq import conformal
+from standarderror.viz import charts, theme
 
-IMG = qp.SETTINGS.build_dir / "img"
-EXT = os.environ.get("QUANTPOST_FIG_EXT", "png")
-SEED = qp.SETTINGS.seed
+IMG = se.SETTINGS.build_dir / "img"
+EXT = os.environ.get("SERR_FIG_EXT", "png")
+SEED = se.SETTINGS.seed
 
 ALPHA = 0.10
 N_TRAIN, N_CALIB, N_TEST = 1500, 1500, 4000
@@ -420,7 +420,7 @@ def figures(data: dict, res: dict) -> dict:
         note=("Rolling coverage of a nominal 90% conformal interval. The mean "
               f"model is exactly correct throughout; after the break it covers "
               f"{res['static_after'] * 100:.0f}% of the time."),
-        footer="quantpost", mode="light",
+        footer="The Standard Error", mode="light",
         alt=("A line of rolling coverage sitting near 90 percent, then falling off "
              "a cliff at a marked point where the volatility tripled and settling "
              "near 40 percent."),
@@ -458,8 +458,8 @@ def build() -> Post:
                  "what the guarantee always said, read carefully."),
         tags=["data-science", "statistics", "machine-learning",
               "quantitative-finance"],
-        author=qp.SETTINGS.author,
-        code_url=qp.SETTINGS.code_repo_url,
+        author=se.SETTINGS.author,
+        code_url=se.SETTINGS.code_repo_url,
         min_words=1500, max_words=2400,
         table_figures=[figs["table"]],
         data_sources=[
@@ -471,8 +471,8 @@ def build() -> Post:
         reproducibility={
             "seed": SEED,
             "environment": ", ".join(
-                f"{k}={v}" for k, v in qp.environment().items()
-                if k in ("python", "numpy", "scipy", "scikit-learn", "quantpost")),
+                f"{k}={v}" for k, v in se.environment().items()
+                if k in ("python", "numpy", "scipy", "scikit-learn", "standarderror")),
             "splits": f"{N_TRAIN} fit / {N_CALIB} calibrate / {N_TEST} test, "
                       "disjoint draws; the difficulty and quantile models see "
                       "only the fit split",

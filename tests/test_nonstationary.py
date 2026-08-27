@@ -1,4 +1,4 @@
-"""Tests for quantpost.ts.nonstationary.
+"""Tests for standarderror.ts.nonstationary.
 
 The tests that matter here are the ones in `TestAgainstAnswersThatAreNotItself`:
 they check the simulated null distributions against MacKinnon's published
@@ -12,7 +12,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from quantpost.ts import nonstationary as ns
+from standarderror.ts import nonstationary as ns
 
 
 @pytest.fixture(scope="module")

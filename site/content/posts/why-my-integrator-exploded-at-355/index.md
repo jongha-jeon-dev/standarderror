@@ -254,11 +254,11 @@ nominal 90% interval realising under 60%, along with what to use instead.
 ### Reproducibility
 
 - **seed**: 20260804
-- **environment**: quantpost=0.1.0, python=3.11.15, numpy=2.4.4, scipy=1.17.1
+- **environment**: standarderror=0.1.0, python=3.11.15, numpy=2.4.4, scipy=1.17.1
 - **machine epsilon**: 2.220e-16
 - **KS maximum linear growth rate**: max_k(k²−k⁴) = 0.25
 - **configurations swept**: 24
 - **fixed integrator verified to**: t = 20000
 - **ETDRK4 vs implicit reference at t=8**: relative error 2.19e-07
 
-Code: <https://github.com/jonghajeon/quantpost>
+Code: <https://github.com/jonghajeon/standarderror>

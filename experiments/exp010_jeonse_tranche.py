@@ -74,7 +74,7 @@ Nothing here redistributes a price series. Every input is a published scalar quo
 with its source in `data_sources`; everything else is closed form or fixed-seed
 simulation.
 
-Run: `quantpost run exp010_jeonse_tranche --publish`
+Run: `standarderror run exp010_jeonse_tranche --publish`
 """
 
 from __future__ import annotations
@@ -84,14 +84,14 @@ import os
 import numpy as np
 import pandas as pd
 
-import quantpost as qp
-from quantpost.credit import tranche
-from quantpost.render import Post
-from quantpost.viz import charts, theme
+import standarderror as se
+from standarderror.credit import tranche
+from standarderror.render import Post
+from standarderror.viz import charts, theme
 
-IMG = qp.SETTINGS.build_dir / "img"
-EXT = os.environ.get("QUANTPOST_FIG_EXT", "png")
-SEED = qp.SETTINGS.seed
+IMG = se.SETTINGS.build_dir / "img"
+EXT = os.environ.get("SERR_FIG_EXT", "png")
+SEED = se.SETTINGS.seed
 
 TERM_YEARS = 2.0                     # the statutory jeonse term
 
@@ -149,7 +149,7 @@ def attachment(ratio_pct: float, auction_pct: float,
                mortgage_pct: float = 0.0) -> float:
     """Attachment point, in the percentage units this post quotes everything in.
 
-    Thin wrapper over `quantpost.credit.attachment_point`. The library function is
+    Thin wrapper over `standarderror.credit.attachment_point`. The library function is
     unit-agnostic; this one fixes the convention — deposit, mortgage and auction
     ratio all as percentages of the home's sale price — so the post cannot mix
     fractions and percentages by accident.
@@ -546,7 +546,7 @@ def figures(res: dict) -> dict:
         note=("The deposit plus any registered mortgage, divided by what that kind of "
               "property fetches at a court auction. Both figures are published "
               "monthly. Neither is on the contract."),
-        footer="quantpost", mode="light",
+        footer="The Standard Error", mode="light",
         alt=(f"Card comparing the price fall a deposit can absorb: "
              f"{apt['required_fall_pct']:.0f}% for a Seoul apartment in January "
              f"2026 against {villa22['required_fall_pct']:.1f}% for a Seoul villa "
@@ -593,8 +593,8 @@ def build() -> Post:
             f"mechanism it misses entirely."),
         tags=["housing", "korea", "risk-management", "quantitative-finance",
               "data-science"],
-        author=qp.SETTINGS.author,
-        code_url=qp.SETTINGS.code_repo_url,
+        author=se.SETTINGS.author,
+        code_url=se.SETTINGS.code_repo_url,
         min_words=1500, max_words=2400,
         table_figures=[figs["table"]],
         data_sources=[
@@ -668,8 +668,8 @@ def build() -> Post:
         reproducibility={
             "seed": SEED,
             "environment": ", ".join(
-                f"{k}={v}" for k, v in qp.environment().items()
-                if k in ("python", "numpy", "scipy", "quantpost")),
+                f"{k}={v}" for k, v in se.environment().items()
+                if k in ("python", "numpy", "scipy", "standarderror")),
             "attachment": "the tenant receives min(D, max(0, lambda·V_T - M)), so "
                           "the tranche attaches at (M + D)/lambda — no volatility, "
                           "drift or horizon enters it",

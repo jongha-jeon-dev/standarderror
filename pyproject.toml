@@ -3,14 +3,15 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "quantpost"
+name = "standarderror"
 version = "0.1.0"
-description = "Research-grade blog posts on financial ML, from public data to published page"
+description = "The Standard Error — writes a phenomenon down as numbers or equations, then looks for the mistake everybody makes in it"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
 authors = [{ name = "Jongha Jeon" }]
-keywords = ["reservoir-computing", "time-series", "explainable-ai", "finance"]
+keywords = ["specification-testing", "time-series", "uncertainty-quantification",
+            "official-statistics", "machine-learning", "reproducibility"]
 
 dependencies = [
     "numpy>=1.26",
@@ -26,15 +27,17 @@ dev = ["pytest>=8.0", "pytest-cov", "ruff>=0.5"]
 extras = ["yfinance", "shap", "statsmodels"]
 
 [project.scripts]
-quantpost = "quantpost.cli:main"
+standarderror = "standarderror.cli:main"
+# A short alias, because the long name is fine in an import and tiresome at a prompt.
+se = "standarderror.cli:main"
 
 [tool.setuptools.packages.find]
-include = ["quantpost*"]
+include = ["standarderror*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q --strict-markers"
-markers = ["network: hits a live public API; skipped unless QUANTPOST_NETWORK_TESTS=1"]
+markers = ["network: hits a live public API; skipped unless SERR_NETWORK_TESTS=1"]
 
 [tool.ruff]
 line-length = 88

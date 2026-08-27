@@ -254,12 +254,12 @@ that is only visible if both are on the record.
 
 - NASDAQ Composite daily close (NASDAQCOM), 1971-02-08 to 2026-08-18, 14,000 usable daily log returns; Nikkei 225 daily close (NIKKEI225), 1949-05-17 to 2026-08-19, 19,181 returns; CBOE Volatility Index (VIXCLS), 1990-01-02 to 2026-08-18, 9,254 daily levels. All via FRED, Federal Reserve Bank of St. Louis, downloaded 20 August 2026. This product uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis.
 - These series are not redistributable, so this post publishes statistics and never values: no return series, no dated observation, and no minimum or maximum, which are the most identifying values a return series has. Every figure plots a statistic against a parameter rather than a series against time. Input files are git-ignored and recorded by sha256 in the reproducibility notes.
-- Loaded by `quantpost.sources.prices.load_prices`, which handles FRED's bare '.' for non-trading days, and reduced to statistics by `publishable_statistics`. Battery and controls from `quantpost.generative.stylised`, the same code the simulated version of this experiment used.
+- Loaded by `standarderror.sources.prices.load_prices`, which handles FRED's bare '.' for non-trading days, and reduced to statistics by `publishable_statistics`. Battery and controls from `standarderror.generative.stylised`, the same code the simulated version of this experiment used.
 
 ### Reproducibility
 
 - **seed**: 20260804
-- **environment**: quantpost=0.1.0, python=3.11.15, numpy=2.4.4, scipy=1.17.1, pandas=3.0.2
+- **environment**: standarderror=0.1.0, python=3.11.15, numpy=2.4.4, scipy=1.17.1, pandas=3.0.2
 - **vintage_sha256**: NASDAQCOM: e1c0e32623619757, NIKKEI225: 13336bbc172c3dbb, VIXCLS: 4e9eab59bc1b650e
 - **returns**: log returns in percent, `100 * diff(log(close))`, with non-trading days dropped rather than bridged, so no return spans a market holiday
 - **within_window**: lag-1 correlation of |r| computed inside each window and averaged over windows, never across a window boundary; windows strided by 8 days
@@ -269,4 +269,4 @@ that is only visible if both are on the record.
 - **vix_check**: VIX level lag-1 autocorrelation +0.977 over 9,254 days, an independent read on the persistence the simulated version of this experiment assumed
 - **cost**: about 6 seconds, cached under a hash of the configuration and of the input file bytes, so a new data vintage recomputes automatically
 
-Code: <https://github.com/jonghajeon/quantpost>
+Code: <https://github.com/jonghajeon/standarderror>

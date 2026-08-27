@@ -82,18 +82,18 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-import quantpost as qp
-from quantpost.render.post import Post, Section
-from quantpost.sources import korea_files as kf
-from quantpost.ts import bend as bd
-from quantpost.ts import detect as dt
-from quantpost.viz import charts, theme
+import standarderror as se
+from standarderror.render.post import Post, Section
+from standarderror.sources import korea_files as kf
+from standarderror.ts import bend as bd
+from standarderror.ts import detect as dt
+from standarderror.viz import charts, theme
 
-IMG = qp.SETTINGS.build_dir / "img"
-EXT = os.environ.get("QUANTPOST_FIG_EXT", "png")
-SEED = qp.SETTINGS.seed
-CACHE = qp.SETTINGS.build_dir / "cache" / "exp020.json"
-DATA = qp.SETTINGS.build_dir.parent / "data" / "korea"
+IMG = se.SETTINGS.build_dir / "img"
+EXT = os.environ.get("SERR_FIG_EXT", "png")
+SEED = se.SETTINGS.seed
+CACHE = se.SETTINGS.build_dir / "cache" / "exp020.json"
+DATA = se.SETTINGS.build_dir.parent / "data" / "korea"
 
 # ---------------------------------------------------------------- configuration
 
@@ -158,7 +158,7 @@ def load() -> dict:
         if not re.search(r"_\d{8}\.csv$", p.name):
             continue
         s = kf.read_ecos_wide(p)
-        name = s.attrs["quantpost"]["series"]
+        name = s.attrs["standarderror"]["series"]
         key = "value" if "금액" in name else "volume" if "물량" in name else None
         if key:
             ecos[key] = s
@@ -903,7 +903,7 @@ def figures(res: dict) -> dict:
               "kinked line and the date it reports is years away — and the "
               "error is a fixed share of the sample, so a longer series does "
               "not help."),
-        footer="quantpost", mode="light",
+        footer="The Standard Error", mode="light",
         alt=("A three-panel hand-drawn strip. The first frame shows a kinked "
              "rising line beside a dashed staircase, marked 1. The second "
              "shows two tick marks on a horizontal axis with a double-headed "
@@ -1308,8 +1308,8 @@ search over pairs of dates costs more than most people expect.
                              "shape race power": SOB_REPS,
                              "date bootstrap": DATE_REPS,
                              "date coverage": f"{COV_REPS} x {COV_INNER}"},
-            "modules": "quantpost/ts/bend.py, quantpost/ts/detect.py, "
-                       "quantpost/sources/korea_files.py",
+            "modules": "standarderror/ts/bend.py, standarderror/ts/detect.py, "
+                       "standarderror/sources/korea_files.py",
             "tests": "tests/test_bend.py",
         },
         min_words=2000,
@@ -1326,13 +1326,13 @@ def _check_table_placement(post: Post) -> None:
     Nothing in the audit catches a reversed `table_figures`; it silently swaps
     the two images between sections, and both look plausible where they land.
     """
-    from quantpost.render import publish
+    from standarderror.render import publish
 
     was = post.draft
     post.draft = False
     try:
         body = publish.medium_bundle(
-            post, out_dir=qp.SETTINGS.build_dir / "_placement20").read_text()
+            post, out_dir=se.SETTINGS.build_dir / "_placement20").read_text()
     finally:
         post.draft = was
     heading, seen = "", {}

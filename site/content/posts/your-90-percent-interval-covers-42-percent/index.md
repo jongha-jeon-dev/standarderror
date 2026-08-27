@@ -252,11 +252,11 @@ one-line formula.
 ### Reproducibility
 
 - **seed**: 20260804
-- **environment**: quantpost=0.1.0, python=3.11.15, numpy=2.4.4, scipy=1.17.1, scikit-learn=1.8.0
+- **environment**: standarderror=0.1.0, python=3.11.15, numpy=2.4.4, scipy=1.17.1, scikit-learn=1.8.0
 - **splits**: 1500 fit / 1500 calibrate / 4000 test, disjoint draws; the difficulty and quantile models see only the fit split
 - **nominal level**: 90% (alpha = 0.1)
 - **finite-sample bound**: [0.9000, 0.9007] for n_calib=1500. The bound is on the mean over calibration draws, so it is checked against 200 repeats (0.90061), not against the single headline run (0.9100)
 - **regime change**: volatility 0.6 -> 1.8 at t=900; calibration ends at t=600
 - **ACI**: gamma = 0.02, window = 300; the first interval is unbounded by construction (19 of 1200), so widths are quoted as medians
 
-Code: <https://github.com/jonghajeon/quantpost>
+Code: <https://github.com/jonghajeon/standarderror>

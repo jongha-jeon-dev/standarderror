@@ -10,9 +10,9 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from quantpost.dynamics import lyapunov, ode
-from quantpost.models import ESN, NGRC, ESNConfig, NGRCConfig, baselines, metrics
-from quantpost.models.tune import rolling_origin
+from standarderror.dynamics import lyapunov, ode
+from standarderror.models import ESN, NGRC, ESNConfig, NGRCConfig, baselines, metrics
+from standarderror.models.tune import rolling_origin
 
 
 @pytest.fixture(scope="module")

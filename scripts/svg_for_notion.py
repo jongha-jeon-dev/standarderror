@@ -14,7 +14,7 @@ The obstacle is size, in two senses. The 200 KiB cap is generous, but the conten
 has to pass through a model's context to reach the tool call, so every kilobyte is
 paid for twice. A default matplotlib SVG of one chart is ~83 KB; this gets it to ~9 KB:
 
-* `QUANTPOST_SVG_FONTS=reference` (see `viz.theme.apply`) stops glyphs being embedded
+* `SERR_SVG_FONTS=reference` (see `viz.theme.apply`) stops glyphs being embedded
   as outline paths, which alone is a 6x cut. Text then renders in whatever font the
   viewer has, so check a rasterised copy — `cairosvg` is enough — before shipping.
 * Here: drop the XML prolog, DOCTYPE, comments and metadata; drop the `id=` attributes
@@ -26,7 +26,7 @@ every stroke finely *and* duplicates it for the white outline, so those land nea
 950 KB and are barely affected by any of the above. Ship those as PNG files.
 
 Usage:
-    QUANTPOST_FIG_EXT=svg QUANTPOST_SVG_FONTS=reference quantpost run <experiment>
+    SERR_FIG_EXT=svg SERR_SVG_FONTS=reference standarderror run <experiment>
     python scripts/svg_for_notion.py build/img/a7-f1-window.svg
 """
 
@@ -146,7 +146,7 @@ def main(argv: list[str]) -> int:
               f"({100 * (1 - b1 / b0):4.1f}% smaller){flag}")
         if "<text" not in after and "<tspan" not in after:
             print("  note: no <text> elements — glyphs may still be embedded as "
-                  "paths; set QUANTPOST_SVG_FONTS=reference when rendering")
+                  "paths; set SERR_SVG_FONTS=reference when rendering")
     return 0
 
 

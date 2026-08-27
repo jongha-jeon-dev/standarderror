@@ -290,7 +290,7 @@ leans on.
 ### Reproducibility
 
 - **seed**: 20260804
-- **environment**: quantpost=0.1.0, python=3.11.15, numpy=2.4.4, scipy=1.17.1
+- **environment**: standarderror=0.1.0, python=3.11.15, numpy=2.4.4, scipy=1.17.1
 - **characteristic_polynomial**: z^L - (2-d) z^(L-1) + (1-d) z^(L-2) + kappa*theta*sum_k g_k z^(L-L_k), roots taken exactly; d is the reversion of price toward long-run cost
 - **undamped**: at d = 0 the polynomial's largest root is 1.0678 > 1, and it exceeds one at every positive gain and delay: a double integrator under delayed proportional feedback has no stable configuration
 - **dominant_mode**: period 24.5 months, |z| = 1.0504; the nonlinear run's realised period is 34.3 months, so saturation lengthens the cycle by about 40%
@@ -299,4 +299,4 @@ leans on.
 - **forecast**: direct multi-horizon ridge, one fit per horizon, trained on months 0-456 and tested on 486-600; horizon is the largest h with RMSE below 0.5 training standard deviations
 - **reservoir**: 400 units, {'n_reservoir': 400, 'spectral_radius': 0.9, 'sparsity': 0.05, 'input_scaling': 0.15, 'leak_rate': 0.5, 'ridge': 1e-06, 'seed': 2}; the multi-channel views need the small input scaling to work at all, which is reported in the post rather than tuned away quietly
 
-Code: <https://github.com/jonghajeon/quantpost>
+Code: <https://github.com/jonghajeon/standarderror>

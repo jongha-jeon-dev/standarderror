@@ -162,8 +162,8 @@ and did not have.
 ### Reproducibility
 
 - **seed**: 20260804
-- **environment**: quantpost=0.1.0, python=3.11.15, numpy=2.4.4
+- **environment**: standarderror=0.1.0, python=3.11.15, numpy=2.4.4
 - **protocol**: fit on the first half, score on the second; the naive scale for MASE comes from the training half only
 - **series length**: 1500
 
-Code: <https://github.com/jonghajeon/quantpost>
+Code: <https://github.com/jonghajeon/standarderror>

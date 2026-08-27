@@ -10,7 +10,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from quantpost.uq import evidence
+from standarderror.uq import evidence
 
 
 class TestZForP:

@@ -15,7 +15,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from quantpost.robust import contamination, equivariance, scale
+from standarderror.robust import contamination, equivariance, scale
 
 
 def truth(A):

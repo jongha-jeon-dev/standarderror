@@ -227,10 +227,10 @@ learned physics, and how to tell that apart from having memorised a trajectory.
 ### Reproducibility
 
 - **seed**: 20260804
-- **environment**: quantpost=0.1.0, python=3.11.15, numpy=2.4.4
+- **environment**: standarderror=0.1.0, python=3.11.15, numpy=2.4.4
 - **identity**: portfolio variance under equicorrelation is rho + (1-rho)·HHI relative to one stock, so the equivalent number of independent stocks is its reciprocal
 - **bound**: the tail beyond the top ten is assumed perfectly evenly spread, which minimises HHI; every effective-holdings figure here is therefore an upper bound (57.0 at the itemised March 2026 weights)
 - **insensitivity**: March 2026 (itemised): at most 57, end 2025: at most 48, July 2026: at most 44
 - **verification**: one-factor Monte Carlo, 500,000 draws at rho in (0.05, 0.12, 0.35, 0.70); largest disagreement with the closed form 0.25%
 
-Code: <https://github.com/jonghajeon/quantpost>
+Code: <https://github.com/jonghajeon/standarderror>

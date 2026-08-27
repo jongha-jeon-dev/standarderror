@@ -7,7 +7,7 @@ cannot tell skill from arithmetic. MASE against the naive forecast can.
 The twist that keeps it honest: "just difference it and report R² on the change"
 is *also* wrong, and there is a clean counterexample.
 
-Run: `quantpost run exp003_persistence --publish`
+Run: `standarderror run exp003_persistence --publish`
 """
 
 from __future__ import annotations
@@ -17,17 +17,17 @@ import os
 import numpy as np
 import pandas as pd
 
-import quantpost as qp
-from quantpost.dynamics import ode
-from quantpost.models import baselines, metrics
-from quantpost.render import Post
-from quantpost.viz import charts, theme
+import standarderror as se
+from standarderror.dynamics import ode
+from standarderror.models import baselines, metrics
+from standarderror.render import Post
+from standarderror.viz import charts, theme
 
-IMG = qp.SETTINGS.build_dir / "img"
+IMG = se.SETTINGS.build_dir / "img"
 # PNG for the site and for Medium; SVG when a target wants inline vector text
 # (Notion accepts SVG as an inline attachment, which avoids needing a public URL).
-EXT = os.environ.get("QUANTPOST_FIG_EXT", "png")
-SEED = qp.SETTINGS.seed
+EXT = os.environ.get("SERR_FIG_EXT", "png")
+SEED = se.SETTINGS.seed
 N = 1500
 
 
@@ -281,8 +281,8 @@ def build() -> Post:
                  "one substitution fixes it."),
         tags=["data-science", "statistics", "machine-learning", "forecasting",
               "analytics"],
-        author=qp.SETTINGS.author,
-        code_url=qp.SETTINGS.code_repo_url,
+        author=se.SETTINGS.author,
+        code_url=se.SETTINGS.code_repo_url,
         min_words=850, max_words=1600,
         # Medium strips table markup on paste; the crosspost swaps in this image.
         table_figures=[figs["table"]],
@@ -294,8 +294,8 @@ def build() -> Post:
         reproducibility={
             "seed": SEED,
             "environment": ", ".join(
-                f"{k}={v}" for k, v in qp.environment().items()
-                if k in ("python", "numpy", "quantpost")),
+                f"{k}={v}" for k, v in se.environment().items()
+                if k in ("python", "numpy", "standarderror")),
             "protocol": "fit on the first half, score on the second; the naive "
                         "scale for MASE comes from the training half only",
             "series length": N,

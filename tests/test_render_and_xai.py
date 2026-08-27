@@ -9,10 +9,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 
-from quantpost.render import Post, publish
-from quantpost.viz import charts, theme
-from quantpost.viz.charts import Figure
-from quantpost.xai import attribution
+from standarderror.render import Post, publish
+from standarderror.viz import charts, theme
+from standarderror.viz.charts import Figure
+from standarderror.xai import attribution
 
 
 def good_figure(tmp_path: Path) -> Figure:
@@ -116,7 +116,7 @@ class TestPostAudit:
 
     def test_placeholder_url_fails(self, tmp_path):
         post = good_post(tmp_path)
-        post.code_url = "https://github.com/YOURNAME/quantpost"
+        post.code_url = "https://github.com/YOURNAME/standarderror"
         assert any("placeholder" in p for p in post.audit())
 
     def test_bad_slug_fails(self, tmp_path):
@@ -702,7 +702,7 @@ class TestSocialCard:
 
     def test_everything_sits_inside_the_crop_safe_margin(self, tmp_path):
         """Medium crops wider than 2:1 and takes it off both edges."""
-        _, (fig, ax) = self.card(tmp_path, footer="quantpost")
+        _, (fig, ax) = self.card(tmp_path, footer="The Standard Error")
         ys = [t.get_position()[1] for t in ax.texts]
         assert max(ys) <= 0.92 and min(ys) >= 0.08
 
@@ -858,12 +858,12 @@ class TestAiDisclosure:
     """
 
     def _post(self, **kw):
-        from quantpost.render.post import Post, Section
+        from standarderror.render.post import Post, Section
         return Post(title="t", slug="t", summary="s",
                     sections=[Section("h", "body text here")], **kw)
 
     def test_the_default_post_already_carries_a_disclosure(self):
-        from quantpost.render.post import AI_DISCLOSURE
+        from standarderror.render.post import AI_DISCLOSURE
         assert self._post().disclosure == AI_DISCLOSURE
         assert "AI" in AI_DISCLOSURE
 

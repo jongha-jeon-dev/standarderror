@@ -79,18 +79,18 @@ import time
 import numpy as np
 import pandas as pd
 
-import quantpost as qp
-from quantpost.render.post import Post, Section
-from quantpost.sources import korea_power as kp
-from quantpost.ts import bend as bd
-from quantpost.ts import detect as dt
-from quantpost.viz import charts, theme
+import standarderror as se
+from standarderror.render.post import Post, Section
+from standarderror.sources import korea_power as kp
+from standarderror.ts import bend as bd
+from standarderror.ts import detect as dt
+from standarderror.viz import charts, theme
 
-IMG = qp.SETTINGS.build_dir / "img"
-EXT = os.environ.get("QUANTPOST_FIG_EXT", "png")
-SEED = qp.SETTINGS.seed
-CACHE = qp.SETTINGS.build_dir / "cache" / "exp021.json"
-DATA = qp.SETTINGS.build_dir.parent / "data" / "korea_power"
+IMG = se.SETTINGS.build_dir / "img"
+EXT = os.environ.get("SERR_FIG_EXT", "png")
+SEED = se.SETTINGS.seed
+CACHE = se.SETTINGS.build_dir / "cache" / "exp021.json"
+DATA = se.SETTINGS.build_dir.parent / "data" / "korea_power"
 
 # ---------------------------------------------------------------- configuration
 
@@ -952,7 +952,7 @@ def figures(res: dict) -> dict:
               f"{res['crossing'][labels[0]]:.0f} — before the plan's own target "
               f"year. The textbook test would have called it far sooner, and "
               f"would have called it on nothing."),
-        footer="quantpost", mode="light",
+        footer="The Standard Error", mode="light",
         alt=("A three-panel hand-drawn strip. The first shows three "
              "transmission pylons carrying sagging wires, with a demand line "
              "above them that climbs, flattens, then splits into a dashed "
@@ -1350,8 +1350,8 @@ pairs of dates costs more than most people expect.
                              "fixed critical values": CAL_REPS,
                              "power": POWER_REPS, "date bootstrap": DATE_REPS,
                              "minimum detectable": MDE_REPS},
-            "modules": "quantpost/ts/bend.py, quantpost/ts/detect.py, "
-                       "quantpost/sources/korea_power.py",
+            "modules": "standarderror/ts/bend.py, standarderror/ts/detect.py, "
+                       "standarderror/sources/korea_power.py",
             "tests": "tests/test_bend.py",
         },
         min_words=2000,
@@ -1365,13 +1365,13 @@ pairs of dates costs more than most people expect.
 def _check_table_placement(post: Post) -> None:
     """Table images are matched to markdown tables positionally, so verify."""
     import re
-    from quantpost.render import publish
+    from standarderror.render import publish
 
     was = post.draft
     post.draft = False
     try:
         body = publish.medium_bundle(
-            post, out_dir=qp.SETTINGS.build_dir / "_placement21").read_text()
+            post, out_dir=se.SETTINGS.build_dir / "_placement21").read_text()
     finally:
         post.draft = was
     heading, seen = "", {}

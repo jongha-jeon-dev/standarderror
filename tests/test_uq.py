@@ -10,7 +10,7 @@ import numpy as np
 import pytest
 from scipy import stats
 
-from quantpost.uq import causal, conformal, multiplicity
+from standarderror.uq import causal, conformal, multiplicity
 
 
 def linear_setup(n_train=400, n_calib=400, n_test=2000, *, seed=0,

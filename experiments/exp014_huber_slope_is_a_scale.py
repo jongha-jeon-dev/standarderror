@@ -52,7 +52,7 @@ No market data and no company: a synthetic regression with a known mean function
 every error is measured against the truth rather than against a held-out sample of the
 same contamination.
 
-Run: `quantpost run exp014_huber_slope_is_a_scale --publish`
+Run: `standarderror run exp014_huber_slope_is_a_scale --publish`
 """
 
 from __future__ import annotations
@@ -64,14 +64,14 @@ import time
 
 import numpy as np
 
-import quantpost as qp
-from quantpost.render import Post
-from quantpost.robust import contamination, equivariance, scale
-from quantpost.viz import charts, theme
+import standarderror as se
+from standarderror.render import Post
+from standarderror.robust import contamination, equivariance, scale
+from standarderror.viz import charts, theme
 
-IMG = qp.SETTINGS.build_dir / "img"
-EXT = os.environ.get("QUANTPOST_FIG_EXT", "png")
-SEED = qp.SETTINGS.seed
+IMG = se.SETTINGS.build_dir / "img"
+EXT = os.environ.get("SERR_FIG_EXT", "png")
+SEED = se.SETTINGS.seed
 
 # --- the paper, as it describes itself -----------------------------------------
 PAPER = "Iris Aragon Mladosich and Christophe Croux, arXiv:2608.13590"
@@ -103,7 +103,7 @@ LOSSES = {
 }
 DEFAULT_LOSS = f"Huber, slope {DEFAULT_SLOPE:g} (the default)"
 FIXED_LOSS = "Huber, slope from the data"
-CACHE = qp.SETTINGS.build_dir / "cache" / "exp014.json"
+CACHE = se.SETTINGS.build_dir / "cache" / "exp014.json"
 
 
 def truth(A) -> np.ndarray:
@@ -139,7 +139,7 @@ def fit_predict(X, y, X_test, label: str, *, rounds: int = ROUNDS) -> np.ndarray
 
     `"auto"` uses a robust scale of the response, which is all that is available
     before fitting. It is enough to restore equivariance and deliberately not enough
-    to be optimal — see `quantpost.robust.equivariance.huber_slope_for`.
+    to be optimal — see `standarderror.robust.equivariance.huber_slope_for`.
     """
     import xgboost as xgb
     objective, slope = LOSSES[label]
@@ -476,7 +476,7 @@ def figures(res: dict) -> dict:
         note=(f"Error against the truth, {100 * HEADLINE_FRACTION:.0f}% of responses "
               f"corrupted, identical code. The robust loss has a transition point, its "
               f"default is the number 1, and a transition point is a scale."),
-        footer="quantpost", mode="light",
+        footer="The Standard Error", mode="light",
         alt=("A two-panel hand-drawn strip. Both frames show the same scatter of "
              "points around a wavy curve with two outliers, and a ruler at the left; "
              "the first ruler has coarse tick marks and the second fine ones. The "
@@ -540,8 +540,8 @@ def build() -> Post:
             f"matters."),
         tags=["machine-learning", "gradient-boosting", "robust-statistics",
               "regression", "data-science"],
-        author=qp.SETTINGS.author,
-        code_url=qp.SETTINGS.code_repo_url,
+        author=se.SETTINGS.author,
+        code_url=se.SETTINGS.code_repo_url,
         min_words=1500, max_words=2400,
         table_figures=[figs["rounds"]],
         data_sources=[
@@ -561,7 +561,7 @@ def build() -> Post:
             f"standard normal features of which two are irrelevant, mean function "
             f"`3 sin(x1) + x2^2 - 2 x3`, Gaussian noise of standard deviation "
             f"{NOISE_SD:g}, seed {SEED}. Contamination is constructed by "
-            f"`quantpost.robust.contamination`. No market data and no company "
+            f"`standarderror.robust.contamination`. No market data and no company "
             f"appears.",
             f"XGBoost {__import__('xgboost').__version__}, defaults as shipped except "
             f"where stated: `max_depth={DEPTH}`, `learning_rate={LR}`, "
@@ -571,8 +571,8 @@ def build() -> Post:
         reproducibility={
             "seed": SEED,
             "environment": ", ".join(
-                f"{k}={v}" for k, v in qp.environment().items()
-                if k in ("python", "numpy", "scipy", "scikit-learn", "quantpost")),
+                f"{k}={v}" for k, v in se.environment().items()
+                if k in ("python", "numpy", "scipy", "scikit-learn", "standarderror")),
             "equivariance_test": (
                 "fit on (X, s*y), predict, divide by s, compare across s; reported as "
                 "the largest root-mean-square deviation from the s=1 predictions "
@@ -830,4 +830,4 @@ would have been worth making whatever they turn out to be.
 
 
 if __name__ == "__main__":
-    compute(force=bool(os.environ.get("QUANTPOST_FORCE")))
+    compute(force=bool(os.environ.get("SERR_FORCE")))

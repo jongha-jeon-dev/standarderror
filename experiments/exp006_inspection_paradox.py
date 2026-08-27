@@ -27,7 +27,7 @@ against the closed form rather than asserted:
 The control matters. A demonstration that produces a large effect on one dataset
 and never shows the effect switching off has not identified the cause.
 
-Run: `quantpost run exp006_inspection_paradox --publish`
+Run: `standarderror run exp006_inspection_paradox --publish`
 """
 
 from __future__ import annotations
@@ -37,13 +37,13 @@ import os
 import numpy as np
 import pandas as pd
 
-import quantpost as qp
-from quantpost.render import Post
-from quantpost.viz import charts, theme
+import standarderror as se
+from standarderror.render import Post
+from standarderror.viz import charts, theme
 
-IMG = qp.SETTINGS.build_dir / "img"
-EXT = os.environ.get("QUANTPOST_FIG_EXT", "png")
-SEED = qp.SETTINGS.seed
+IMG = se.SETTINGS.build_dir / "img"
+EXT = os.environ.get("SERR_FIG_EXT", "png")
+SEED = se.SETTINGS.seed
 
 MEAN_GAP = 10.0          # minutes between buses, on average
 N_GAPS = 200_000         # gaps simulated
@@ -285,7 +285,7 @@ def figures(res: dict) -> dict:
         note=("What a passenger arriving at a random moment actually waits. The "
               "average gap is identical down the list; only its unevenness "
               "changes."),
-        footer="quantpost", mode="light",
+        footer="The Standard Error", mode="light",
         alt=("Four horizontal bars of average passenger wait for timetables with "
              "the same 10-minute average gap: "
              + ", ".join(f"{n} {res['bus'][n]['measured_wait']:.1f} minutes"
@@ -320,8 +320,8 @@ def build() -> Post:
                  "average class, and it has a one-line formula that says exactly "
                  "how much bigger."),
         tags=["statistics", "data-science", "mathematics", "public-transport"],
-        author=qp.SETTINGS.author,
-        code_url=qp.SETTINGS.code_repo_url,
+        author=se.SETTINGS.author,
+        code_url=se.SETTINGS.code_repo_url,
         min_words=1000, max_words=1700,
         table_figures=[figs["table"]],
         data_sources=[
@@ -335,8 +335,8 @@ def build() -> Post:
         reproducibility={
             "seed": SEED,
             "environment": ", ".join(
-                f"{k}={v}" for k, v in qp.environment().items()
-                if k in ("python", "numpy", "quantpost")),
+                f"{k}={v}" for k, v in se.environment().items()
+                if k in ("python", "numpy", "standarderror")),
             "design": f"{N_GAPS:,} gaps per timetable, {N_RIDERS:,} passengers "
                       "placed uniformly on the timeline; the gap each passenger "
                       "lands in is found by search, not by sampling gaps in "

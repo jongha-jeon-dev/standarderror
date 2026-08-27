@@ -51,7 +51,7 @@ Three more things this is careful about:
    about a *rule*, not an attribution of one to Korean retail investors, and the
    post says so.
 
-Run: `quantpost run exp008_behaviour_gap --publish`
+Run: `standarderror run exp008_behaviour_gap --publish`
 """
 
 from __future__ import annotations
@@ -61,14 +61,14 @@ import os
 import numpy as np
 import pandas as pd
 
-import quantpost as qp
-from quantpost.dynamics import sde
-from quantpost.render import Post
-from quantpost.viz import charts, theme
+import standarderror as se
+from standarderror.dynamics import sde
+from standarderror.render import Post
+from standarderror.viz import charts, theme
 
-IMG = qp.SETTINGS.build_dir / "img"
-EXT = os.environ.get("QUANTPOST_FIG_EXT", "png")
-SEED = qp.SETTINGS.seed
+IMG = se.SETTINGS.build_dir / "img"
+EXT = os.environ.get("SERR_FIG_EXT", "png")
+SEED = se.SETTINGS.seed
 
 # --- published facts, sourced in `data_sources` --------------------------------
 RECORD_DAY = 17.91          # % — KOSPI, 31 July 2026
@@ -510,7 +510,7 @@ def figures(res: dict) -> dict:
               f"sixths of the difference is not missed rebounds — it is "
               f"{sm['panics']['days_out'] / SESSIONS_PER_YEAR:.0f} of the 20 years "
               "spent in cash."),
-        footer="quantpost", mode="light",
+        footer="The Standard Error", mode="light",
         alt=(f"Card comparing the index's {res['twr_mean'] * 100:.1f}% annualised "
              f"return with the "
              f"{res['twr_mean'] * 100 + sm['panics']['gap_mean']:.1f}% earned by "
@@ -551,8 +551,8 @@ def build() -> Post:
                  "the index has risen 12%."),
         tags=["investing", "quantitative-finance", "statistics", "data-science",
               "behavioral-economics"],
-        author=qp.SETTINGS.author,
-        code_url=qp.SETTINGS.code_repo_url,
+        author=se.SETTINGS.author,
+        code_url=se.SETTINGS.code_repo_url,
         min_words=1500, max_words=2400,
         table_figures=[figs["table"]],
         data_sources=[
@@ -572,8 +572,8 @@ def build() -> Post:
         reproducibility={
             "seed": SEED,
             "environment": ", ".join(
-                f"{k}={v}" for k, v in qp.environment().items()
-                if k in ("python", "numpy", "scipy", "quantpost")),
+                f"{k}={v}" for k, v in se.environment().items()
+                if k in ("python", "numpy", "scipy", "standarderror")),
             "market": f"GARCH(1,1) log returns with t({SHOCK_DF:.0f}) shocks "
                       f"converted to simple returns and given a "
                       f"{DRIFT_ANNUAL:.0%} annual drift, unconditional "

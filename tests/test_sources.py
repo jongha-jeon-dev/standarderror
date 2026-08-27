@@ -6,7 +6,7 @@ column name rather than going down. The FRED date-column rename from `DATE` to
 `observation_date` is the live example: both fixtures are here and both must
 parse, because we read column 0 positionally.
 
-Run the live smoke tests with `QUANTPOST_NETWORK_TESTS=1 pytest -m network`.
+Run the live smoke tests with `SERR_NETWORK_TESTS=1 pytest -m network`.
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ import os
 import pandas as pd
 import pytest
 
-from quantpost.sources import (
+from standarderror.sources import (
     bis,
     citations,
     ecb,
@@ -29,9 +29,9 @@ from quantpost.sources import (
     worldbank,
 )
 
-NETWORK = os.environ.get("QUANTPOST_NETWORK_TESTS") == "1"
+NETWORK = os.environ.get("SERR_NETWORK_TESTS") == "1"
 needs_network = pytest.mark.skipif(not NETWORK,
-                                   reason="set QUANTPOST_NETWORK_TESTS=1")
+                                   reason="set SERR_NETWORK_TESTS=1")
 
 
 # --------------------------------------------------------------- fixtures
@@ -124,7 +124,7 @@ class TestFred:
         patched_fetch["table"]["fredgraph.csv"] = FRED_CSV_NEW
         df = fred.get("ust_10y")
         assert "Federal Reserve Bank of St. Louis" in citations(df)[0]
-        assert "not endorsed or certified" in df.attrs["quantpost"]["licence"]
+        assert "not endorsed or certified" in df.attrs["standarderror"]["licence"]
 
     def test_api_without_key_fails_clearly(self, monkeypatch):
         from dataclasses import replace
@@ -255,7 +255,7 @@ class TestMarket:
         patched_fetch["table"]["stooq.com"] = (
             b"Date,Open,High,Low,Close,Volume\n2026-07-01,1,2,0.5,1.5,100\n")
         df = market.stooq("^spx", accept_terms=True)
-        assert df.attrs["quantpost"]["redistributable"] is False
+        assert df.attrs["standarderror"]["redistributable"] is False
         assert any("NOT redistributable" in w for w in licence_warnings(df))
 
     def test_stooq_bad_symbol_gives_a_useful_error(self, patched_fetch):
@@ -332,7 +332,7 @@ class TestWorldBank:
             seen["n"] += 1
             return WB_PAGED_1 if "page=1" in url else WB_PAGED_2
 
-        import quantpost.sources.worldbank as wb
+        import standarderror.sources.worldbank as wb
         wb.fetch = fake
         df = wb.get("X", "KOR")
         assert seen["n"] == 2
@@ -348,7 +348,7 @@ class TestWorldBank:
     def test_licence_is_redistributable(self, patched_fetch):
         patched_fetch["table"]["api.worldbank.org"] = WB_JSON
         df = worldbank.get("population", "KOR")
-        assert df.attrs["quantpost"]["redistributable"] is True
+        assert df.attrs["standarderror"]["redistributable"] is True
         assert licence_warnings(df) == []
 
 
@@ -393,12 +393,12 @@ class TestOwid:
         df = owid.get("life_expectancy")
         assert "date" in df.columns
         assert df["date"].iloc[0] == pd.Timestamp("2022-12-31")
-        assert df.attrs["quantpost"]["time_column"] == "Year"
+        assert df.attrs["standarderror"]["time_column"] == "Year"
 
     def test_handles_daily_charts(self, patched_fetch):
         patched_fetch["table"]["grapher/covid.csv"] = OWID_DAILY
         df = owid.get("covid")
-        assert df.attrs["quantpost"]["time_column"] == "Day"
+        assert df.attrs["standarderror"]["time_column"] == "Day"
         assert df["date"].iloc[0] == pd.Timestamp("2023-01-01")
 
     def test_drop_aggregates_removes_world_and_continents(self, patched_fetch):
@@ -407,7 +407,7 @@ class TestOwid:
         assert len(df) == 4
         clean = owid.drop_aggregates(df)
         assert set(clean["Entity"]) == {"South Korea"}
-        assert clean.attrs["quantpost"]["slug"] == "life-expectancy"
+        assert clean.attrs["standarderror"]["slug"] == "life-expectancy"
 
     def test_wide_pivots_on_the_detected_value_column(self, patched_fetch):
         patched_fetch["table"]["grapher/life-expectancy.csv"] = OWID_CSV

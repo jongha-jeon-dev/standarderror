@@ -10,7 +10,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from quantpost.credit import (attachment_point, expected_shortfall_rate,
+from standarderror.credit import (attachment_point, expected_shortfall_rate,
                               required_fall, simulate_shortfall_rate)
 
 

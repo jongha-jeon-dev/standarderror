@@ -62,15 +62,15 @@ import time
 
 import numpy as np
 
-import quantpost as qp
-from quantpost.render.post import Post, Section
-from quantpost.ts import nonstationary as ns
-from quantpost.viz import charts, theme
+import standarderror as se
+from standarderror.render.post import Post, Section
+from standarderror.ts import nonstationary as ns
+from standarderror.viz import charts, theme
 
-IMG = qp.SETTINGS.build_dir / "img"
-EXT = os.environ.get("QUANTPOST_FIG_EXT", "png")
-SEED = qp.SETTINGS.seed
-CACHE = qp.SETTINGS.build_dir / "cache" / "exp018.json"
+IMG = se.SETTINGS.build_dir / "img"
+EXT = os.environ.get("SERR_FIG_EXT", "png")
+SEED = se.SETTINGS.seed
+CACHE = se.SETTINGS.build_dir / "cache" / "exp018.json"
 
 # ---------------------------------------------------------------- configuration
 
@@ -90,7 +90,7 @@ DRIFT_NOTE = "drift 0.1 per step against unit shocks"
 
 SOURCES = [
     "Simulated. Two independent Gaussian random walks per replication; no real "
-    "data enters findings 1-4. Code: quantpost/ts/nonstationary.py.",
+    "data enters findings 1-4. Code: standarderror/ts/nonstationary.py.",
     "C. W. J. Granger and P. Newbold, 'Spurious regressions in econometrics', "
     "Journal of Econometrics 1974;2:111-120 — the original demonstration.",
     "P. C. B. Phillips, 'Understanding spurious regressions in econometrics', "
@@ -183,7 +183,7 @@ def misuse(rng_seed: int) -> dict:
 
 # ---------------------------------------------------------------- real data
 
-DATA_DIR = qp.SETTINGS.build_dir.parent / "data" / "worldbank"
+DATA_DIR = se.SETTINGS.build_dir.parent / "data" / "worldbank"
 INDICATORS = {
     "fertility rate": "SP.DYN.TFRT.IN",
     "life expectancy": "SP.DYN.LE00.IN",
@@ -215,8 +215,8 @@ HEADLINE_PAIR = {
 
 
 def load_panel():
-    from quantpost.sources import worldbank_bulk as wbb
-    from quantpost.ts import panelpairs as pp
+    from standarderror.sources import worldbank_bulk as wbb
+    from standarderror.ts import panelpairs as pp
     frames = {}
     for name, code in INDICATORS.items():
         hits = sorted(DATA_DIR.glob(f"API_{code}_*.zip"))
@@ -231,7 +231,7 @@ def load_panel():
 
 
 def real_data(say) -> dict:
-    from quantpost.ts import panelpairs as pp
+    from standarderror.ts import panelpairs as pp
 
     panel = load_panel()
     say(f"  panel: {len(panel)} series, {len(set(panel.country))} countries, "
@@ -406,7 +406,7 @@ def figures(res: dict) -> dict:
         xlabel="length of the series (T, log scale)",
         ylabel="share of samples calling the slope significant",
         source=("Simulated; nominal two-sided test at 5% using the normal critical "
-                "value 1.96. quantpost/ts/nonstationary.py"),
+                "value 1.96. standarderror/ts/nonstationary.py"),
         alt=("A line chart against sample size on a log axis. Both lines start "
              "above 50% at T=25 and rise steadily. The no-drift line reaches "
              f"{_pct(last)} at T=1600; the trending line reaches 100% by T=1600. "
@@ -506,7 +506,7 @@ def figures(res: dict) -> dict:
                   f"{_pct(c1600['p_abs_r_over_0.96'])} of pairs exceed 0.96. "
                   f"Nothing connects any pair."),
         xlabel="|r| between two series that share no cause",
-        source="Simulated; 40,000 pairs per condition. quantpost/ts/nonstationary.py",
+        source="Simulated; 40,000 pairs per condition. standarderror/ts/nonstationary.py",
         alt=("A density histogram of absolute correlation running from 0 to 1. The "
              "trending case is a tall spike piled against the right edge, almost "
              "all of it above 0.85, peaking just below 1.0. The no-drift overlay is "
@@ -610,7 +610,7 @@ def figures(res: dict) -> dict:
 
     # ---- F5: the same picture, on real World Bank series ----------------
     real = res["real"]
-    from quantpost.ts import panelpairs as pp
+    from standarderror.ts import panelpairs as pp
     panel = load_panel()
     rmat = pp.correlation_matrix(panel.values)
     dmat = pp.correlation_matrix(np.diff(panel.values, axis=1))
@@ -747,7 +747,7 @@ def figures(res: dict) -> dict:
               "diverges, so a longer sample makes the false result stronger. The "
               "standard remedy is real, and is usually run against the wrong "
               "critical value."),
-        footer="quantpost", mode="light",
+        footer="The Standard Error", mode="light",
         alt=("A three-panel hand-drawn strip. The first frame shows two lines "
              "climbing together inside a pair of axes, marked "
              f"{c1600['median_abs_r']:.2f}. The second shows two separate boxes of "
@@ -1112,13 +1112,13 @@ came for.
 
 def _check_table_placement(post: Post) -> None:
     import re
-    from quantpost.render import publish
+    from standarderror.render import publish
 
     was_draft = post.draft
     post.draft = False
     try:
         body = publish.medium_bundle(
-            post, out_dir=qp.SETTINGS.build_dir / "_placement_check").read_text()
+            post, out_dir=se.SETTINGS.build_dir / "_placement_check").read_text()
     finally:
         post.draft = was_draft
 

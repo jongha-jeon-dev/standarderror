@@ -273,11 +273,11 @@ my section is wrong in exactly the same direction.
 ### Reproducibility
 
 - **seed**: 20260804
-- **environment**: quantpost=0.1.0, python=3.11.15, numpy=2.4.4, scipy=1.17.1
+- **environment**: standarderror=0.1.0, python=3.11.15, numpy=2.4.4, scipy=1.17.1
 - **noise**: annualised implied constituent volatility 44.42 scaled to a 15-day window is 10.84%; removing the systematic share at rho = 0.05 leaves 10.56%, i.e. beta-adjustment removes 2.5% of the volatility
 - **implied_n**: n = (z * sigma / effect)^2 from the reported p-value; for p reported as an upper bound the result is a lower bound on n and is shown with a > sign
 - **breadth**: effective independent positions n / (1 + (n-1) rho), which converges to 1/rho; annualised Sharpe is the per-event Sharpe times the square root of effective breadth times the square root of 16.8 non-overlapping windows a year
 - **ceiling**: at rho = 0.05 the ceiling is 20 independent bets and is 90% reached by 171 positions
 - **not_reanalysis**: the paper's data is not public; nothing here recomputes its effects, and the effect sizes are taken as reported
 
-Code: <https://github.com/jonghajeon/quantpost>
+Code: <https://github.com/jonghajeon/standarderror>

@@ -23,7 +23,7 @@ import numpy as np
 import pytest
 import torch
 
-from quantpost.models.scaffold import (MultiIndexTask, ScaffoldMLP, evaluate,
+from standarderror.models.scaffold import (MultiIndexTask, ScaffoldMLP, evaluate,
                                        make_multi_index, minimum_rank, recovery,
                                        train)
 

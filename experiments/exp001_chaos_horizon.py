@@ -15,7 +15,7 @@ Three findings, none of which is "the reservoir won":
    horizon — a tenth of what the exponential-growth argument predicts. One-step
    accuracy and closed-loop horizon are different quantities.
 
-Run: `python -m quantpost.cli run exp001_chaos_horizon --publish`
+Run: `python -m standarderror.cli run exp001_chaos_horizon --publish`
 """
 
 from __future__ import annotations
@@ -25,21 +25,21 @@ from dataclasses import replace
 
 import numpy as np
 
-import quantpost as qp
-from quantpost.dynamics import lyapunov, ode
-from quantpost.models import ESN, NGRC, ESNConfig, NGRCConfig, baselines, metrics
-from quantpost.render import Post
-from quantpost.viz import charts
-from quantpost.xai import reservoir_probes
+import standarderror as se
+from standarderror.dynamics import lyapunov, ode
+from standarderror.models import ESN, NGRC, ESNConfig, NGRCConfig, baselines, metrics
+from standarderror.render import Post
+from standarderror.viz import charts
+from standarderror.xai import reservoir_probes
 
-IMG = qp.SETTINGS.build_dir / "img"
+IMG = se.SETTINGS.build_dir / "img"
 DT = 0.02
 N_TRAIN = 15000
 N_WARM = 500
 HORIZON = 1500
 N_ROLLOUTS = 8
 VPT_THRESHOLD = 0.3
-SEED = qp.SETTINGS.seed
+SEED = se.SETTINGS.seed
 
 ESN_CFG = ESNConfig(n_reservoir=600, spectral_radius=0.9, sparsity=0.03,
                     input_scaling=0.6, bias_scaling=0.1, leak_rate=1.0,
@@ -461,8 +461,8 @@ def build() -> Post:
                  "recurrent model into a risk system."),
         tags=["reservoir-computing", "time-series", "explainable-ai",
               "machine-learning", "quantitative-finance"],
-        author=qp.SETTINGS.author,
-        code_url=qp.SETTINGS.code_repo_url,
+        author=se.SETTINGS.author,
+        code_url=se.SETTINGS.code_repo_url,
         data_sources=[
             "Simulated Lorenz-63 (sigma=10, rho=28, beta=8/3), integrated with "
             "RK45 at rtol=1e-10; no external data required.",
@@ -470,8 +470,8 @@ def build() -> Post:
         reproducibility={
             "seed": SEED,
             "environment": ", ".join(
-                f"{k}={v}" for k, v in qp.environment().items()
-                if k in ("python", "numpy", "scipy", "quantpost")),
+                f"{k}={v}" for k, v in se.environment().items()
+                if k in ("python", "numpy", "scipy", "standarderror")),
             "largest Lyapunov exponent (Benettin, analytic Jacobian)":
                 f"{lam:.4f} (literature value 0.9056)",
             "Kaplan-Yorke dimension":

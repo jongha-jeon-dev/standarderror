@@ -66,17 +66,17 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-import quantpost as qp
-from quantpost.render.post import Post, Section
-from quantpost.sources import korea_files as kf
-from quantpost.ts import detect as dt
-from quantpost.viz import charts, theme
+import standarderror as se
+from standarderror.render.post import Post, Section
+from standarderror.sources import korea_files as kf
+from standarderror.ts import detect as dt
+from standarderror.viz import charts, theme
 
-IMG = qp.SETTINGS.build_dir / "img"
-EXT = os.environ.get("QUANTPOST_FIG_EXT", "png")
-SEED = qp.SETTINGS.seed
-CACHE = qp.SETTINGS.build_dir / "cache" / "exp019.json"
-DATA = qp.SETTINGS.build_dir.parent / "data" / "korea"
+IMG = se.SETTINGS.build_dir / "img"
+EXT = os.environ.get("SERR_FIG_EXT", "png")
+SEED = se.SETTINGS.seed
+CACHE = se.SETTINGS.build_dir / "cache" / "exp019.json"
+DATA = se.SETTINGS.build_dir.parent / "data" / "korea"
 
 # ---------------------------------------------------------------- configuration
 
@@ -135,7 +135,7 @@ def load() -> dict:
         if not re.search(r"_\d{8}\.csv$", p.name):
             continue
         s = kf.read_ecos_wide(p)
-        name = s.attrs["quantpost"]["series"]
+        name = s.attrs["standarderror"]["series"]
         key = "value" if "금액" in name else "volume" if "물량" in name else None
         if key:
             ecos[key] = s
@@ -380,7 +380,7 @@ def compute(*, force: bool = False, verbose: bool = True) -> dict:
                                 "value": float(r.share_value),
                                 "uv_ratio": float(r.uv_ratio)}
                        for y, r in annual.iterrows()},
-            "meta": share.attrs["quantpost"],
+            "meta": share.attrs["standarderror"],
         },
         "elapsed_s": round(time.time() - t0, 1),
     }
@@ -726,7 +726,7 @@ def figures(res: dict) -> dict:
               "that a standard break test finds a structural break at three "
               "months in five. Nothing in twenty-six years survives a critical "
               "value built for the way the search was actually run."),
-        footer="quantpost", mode="light",
+        footer="The Standard Error", mode="light",
         alt=("A three-panel hand-drawn strip. The first frame shows a wave "
              "inside an axis crossed by six dashed vertical lines, marked "
              f"{_pct(a_vol['scan']['share_ols'])}. The second shows a long "
@@ -1061,7 +1061,7 @@ what it costs to look for one when you do not know where it starts.
             "bootstrap_block_months": BLOCK,
             "replications": {"calibration": CAL_REPS, "sup": SUP_REPS,
                              "mde": MDE_REPS},
-            "modules": "quantpost/ts/detect.py, quantpost/sources/korea_files.py",
+            "modules": "standarderror/ts/detect.py, standarderror/sources/korea_files.py",
             "tests": "tests/test_detect.py",
         },
         min_words=2000,
@@ -1074,13 +1074,13 @@ what it costs to look for one when you do not know where it starts.
 
 def _check_table_placement(post: Post) -> None:
     """Table images are matched to markdown tables positionally, so verify."""
-    from quantpost.render import publish
+    from standarderror.render import publish
 
     was = post.draft
     post.draft = False
     try:
         body = publish.medium_bundle(
-            post, out_dir=qp.SETTINGS.build_dir / "_placement19").read_text()
+            post, out_dir=se.SETTINGS.build_dir / "_placement19").read_text()
     finally:
         post.draft = was
     heading, seen = "", {}

@@ -15,8 +15,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from quantpost.sources import us_labor as ul
-from quantpost.ts import noisescale as ns
+from standarderror.sources import us_labor as ul
+from standarderror.ts import noisescale as ns
 
 WIDE = '''"Series Id:","LNS14000000"
 "Seasonally Adjusted"

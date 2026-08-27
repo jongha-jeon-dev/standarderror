@@ -285,10 +285,10 @@ closed-loop predictability there at all, or does persistence win?
 ### Reproducibility
 
 - **seed**: 20260804
-- **environment**: quantpost=0.1.0, python=3.11.15, numpy=2.4.4, scipy=1.17.1
+- **environment**: standarderror=0.1.0, python=3.11.15, numpy=2.4.4, scipy=1.17.1
 - **largest Lyapunov exponent (Benettin, analytic Jacobian)**: 0.9064 (literature value 0.9056)
 - **Kaplan-Yorke dimension**: 2.062 (literature value 2.062)
 - **rollout origins**: 8
 - **fit time**: ESN 3.41s, NG-RC 0.01s
 
-Code: <https://github.com/jonghajeon/quantpost>
+Code: <https://github.com/jonghajeon/standarderror>

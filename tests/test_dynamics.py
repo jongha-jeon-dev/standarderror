@@ -11,7 +11,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from quantpost.dynamics import lyapunov, ode, pde, sde
+from standarderror.dynamics import lyapunov, ode, pde, sde
 
 
 class TestLorenz:

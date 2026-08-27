@@ -257,11 +257,11 @@ one has a formula too, and the answer is a much smaller number than 800.
 ### Reproducibility
 
 - **seed**: 20260804
-- **environment**: quantpost=0.1.0, python=3.11.15, numpy=2.4.4, scipy=1.17.1
+- **environment**: standarderror=0.1.0, python=3.11.15, numpy=2.4.4, scipy=1.17.1
 - **market**: GARCH(1,1) log returns with t(5) shocks converted to simple returns and given a 7% annual drift, unconditional daily sd fixed at 1.1% while persistence is swept over (0.0, 0.5, 0.8, 0.9, 0.95, 0.98) (omega solved from the target variance, so only the arrival pattern changes)
 - **histories**: 20 years x 500 independent histories for the headline figures; 120 per point for the persistence sweep
 - **rules**: one unit contributed per 21-session month; 'chases' doubles after a month above +3% and withdraws a unit below -3%; 'buys dips' mirrors it; 'panics' liquidates on a 15% drawdown and re-enters at 5%
 - **money-weighted return**: IRR by bisection on the terminal-value identity, annualised; a rule's own reallocation between the index and cash is not a cash flow, because the money never leaves the investor
 - **cash rate**: 0% in the headline figures; at 3% the panic rule's gap is -1.11pp instead of -2.40pp
 
-Code: <https://github.com/jonghajeon/quantpost>
+Code: <https://github.com/jonghajeon/standarderror>

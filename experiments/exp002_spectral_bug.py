@@ -12,21 +12,21 @@ A debugging post, and the analysis is the debugging. Two real bugs from this rep
 Neither is caught by a test that checks shapes, dtypes or "does it run". Both are
 caught immediately by a test that checks a physical identity.
 
-Run: `quantpost run exp002_spectral_bug --publish`
+Run: `standarderror run exp002_spectral_bug --publish`
 """
 
 from __future__ import annotations
 
 import numpy as np
 
-import quantpost as qp
-from quantpost.dynamics import lyapunov, ode, pde
-from quantpost.render import Post
-from quantpost.viz import charts, theme
+import standarderror as se
+from standarderror.dynamics import lyapunov, ode, pde
+from standarderror.render import Post
+from standarderror.viz import charts, theme
 
-IMG = qp.SETTINGS.build_dir / "img"
+IMG = se.SETTINGS.build_dir / "img"
 EPS = float(np.finfo(float).eps)
-SEED = qp.SETTINGS.seed
+SEED = se.SETTINGS.seed
 
 # max_k (k^2 - k^4) = 1/4, attained at k = 1/sqrt(2). Independent of L and N,
 # which is the whole reason the failure time never moved.
@@ -509,8 +509,8 @@ def build() -> Post:
                  "checks a physical identity."),
         tags=["numerical-analysis", "scientific-computing", "python",
               "software-testing", "machine-learning"],
-        author=qp.SETTINGS.author,
-        code_url=qp.SETTINGS.code_repo_url,
+        author=se.SETTINGS.author,
+        code_url=se.SETTINGS.code_repo_url,
         data_sources=[
             "Simulated Kuramoto-Sivashinsky (u_t = -u u_x - u_xx - u_xxxx on a "
             "periodic domain) and Lorenz-63. No external data; every number here "
@@ -519,8 +519,8 @@ def build() -> Post:
         reproducibility={
             "seed": SEED,
             "environment": ", ".join(
-                f"{k}={v}" for k, v in qp.environment().items()
-                if k in ("python", "numpy", "scipy", "quantpost")),
+                f"{k}={v}" for k, v in se.environment().items()
+                if k in ("python", "numpy", "scipy", "standarderror")),
             "machine epsilon": f"{EPS:.3e}",
             "KS maximum linear growth rate": f"max_k(k²−k⁴) = {KS_MAX_GROWTH}",
             "configurations swept": sweep["n_configs"],

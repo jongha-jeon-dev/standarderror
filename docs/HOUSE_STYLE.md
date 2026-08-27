@@ -21,7 +21,7 @@ are typeset and remain available for **figures inside** a post. They are no long
 the default for a hero. Do not reach for them for a hero without being asked.
 
 Both drawn cards use matplotlib's xkcd path filter plus the bundled Patrick Hand
-face (`quantpost/viz/fonts/`, OFL, licence alongside). Two things to remember when
+face (`standarderror/viz/fonts/`, OFL, licence alongside). Two things to remember when
 drawing into a panel:
 
 - xkcd mode puts a **white stroke around every text object**, so white-on-dark
@@ -136,14 +136,14 @@ contamination in to 1.5 standard deviations and the error nearly quadruples.
 
 So: sweep the parameter of the construction, not just the parameter of the method. If a
 contamination experiment reports one distance, one magnitude or one fraction, it has not
-reported an effect, and `quantpost.robust.contamination` returns a record of what it did
+reported an effect, and `standarderror.robust.contamination` returns a record of what it did
 for exactly that reason.
 
 ## Test units, not just correctness
 
 A hyperparameter with units and a fixed default is a bug that no loss curve shows.
 Multiply the response by a constant, refit, divide the predictions back: anything that
-moves has a units problem. `quantpost.robust.equivariance` is that test, and it caught a
+moves has a units problem. `standarderror.robust.equivariance` is that test, and it caught a
 factor of 27 in a shipped library's robust loss.
 
 Worth running on any tuning constant compared against a residual, a distance or a price.

@@ -23,8 +23,8 @@ import warnings
 import numpy as np
 import pytest
 
-from quantpost.dynamics import sde
-from quantpost.generative import diffusion, stylised
+from standarderror.dynamics import sde
+from standarderror.generative import diffusion, stylised
 
 
 @pytest.fixture(scope="module")

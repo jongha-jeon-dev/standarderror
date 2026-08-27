@@ -357,9 +357,9 @@ setting with heavier competing risks or crossover is worth checking separately.
 
 - **seed**: 20260804
 - **simulated trials per row**: 400 at 758:379
-- **module**: quantpost.uq.survival
+- **module**: standarderror.uq.survival
 - **tests**: tests/test_survival.py
 - **config hash**: e289e7f0c9159529
 - **runtime**: 5.0s
 
-Code: <https://github.com/jonghajeon/quantpost>
+Code: <https://github.com/jonghajeon/standarderror>

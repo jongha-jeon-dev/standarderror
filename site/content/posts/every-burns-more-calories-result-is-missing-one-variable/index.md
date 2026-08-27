@@ -300,9 +300,9 @@ then stopped.
 
 - **seed**: 20260804
 - **simulated experiments per point**: 2,000
-- **module**: quantpost.physio.heat
+- **module**: standarderror.physio.heat
 - **tests**: tests/test_physio.py
 - **config hash**: f9d37db85ea2c06f
 - **runtime**: 2.1s
 
-Code: <https://github.com/jonghajeon/quantpost>
+Code: <https://github.com/jonghajeon/standarderror>

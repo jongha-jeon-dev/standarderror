@@ -1,4 +1,4 @@
-"""Tests for quantpost.ts.detect.
+"""Tests for standarderror.ts.detect.
 
 The load-bearing tests are the size checks: a test that is not correctly sized
 makes every power number downstream meaningless, and the whole point of the
@@ -12,7 +12,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from quantpost.ts import detect as dt
+from standarderror.ts import detect as dt
 
 
 def ar1(n, rho, rng, sigma=1.0):

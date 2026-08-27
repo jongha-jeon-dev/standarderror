@@ -222,11 +222,11 @@ guarantee quietly fails. I will show a nominal 90% interval realising under 60%.
 ### Reproducibility
 
 - **seed**: 20260804
-- **environment**: quantpost=0.1.0, python=3.11.15, numpy=2.4.4, scipy=1.17.1, scikit-learn=1.8.0
+- **environment**: standarderror=0.1.0, python=3.11.15, numpy=2.4.4, scipy=1.17.1, scikit-learn=1.8.0
 - **design**: 2,000 logistic regressions, each on 4 of 60 noise features
 - **splits**: 1200 train / 900 validation / 900 test, contiguous and disjoint
 - **class balance (train/validation/test)**: train 0.502, validation 0.503, test 0.493
 - **chance sd of one model's accuracy**: 1.67pp (observed across models: 1.68pp)
 - **order statistics**: exact, from the Binomial(900, 1/2) CDF — not the normal approximation, which is off by ~1.5x in the tail the trials table lives in
 
-Code: <https://github.com/jonghajeon/quantpost>
+Code: <https://github.com/jonghajeon/standarderror>

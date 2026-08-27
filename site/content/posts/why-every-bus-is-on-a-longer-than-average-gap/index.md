@@ -156,9 +156,9 @@ learned physics, and how to tell that apart from having memorised a trajectory.
 ### Reproducibility
 
 - **seed**: 20260804
-- **environment**: quantpost=0.1.0, python=3.11.15, numpy=2.4.4
+- **environment**: standarderror=0.1.0, python=3.11.15, numpy=2.4.4
 - **design**: 200,000 gaps per timetable, 400,000 passengers placed uniformly on the timeline; the gap each passenger lands in is found by search, not by sampling gaps in proportion to length
 - **closed forms checked**: E[experienced] = E[X] + Var(X)/E[X] and E[wait] = E[X²]/(2E[X]); largest simulation-vs-formula disagreement across all four timetables and both quantities: 0.19%
 - **control**: the equal-gap timetable, where the predicted penalty is exactly zero and the measured one is 0.00%
 
-Code: <https://github.com/jonghajeon/quantpost>
+Code: <https://github.com/jonghajeon/standarderror>

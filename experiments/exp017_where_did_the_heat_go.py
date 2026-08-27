@@ -54,7 +54,7 @@ claim about whether TOFA works or should be developed. Every input is a publishe
 number. The subject is what a measured metabolic rate has to obey and which variable
 the field does not print.
 
-Run: `quantpost run exp017_where_did_the_heat_go --publish`
+Run: `standarderror run exp017_where_did_the_heat_go --publish`
 """
 
 from __future__ import annotations
@@ -68,15 +68,15 @@ import warnings
 import numpy as np
 import pandas as pd
 
-import quantpost as qp
-from quantpost.physio import heat
-from quantpost.render import Post
-from quantpost.viz import charts, theme
+import standarderror as se
+from standarderror.physio import heat
+from standarderror.render import Post
+from standarderror.viz import charts, theme
 
-IMG = qp.SETTINGS.build_dir / "img"
-EXT = os.environ.get("QUANTPOST_FIG_EXT", "png")
-SEED = qp.SETTINGS.seed
-CACHE = qp.SETTINGS.build_dir / "cache" / "exp017.json"
+IMG = se.SETTINGS.build_dir / "img"
+EXT = os.environ.get("SERR_FIG_EXT", "png")
+SEED = se.SETTINGS.seed
+CACHE = se.SETTINGS.build_dir / "cache" / "exp017.json"
 
 # --- what the paper reports -----------------------------------------------------
 PAPER = {
@@ -672,7 +672,7 @@ def figures(res: dict) -> dict:
               "expenditure is heat production. Heat made and not stored has gone "
               "somewhere, and the required increase in heat loss equals the reported "
               "increase in expenditure exactly — whatever the conductance is."),
-        footer="quantpost", mode="light",
+        footer="The Standard Error", mode="light",
         alt=("A three-panel hand-drawn strip. The first frame shows a furnace with "
              "flames and three arrows of heat rising out, marked plus 18 percent. The "
              "second shows a thermometer reading dead centre between two dashed "
@@ -768,12 +768,12 @@ def build() -> Post:
             "that follows is about what that number implies, not about whether it is "
             "true.",
         ],
-        code_url="https://github.com/jonghajeon/quantpost",
+        code_url="https://github.com/jonghajeon/standarderror",
         author="Jongha Jeon",
         reproducibility={
             "seed": SEED,
             "simulated experiments per point": f"{SIM_REPS:,}",
-            "module": "quantpost.physio.heat",
+            "module": "standarderror.physio.heat",
             "tests": "tests/test_physio.py",
             "config hash": res["key"],
             "runtime": f"{res['elapsed_s']}s",
@@ -1033,4 +1033,4 @@ then stopped.
 
 
 if __name__ == "__main__":
-    compute(force=bool(os.environ.get("QUANTPOST_FORCE")))
+    compute(force=bool(os.environ.get("SERR_FORCE")))

@@ -43,7 +43,7 @@ computations say what a significance claim constrains; they say nothing about
 whether the treatment is good, and a bound that permits a modest effect is not
 evidence of a modest effect.
 
-Run: `quantpost run exp016_the_number_not_printed --publish`
+Run: `standarderror run exp016_the_number_not_printed --publish`
 """
 
 from __future__ import annotations
@@ -55,15 +55,15 @@ import time
 
 import numpy as np
 
-import quantpost as qp
-from quantpost.render import Post
-from quantpost.uq import survival as sv
-from quantpost.viz import charts, theme
+import standarderror as se
+from standarderror.render import Post
+from standarderror.uq import survival as sv
+from standarderror.viz import charts, theme
 
-IMG = qp.SETTINGS.build_dir / "img"
-EXT = os.environ.get("QUANTPOST_FIG_EXT", "png")
-SEED = qp.SETTINGS.seed
-CACHE = qp.SETTINGS.build_dir / "cache" / "exp016.json"
+IMG = se.SETTINGS.build_dir / "img"
+EXT = os.environ.get("SERR_FIG_EXT", "png")
+SEED = se.SETTINGS.seed
+CACHE = se.SETTINGS.build_dir / "cache" / "exp016.json"
 
 # --- the calibration set -------------------------------------------------------
 # Adjuvant melanoma trials that published a hazard ratio, its interval, the level of
@@ -836,7 +836,7 @@ def figures(res: dict) -> dict:
               "157-patient phase 2b. An interval's width says how many events there "
               "were and nothing else — so the count is recoverable, and a bare "
               "significance claim is a bound set by the one integer nobody prints."),
-        footer="quantpost", mode="light",
+        footer="The Standard Error", mode="light",
         alt=("A three-panel hand-drawn strip. The first frame shows a press release "
              "with a crossed-out empty box where a number should be, marked zero. "
              "The second shows a confidence interval being measured end to end, "
@@ -938,13 +938,13 @@ def build() -> Post:
             "security, and nothing here is medical or investment advice. A bound "
             "that permits a modest effect is not evidence of a modest effect.",
         ],
-        code_url="https://github.com/jonghajeon/quantpost",
+        code_url="https://github.com/jonghajeon/standarderror",
         author="Jongha Jeon",
         reproducibility={
             "seed": SEED,
             "simulated trials per row": f"{SIM_REPS} at {SIM_BASE['n_treated']}:"
                                         f"{SIM_BASE['n_control']}",
-            "module": "quantpost.uq.survival",
+            "module": "standarderror.uq.survival",
             "tests": "tests/test_survival.py",
             "config hash": res["key"],
             "runtime": f"{res['elapsed_s']}s",
@@ -1251,4 +1251,4 @@ setting with heavier competing risks or crossover is worth checking separately.
 
 
 if __name__ == "__main__":
-    compute(force=bool(os.environ.get("QUANTPOST_FORCE")))
+    compute(force=bool(os.environ.get("SERR_FORCE")))

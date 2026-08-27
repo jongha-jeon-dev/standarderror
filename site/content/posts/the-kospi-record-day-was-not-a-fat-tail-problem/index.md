@@ -244,11 +244,11 @@ trajectory.
 ### Reproducibility
 
 - **seed**: 20260804
-- **environment**: quantpost=0.1.0, python=3.11.15, numpy=2.4.4, scipy=1.17.1
+- **environment**: standarderror=0.1.0, python=3.11.15, numpy=2.4.4, scipy=1.17.1
 - **closed forms**: Gaussian and rescaled Student-t survival functions evaluated in logs (the probabilities underflow float64 by tens of orders of magnitude); adjacency probability (2kn - k(k+1)) / (n(n-1))
 - **adjacency check**: exact 0.01325 against 200,000 Monte Carlo draws 0.01377
 - **sessions**: 151 business days from 2026-01-02 to 2026-07-31 (ignoring Korean market holidays; at 141 sessions the adjacency probability is 1.42% instead of 1.32%)
 - **simulation**: GARCH(1,1), omega=0.02, arch=0.1, garch=0.88, t(5) shocks, 6,000 sessions (24 years), unconditional daily sd 1.19%
 - **VaR backtest**: two static VaR models at 1% — a Gaussian quantile and the empirical 1st percentile — both estimated on the first 3,000 sessions and tested on the next 3,000
 
-Code: <https://github.com/jonghajeon/quantpost>
+Code: <https://github.com/jonghajeon/standarderror>

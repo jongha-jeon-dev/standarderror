@@ -65,7 +65,7 @@ Nothing here re-analyses the paper's data, which is not public. Every input is a
 published scalar, quoted with its source. No investment advice, and no claim about
 any company.
 
-Run: `quantpost run exp012_priced_in --publish`
+Run: `standarderror run exp012_priced_in --publish`
 """
 
 from __future__ import annotations
@@ -75,14 +75,14 @@ import os
 import numpy as np
 import pandas as pd
 
-import quantpost as qp
-from quantpost.render import Post
-from quantpost.uq import evidence
-from quantpost.viz import charts, theme
+import standarderror as se
+from standarderror.render import Post
+from standarderror.uq import evidence
+from standarderror.viz import charts, theme
 
-IMG = qp.SETTINGS.build_dir / "img"
-EXT = os.environ.get("QUANTPOST_FIG_EXT", "png")
-SEED = qp.SETTINGS.seed
+IMG = se.SETTINGS.build_dir / "img"
+EXT = os.environ.get("SERR_FIG_EXT", "png")
+SEED = se.SETTINGS.seed
 
 # --- the paper's reported figures, sourced in `data_sources` --------------------
 PAPER = "Kargarzadeh, Khaledian, Parvini, Ghatak and Khaledian (arXiv:2608.14014)"
@@ -409,7 +409,7 @@ def figures(res: dict) -> dict:
               f"{N_EVENTS / 1e6:.2f} million stock-day events. Pooled over every "
               f"signed event, {res['given_back_pct']:.0f}% of the move is handed "
               f"back after publication."),
-        footer="quantpost", mode="light",
+        footer="The Standard Error", mode="light",
         alt=("A two-panel hand-drawn strip. In the first a small speech bubble "
              "whispers that someone might buy it, and a price line steps up: "
              f"{RUMOUR['the rumour day']:+.2f}%. In the second a newspaper front "
@@ -453,8 +453,8 @@ def build() -> Post:
             f"which turns on a single number neither of us measured."),
         tags=["machine-learning", "quantitative-finance", "market-microstructure",
               "nlp", "data-science"],
-        author=qp.SETTINGS.author,
-        code_url=qp.SETTINGS.code_repo_url,
+        author=se.SETTINGS.author,
+        code_url=se.SETTINGS.code_repo_url,
         min_words=1600, max_words=2400,
         table_figures=[figs["table"]],
         data_sources=[
@@ -487,8 +487,8 @@ def build() -> Post:
         reproducibility={
             "seed": SEED,
             "environment": ", ".join(
-                f"{k}={v}" for k, v in qp.environment().items()
-                if k in ("python", "numpy", "scipy", "quantpost")),
+                f"{k}={v}" for k, v in se.environment().items()
+                if k in ("python", "numpy", "scipy", "standarderror")),
             "noise": (f"annualised implied constituent volatility {VIXEQ} scaled to "
                       f"a {WINDOW_DAYS}-day window is "
                       f"{noise['window_total']:.2f}%; removing the systematic share "
