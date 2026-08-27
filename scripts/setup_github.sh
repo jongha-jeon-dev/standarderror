@@ -209,7 +209,7 @@ elif [[ $GH_READY -eq 1 ]]; then
     ok "repo already existed on GitHub; origin added"
   else
     run "gh repo create '$GH_USER/$REPO' --public --source=. --remote=origin \
-          --description 'Reservoir computing, risk models and explainability, with the data and the code'"
+          --description 'The Standard Error - writes a phenomenon down as numbers or equations, then looks for the mistake everybody makes in it'"
     ok "created public repo $GH_USER/$REPO"
   fi
 else

@@ -1,12 +1,12 @@
 baseURL = "https://YOURNAME.github.io/standarderror/"
 languageCode = "en-gb"
-title = "Notes on financial machine learning"
+title = "The Standard Error"
 theme = "PaperMod"
 
 # Every post is a page bundle (index.md plus its images), so figures live beside
 # the text they belong to and never break when a slug changes.
 [params]
-  description = "Reservoir computing, risk models, and explainability — with the data and the code."
+  description = "A standard error is the width of an interval. The standard error is the mistake everybody makes. Both, with the data and the code."
   ShowReadingTime = true
   ShowCodeCopyButtons = true
   ShowPostNavLinks = true
