@@ -73,7 +73,7 @@ the seven episodes before it.
 | 7 | The Scree Plot Lies | Eckart–Young, why truncating a factorisation is a modelling decision, and how to choose the rank without looking at an elbow |
 | 8 | Logistic Regression Is Least Squares, Repeated | IRLS from scratch on public credit data: where the weights come from, and why separable data sends a coefficient to infinity |
 
-Episodes are 1,200–1,800 words. Everything runs on simulated data or on a public
+Episodes run 1,900–2,800 words. Everything runs on simulated data or on a public
 dataset named in the episode.
 
 ### What this series is not
