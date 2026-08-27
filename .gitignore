@@ -12,7 +12,21 @@ site/resources/
 *.egg-info/
 .DS_Store
 
-# Hand-downloaded source data. Not redistributable: FRED index series carry the
-# provider's terms, and this repository's rule is to publish statistics and never
-# values. Keeping the files out of git is how that rule survives a `git add -A`.
-data/
+# Hand-downloaded source data, excluded by default and re-included per source.
+# `data/*` rather than `data/` on purpose: git cannot re-include anything inside an
+# excluded *directory*, so excluding the contents is what makes the exceptions
+# below possible at all. The reasoning for each line is in data/LICENCES.md.
+# A trailing `#` is not a comment in this file — only a line-leading one is — so
+# these annotations sit on their own lines. Putting them after the pattern turns
+# the whole line into a literal that matches nothing, silently.
+data/*
+!data/LICENCES.md
+# World Bank Open Data, CC BY 4.0
+!data/worldbank/
+# US Bureau of Labor Statistics, public domain
+!data/us_labor/
+
+# Editorial rather than published: which posts are planned, and how their titles
+# were chosen. Not secret, but not part of the record either.
+analysis/
+docs/CONTENT_BACKLOG.md

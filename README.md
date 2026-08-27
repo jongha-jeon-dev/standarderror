@@ -48,7 +48,8 @@ reaching readers; `--live` is the only thing that publishes. Full walkthrough in
 | `experiments/` | One file per post: `build() -> Post` |
 | `site/` | Hugo scaffold and the GitHub Pages workflow |
 | `scripts/` | `setup_github.sh` — idempotent one-time setup |
-| `docs/` | `SETUP.md` (setup + writing loop), `CONTENT_BACKLOG.md` (16 planned posts) |
+| `docs/` | `SETUP.md` (setup + writing loop), `HOUSE_STYLE.md` (the standard posts are held to) |
+| `data/` | source files, committed only where the provider licenses redistribution — see `data/LICENCES.md` |
 
 ## Data sources
 
