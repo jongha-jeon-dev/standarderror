@@ -2,7 +2,7 @@
 title: "Linear Algebra 1: The Condition Number Is the Error Bar on Your Solve"
 date: 2026-08-27
 slug: "linear-algebra-1-condition-number"
-draft: true
+draft: false
 description: "A 14 by 14 system whose answer is all ones, solved to a residual at machine precision, returning entries between -4.9 and +8.5 — and the one number on the matrix that predicts it."
 author: "Jongha Jeon"
 tags: ["linear-algebra", "numerical-methods", "regression", "lectures", "data-science"]
@@ -153,10 +153,10 @@ wide — not an ellipse so much as a needle.
 Now run it backwards, because solving is the backwards direction. If the matrix
 squashes one direction by a factor of 0.0005, then *un*-squashing
 it — which is what a solve does — multiplies anything in that direction by
-2001. Errors included. That is why the sliver in the figure
+2001. Errors included. That is why the sliver in the previous figure
 has the shape it has: it is a small square of tolerance, pushed backwards through
 the matrix, stretched by 1/*σ* in each direction. Its aspect ratio is therefore
-*σ*ₘₐₓ/*σ*ₘᵢₙ — which is the number the figure labels, and which finally has a
+*σ*ₘₐₓ/*σ*ₘᵢₙ — which is the number that figure labels, and which finally has a
 name:
 
 $$\kappa(A) = \frac{\sigma_{\max}}{\sigma_{\min}}$$
@@ -166,6 +166,10 @@ every direction treated alike, nothing amplified. A thousand means a thousand-fo
 difference between the direction the matrix handles best and the direction it
 handles worst — and a solve amplifies error in the worst direction by exactly
 that ratio more than in the best one.
+
+![A circle and a tilted ellipse sharing a centre, with two arrows marking the ellipse's long and short semi-axes, labelled sigma one and sigma two.](lec01-fA-ellipse.png)
+
+*Drawn with σ₁/σ₂ = 5, which is about as eccentric as fits on a page. The 2 × 2 matrix in the code above has a ratio of 4002 — its ellipse would be 800 times thinner than this one, which is why the sliver in the previous figure looked like a line.*
 
 ## The inequality, one line at a time
 
@@ -222,6 +226,54 @@ matrix puts on your answer before your data arrives. And since a factor of ten i
 error is one lost decimal digit, log₁₀ *κ* counts the digits directly: a matrix
 with *κ* = 10⁸ eats eight of your 16 marks and hands
 you the rest.
+
+## The same failure, measured
+
+All of that is checkable in six lines, and the check is one you can
+run on any matrix you are about to solve with — it costs one call.
+
+```python
+kappa = np.linalg.cond(H)
+eps = np.finfo(float).eps
+
+print(f"kappa(H)             {kappa:.2e}")
+print(f"digits available     {-np.log10(eps):.1f}")
+print(f"digits lost to kappa {np.log10(kappa):.1f}")
+print(f"error bound          {kappa * eps:.1e}")
+```
+
+```text
+kappa(H)             3.22e+17
+digits available     15.7
+digits lost to kappa 17.5
+error bound          7.1e+01
+```
+
+Note the second and third lines together. The ruler has
+16 marks; this matrix consumes
+17.5 of them. There is nothing left, which is why the
+answer came back with entries near 8.5 instead of 1, and why
+no better algorithm would have helped.
+
+Run that across sizes and the whole story is one table. The residual column is
+the check that gets run in practice; the error column is the quantity anybody
+cares about; and they move in opposite directions.
+
+![Table of condition number, residual and error against system size.](lec01-t1-digits.png)
+
+*The last column is the cost of writing inv(A) @ b instead of solve(A, b): the same problem, between five and two hundred times worse.*
+
+The last two columns of that table are the ones to keep. **Digits
+kept** reaches zero by *n* = 14, and the prediction
+15.7 − log₁₀ *κ* falls with it — not fitted to it,
+computed from the matrix alone before the system was ever solved. Plotting the
+two together is the whole claim of this episode in one picture: a measurement and
+a closed form, agreeing — while the residual, noted on the same chart, sits at
+machine precision across the entire range and reports that everything is fine.
+
+![Two nearly coincident falling lines showing correct digits against system size, with a note that the residual stays at machine precision throughout.](lec01-f1-digits.png)
+
+*The two lines are not a fit and a model; they are a measurement and a closed form, and the closed form is the lower one because it is a worst case. What the residual does over the same range is why this failure is silent.*
 
 ## Is the bound real, or just an inequality?
 
@@ -327,8 +379,12 @@ space** as the monomials of degree ≤ 11. Same model, same
 achievable fits, same predictions — the last line confirms the fitted values
 agree to 4e-14. All that changed is which basis the
 coefficients are expressed in, and the condition number went from
-1.6e+16 to 22. Figure 2 is that comparison across
-degrees.
+1.6e+16 to 22. The comparison across degrees is
+plotted below.
+
+![One line rising steeply past a dashed limit line and another staying flat and low, against polynomial degree, on a log scale.](lec01-f2-basis.png)
+
+*At degree 11 the two differ by a factor of 7e+14. The fitted values agree to 4e-14, so nothing about the model changed.*
 
 Why does that help so much? Because of what the columns of *X* are being asked
 to do. Suppose you have to describe a position using two given directions. If
@@ -347,16 +403,16 @@ that use them are large, opposite and unstable. Legendre polynomials are north
 and east: mutually orthogonal, each contributing something the others cannot, so
 each coefficient answers a question the others do not.
 
+![Four curves lying almost on top of one another near the right edge, and four oscillating curves that are clearly distinct.](lec01-fB-basis.png)
+
+*The monomials are the north-east and north-north-east of the text: on this interval t⁵ through t⁸ are nearly the same function, so the coefficients that use them must be large and nearly cancelling. The Legendre polynomials of the same degrees are mutually orthogonal — each one carries information the others cannot.*
+
 That is the general lesson, and it is bigger than polynomials: **conditioning is
 a property of the parameterisation, not of the problem.** A design matrix whose
 columns are a duration in seconds, a probability and a currency amount is badly
 conditioned for reasons that have nothing to do with the statistics of the data,
 and centring and scaling the columns is not cosmetic tidying — it is the cheapest
 available reduction in the error bar on your coefficients.
-
-![One line rising steeply past a dashed limit line and another staying flat and low, against polynomial degree, on a log scale.](lec01-f2-basis.png)
-
-*At degree 11 the two differ by a factor of 7e+14. The fitted values agree to 4e-14, so nothing about the model changed.*
 
 ## What to take away, and what is still hiding
 
