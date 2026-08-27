@@ -39,6 +39,8 @@ Run: `standarderror run exp007_kospi_tails --publish`
 
 from __future__ import annotations
 
+from datetime import date
+
 import itertools
 import os
 
@@ -50,6 +52,10 @@ import standarderror as se
 from standarderror.models import metrics
 from standarderror.render import Post
 from standarderror.viz import charts, theme
+
+#: Pinned so a rebuild cannot silently re-date a published post.
+#: `Post.date` defaults to today, which is correct exactly once.
+POST_DATE = date(2026, 8, 7)
 
 IMG = se.SETTINGS.build_dir / "img"
 EXT = os.environ.get("SERR_FIG_EXT", "png")
@@ -494,6 +500,7 @@ def build() -> Post:
     post = Post(
         title="The KOSPI's Record Day Was Not a Fat-Tail Problem",
         slug="the-kospi-record-day-was-not-a-fat-tail-problem",
+        date=POST_DATE,
         subtitle=("A +17.91% session, a 12-sigma move, and the assumption that "
                   "actually broke"),
         summary=(f"On 31 July 2026 the KOSPI rose {RECORD_DAY}% in a single "

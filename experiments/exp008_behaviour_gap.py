@@ -56,6 +56,8 @@ Run: `standarderror run exp008_behaviour_gap --publish`
 
 from __future__ import annotations
 
+from datetime import date
+
 import os
 
 import numpy as np
@@ -65,6 +67,10 @@ import standarderror as se
 from standarderror.dynamics import sde
 from standarderror.render import Post
 from standarderror.viz import charts, theme
+
+#: Pinned so a rebuild cannot silently re-date a published post.
+#: `Post.date` defaults to today, which is correct exactly once.
+POST_DATE = date(2026, 8, 13)
 
 IMG = se.SETTINGS.build_dir / "img"
 EXT = os.environ.get("SERR_FIG_EXT", "png")
@@ -536,6 +542,7 @@ def build() -> Post:
     post = Post(
         title="Individuals Sold a Record Amount on the Best Day in Market History",
         slug="individuals-sold-a-record-amount-on-the-best-day",
+        date=POST_DATE,
         subtitle=("The gap between what an index returns and what its investors "
                   "earn is arithmetic — and I was wrong about where it comes from"),
         summary=(f"On 31 July 2026 the KOSPI rose {RECORD_DAY}%, the largest "

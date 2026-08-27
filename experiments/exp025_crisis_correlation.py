@@ -65,6 +65,8 @@ Run: `standarderror run exp025_crisis_correlation --publish`
 
 from __future__ import annotations
 
+from datetime import date
+
 import hashlib
 import json
 import os
@@ -81,6 +83,10 @@ from standarderror.sources import prices
 from standarderror.sources.fred import MANDATORY_DISCLAIMER
 from standarderror.ts import conditional as cd
 from standarderror.viz import charts
+
+#: Pinned so a rebuild cannot silently re-date a published post.
+#: `Post.date` defaults to today, which is correct exactly once.
+POST_DATE = date(2026, 8, 27)
 
 IMG = se.SETTINGS.build_dir / "img"
 EXT = os.environ.get("SERR_FIG_EXT", "png")
@@ -683,6 +689,7 @@ def build() -> Post:
     post = Post(
         title="Most of the Crisis Correlation Is Arithmetic",
         slug="most-of-the-crisis-correlation-is-arithmetic",
+        date=POST_DATE,
         subtitle=("Split any two return series into turbulent and calm periods "
                   "and the correlation rises. On a simulated pair whose "
                   "correlation is constant by construction it rises just as "

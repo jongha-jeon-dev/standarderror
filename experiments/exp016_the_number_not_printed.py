@@ -48,6 +48,8 @@ Run: `standarderror run exp016_the_number_not_printed --publish`
 
 from __future__ import annotations
 
+from datetime import date
+
 import hashlib
 import json
 import os
@@ -59,6 +61,10 @@ import standarderror as se
 from standarderror.render import Post
 from standarderror.uq import survival as sv
 from standarderror.viz import charts, theme
+
+#: Pinned so a rebuild cannot silently re-date a published post.
+#: `Post.date` defaults to today, which is correct exactly once.
+POST_DATE = date(2026, 8, 21)
 
 IMG = se.SETTINGS.build_dir / "img"
 EXT = os.environ.get("SERR_FIG_EXT", "png")
@@ -899,6 +905,7 @@ def build() -> Post:
     post = Post(
         title="Reverse-Engineering the Number Merck Did Not Print",
         slug="reverse-engineering-the-number-merck-did-not-print",
+        date=POST_DATE,
         subtitle=("A phase 3 cancer-vaccine win was announced with no hazard "
                   "ratio, no interval and no p-value. Here is exactly how much of "
                   "it is recoverable, and where the arithmetic stops."),

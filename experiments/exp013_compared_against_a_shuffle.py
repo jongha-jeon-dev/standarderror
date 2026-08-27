@@ -74,10 +74,12 @@ and a factor is a factor whichever end it comes from.
 No market data, no company, no investment implication. The only inputs are the
 survey's published description of itself and a simulated path.
 
-Run: `standarderror run exp013_fat_tails_are_free --publish`
+Run: `standarderror run exp013_compared_against_a_shuffle --publish`
 """
 
 from __future__ import annotations
+
+from datetime import date
 
 import hashlib
 import json
@@ -92,6 +94,10 @@ from standarderror.dynamics import sde
 from standarderror.generative import diffusion, stylised
 from standarderror.render import Post
 from standarderror.viz import charts, theme
+
+#: Pinned so a rebuild cannot silently re-date a published post.
+#: `Post.date` defaults to today, which is correct exactly once.
+POST_DATE = date(2026, 8, 19)
 
 IMG = se.SETTINGS.build_dir / "img"
 EXT = os.environ.get("SERR_FIG_EXT", "png")
@@ -851,8 +857,9 @@ def build() -> Post:
     ladder_range = max(ladder_clust) - min(ladder_clust)
 
     post = Post(
-        title="Fat Tails Are Free",
-        slug="fat-tails-are-free",
+        title="Your Generative Model Was Not Compared Against a Shuffle",
+        slug="your-generative-model-was-not-compared-against-a-shuffle",
+        date=POST_DATE,
         subtitle=("A survey of diffusion models in finance, and the two baselines "
                   "its evaluation tables are missing"),
         summary=(

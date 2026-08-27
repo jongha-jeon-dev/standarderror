@@ -59,6 +59,8 @@ Run: `standarderror run exp017_where_did_the_heat_go --publish`
 
 from __future__ import annotations
 
+from datetime import date
+
 import hashlib
 import json
 import os
@@ -72,6 +74,10 @@ import standarderror as se
 from standarderror.physio import heat
 from standarderror.render import Post
 from standarderror.viz import charts, theme
+
+#: Pinned so a rebuild cannot silently re-date a published post.
+#: `Post.date` defaults to today, which is correct exactly once.
+POST_DATE = date(2026, 8, 25)
 
 IMG = se.SETTINGS.build_dir / "img"
 EXT = os.environ.get("SERR_FIG_EXT", "png")
@@ -732,6 +738,7 @@ def build() -> Post:
     post = Post(
         title="Every \"Burns More Calories\" Result Is Missing One Variable",
         slug="every-burns-more-calories-result-is-missing-one-variable",
+        date=POST_DATE,
         subtitle=("A careful obesity paper reports 18% higher energy expenditure and "
                   "no change in body temperature, at three ambient temperatures. Two "
                   "of the three fit a simple heat balance. The third pins down a "

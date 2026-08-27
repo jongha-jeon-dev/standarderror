@@ -57,6 +57,8 @@ Run: `standarderror run exp014_huber_slope_is_a_scale --publish`
 
 from __future__ import annotations
 
+from datetime import date
+
 import hashlib
 import json
 import os
@@ -68,6 +70,10 @@ import standarderror as se
 from standarderror.render import Post
 from standarderror.robust import contamination, equivariance, scale
 from standarderror.viz import charts, theme
+
+#: Pinned so a rebuild cannot silently re-date a published post.
+#: `Post.date` defaults to today, which is correct exactly once.
+POST_DATE = date(2026, 8, 19)
 
 IMG = se.SETTINGS.build_dir / "img"
 EXT = os.environ.get("SERR_FIG_EXT", "png")
@@ -521,6 +527,7 @@ def build() -> Post:
     post = Post(
         title="Your Robust Loss Has a Unit Bug",
         slug="your-robust-loss-has-a-unit-bug",
+        date=POST_DATE,
         subtitle=("A paper makes XGBoost robust with M-, S- and tau-estimators. The "
                   "reason it had to is a number equal to 1."),
         summary=(

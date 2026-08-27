@@ -62,6 +62,8 @@ Run: `standarderror run exp024_smoother_than_the_survey --publish`
 
 from __future__ import annotations
 
+from datetime import date
+
 import hashlib
 import json
 import os
@@ -78,6 +80,10 @@ from standarderror.sources import us_labor as ul
 from standarderror.ts import noisescale as ns
 from standarderror.ts import seasonal as sz
 from standarderror.viz import charts
+
+#: Pinned so a rebuild cannot silently re-date a published post.
+#: `Post.date` defaults to today, which is correct exactly once.
+POST_DATE = date(2026, 8, 27)
 
 IMG = se.SETTINGS.build_dir / "img"
 EXT = os.environ.get("SERR_FIG_EXT", "png")
@@ -671,6 +677,7 @@ def build() -> Post:
     post = Post(
         title="The Unemployment Rate Is Smoother Than the Survey That Produces It",
         slug="smoother-than-the-survey",
+        date=POST_DATE,
         subtitle=("BLS told Congress its household survey has lost precision. "
                   "The published series can be asked the same question directly, "
                   "and it agrees with the agency about twenty years ago and not "

@@ -12,6 +12,8 @@ Run: `standarderror run exp003_persistence --publish`
 
 from __future__ import annotations
 
+from datetime import date
+
 import os
 
 import numpy as np
@@ -22,6 +24,10 @@ from standarderror.dynamics import ode
 from standarderror.models import baselines, metrics
 from standarderror.render import Post
 from standarderror.viz import charts, theme
+
+#: Pinned so a rebuild cannot silently re-date a published post.
+#: `Post.date` defaults to today, which is correct exactly once.
+POST_DATE = date(2026, 8, 6)
 
 IMG = se.SETTINGS.build_dir / "img"
 # PNG for the site and for Medium; SVG when a target wants inline vector text
@@ -272,6 +278,7 @@ def build() -> Post:
     post = Post(
         title="Your Forecast Is Probably Just Repeating Yesterday",
         slug="your-forecast-is-probably-just-repeating-yesterday",
+        date=POST_DATE,
         subtitle=("A model scores 99% on a series of coin flips. Here is why, and "
                   "the one number that would have caught it"),
         summary=(f"I built a forecast for a series that is provably impossible to "
@@ -410,7 +417,6 @@ about.** Not on a transformed version that happens to score better.
     post.add("Three questions", """
 If someone shows you a forecast — a vendor, a colleague, a paper, your own notebook
 from last month — these three questions do most of the work:
-
 **1. What does the lazy forecast score?** If nobody computed it, the number you were
 shown is uninterpretable. This is not a hostile question; it takes one line of code
 and it is the first thing a careful analyst runs.

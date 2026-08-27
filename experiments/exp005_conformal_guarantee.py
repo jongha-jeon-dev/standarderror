@@ -42,6 +42,8 @@ Run: `standarderror run exp005_conformal_guarantee --publish`
 
 from __future__ import annotations
 
+from datetime import date
+
 import os
 
 import numpy as np
@@ -52,6 +54,10 @@ import standarderror as se
 from standarderror.render import Post
 from standarderror.uq import conformal
 from standarderror.viz import charts, theme
+
+#: Pinned so a rebuild cannot silently re-date a published post.
+#: `Post.date` defaults to today, which is correct exactly once.
+POST_DATE = date(2026, 8, 7)
 
 IMG = se.SETTINGS.build_dir / "img"
 EXT = os.environ.get("SERR_FIG_EXT", "png")
@@ -446,6 +452,7 @@ def build() -> Post:
     post = Post(
         title="Your 90% Prediction Interval Covers 42% of the Time",
         slug="your-90-percent-interval-covers-42-percent",
+        date=POST_DATE,
         subtitle=("Conformal prediction's guarantee is real, and it does not say "
                   "what people repeat about it"),
         summary=(f"Conformal prediction gives you a distribution-free coverage "

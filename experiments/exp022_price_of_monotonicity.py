@@ -55,6 +55,8 @@ figures are quoted as published and are the only external numbers used.
 
 from __future__ import annotations
 
+from datetime import date
+
 import json
 import os
 import time
@@ -67,6 +69,10 @@ from standarderror.models import monotone as mono
 from standarderror.render.post import Post, Section
 from standarderror.render.snippet import Session
 from standarderror.viz import charts, theme
+
+#: Pinned so a rebuild cannot silently re-date a published post.
+#: `Post.date` defaults to today, which is correct exactly once.
+POST_DATE = date(2026, 8, 26)
 
 IMG = se.SETTINGS.build_dir / "img"
 EXT = os.environ.get("SERR_FIG_EXT", "png")
@@ -618,6 +624,7 @@ def build() -> Post:
     post = Post(
         title="The Price of Monotonicity Is Negative Until Your Signs Are Wrong",
         slug="price-of-monotonicity",
+        date=POST_DATE,
         subtitle=("A recent credit-risk benchmark prices monotonicity constraints "
                   "at under one percent of AUC. On synthetic data whose truth is "
                   "known, the same measurement runs the other way."),

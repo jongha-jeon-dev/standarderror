@@ -917,3 +917,68 @@ class TestContinuationSections:
         from standarderror.render.post import Section
 
         assert "#" not in Section("   ", "body").markdown()
+
+
+class TestPublishedPostsPinTheirDate:
+    """`Post.date` defaults to today, which is right exactly once.
+
+    Rebuilding a post that is already on the site therefore re-dates it, which
+    reorders the index and misstates when the work was done. Caught the first
+    time a rebuild moved a post from 19 to 27 August. The invariant is narrow on
+    purpose: a post that has never been published has no date to preserve, so
+    only posts with a Hugo page are required to pin one.
+    """
+
+    @staticmethod
+    def _experiments():
+        from pathlib import Path
+        return sorted(Path("experiments").glob("exp*.py"))
+
+    @staticmethod
+    def _slug(text):
+        import re
+        m = re.search(r'^\s*slug="([^"]+)",\s*$', text, flags=re.M)
+        return m.group(1) if m else None
+
+    def test_every_post_with_a_page_pins_its_date(self):
+        from pathlib import Path
+
+        missing = []
+        for path in self._experiments():
+            text = path.read_text()
+            slug = self._slug(text)
+            if slug is None:
+                continue
+            page = Path("site/content/posts") / slug / "index.md"
+            if page.exists() and "date=POST_DATE" not in text:
+                missing.append(path.name)
+        assert not missing, (
+            f"published posts that would be re-dated by a rebuild: {missing}")
+
+    def test_the_pinned_date_matches_the_page(self):
+        import re
+        from pathlib import Path
+
+        wrong = []
+        for path in self._experiments():
+            text = path.read_text()
+            slug = self._slug(text)
+            pin = re.search(r'^POST_DATE = date\((\d+), (\d+), (\d+)\)\s*$',
+                            text, flags=re.M)
+            if slug is None or pin is None:
+                continue
+            page = Path("site/content/posts") / slug / "index.md"
+            if not page.exists():
+                continue
+            front = re.search(r'^date: (\d+)-(\d+)-(\d+)\s*$', page.read_text(),
+                              flags=re.M)
+            if front is None:
+                continue
+            if tuple(int(g) for g in pin.groups()) != tuple(
+                    int(g) for g in front.groups()):
+                wrong.append((path.name, pin.groups(), front.groups()))
+        assert not wrong, f"pinned date disagrees with the published page: {wrong}"
+
+    def test_the_guard_finds_the_experiments_at_all(self):
+        # A path typo would make both tests above pass by testing nothing.
+        assert len(self._experiments()) > 10

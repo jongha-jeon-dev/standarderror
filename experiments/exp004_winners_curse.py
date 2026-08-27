@@ -34,6 +34,8 @@ Run: `standarderror run exp004_winners_curse --publish`
 
 from __future__ import annotations
 
+from datetime import date
+
 import os
 
 import numpy as np
@@ -46,6 +48,9 @@ from standarderror.render import Post
 from standarderror.uq import multiplicity
 from standarderror.viz import charts, theme
 
+#: Pinned so a rebuild cannot silently re-date a published post.
+#: `Post.date` defaults to today, which is correct exactly once.
+POST_DATE = date(2026, 8, 7)
 IMG = se.SETTINGS.build_dir / "img"
 EXT = os.environ.get("SERR_FIG_EXT", "png")
 SEED = se.SETTINGS.seed
@@ -343,6 +348,7 @@ def build() -> Post:
     post = Post(
         title="I Trained 2,000 Models on a Coin Flip and the Best One Looked Great",
         slug="i-trained-2000-models-on-a-coin-flip",
+        date=POST_DATE,
         subtitle=(f"A {res['val_best'] * 100:.1f}% hit rate, a p-value of "
                   f"{res['p_face']:.4f}, and not one shred of signal in the data"),
         summary=(f"I generated a target that cannot be predicted, gave "

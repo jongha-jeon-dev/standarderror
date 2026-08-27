@@ -53,6 +53,8 @@ Run: `standarderror run exp009_effective_bets --publish`
 
 from __future__ import annotations
 
+from datetime import date
+
 import os
 
 import numpy as np
@@ -61,6 +63,10 @@ import pandas as pd
 import standarderror as se
 from standarderror.render import Post
 from standarderror.viz import charts, theme
+
+#: Pinned so a rebuild cannot silently re-date a published post.
+#: `Post.date` defaults to today, which is correct exactly once.
+POST_DATE = date(2026, 8, 14)
 
 IMG = se.SETTINGS.build_dir / "img"
 EXT = os.environ.get("SERR_FIG_EXT", "png")
@@ -341,6 +347,7 @@ def build() -> Post:
     post = Post(
         title="Your Index Fund Owns 503 Companies and Is About Three Bets",
         slug="your-index-fund-owns-503-companies-and-is-three-bets",
+        date=POST_DATE,
         subtitle=("Concentration has a formula, and running it is unkind to both "
                   "sides of the argument"),
         summary=(f"The ten largest S&P 500 companies are around 41% of the index "

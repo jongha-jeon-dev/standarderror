@@ -79,6 +79,8 @@ Run: `standarderror run exp010_jeonse_tranche --publish`
 
 from __future__ import annotations
 
+from datetime import date
+
 import os
 
 import numpy as np
@@ -88,6 +90,10 @@ import standarderror as se
 from standarderror.credit import tranche
 from standarderror.render import Post
 from standarderror.viz import charts, theme
+
+#: Pinned so a rebuild cannot silently re-date a published post.
+#: `Post.date` defaults to today, which is correct exactly once.
+POST_DATE = date(2026, 8, 14)
 
 IMG = se.SETTINGS.build_dir / "img"
 EXT = os.environ.get("SERR_FIG_EXT", "png")
@@ -575,6 +581,7 @@ def build() -> Post:
     post = Post(
         title="The Jeonse Number That Is Not on the Contract",
         slug="the-jeonse-number-not-on-the-contract",
+        date=POST_DATE,
         subtitle=("A deposit's safety margin is two published ratios divided — and "
                   "the interesting part is what that arithmetic cannot tell you"),
         summary=(

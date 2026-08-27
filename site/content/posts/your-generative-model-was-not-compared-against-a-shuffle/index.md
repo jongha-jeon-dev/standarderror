@@ -1,7 +1,7 @@
 ---
-title: "Fat Tails Are Free"
+title: "Your Generative Model Was Not Compared Against a Shuffle"
 date: 2026-08-19
-slug: "fat-tails-are-free"
+slug: "your-generative-model-was-not-compared-against-a-shuffle"
 draft: true
 description: "A survey of diffusion models in finance, and the two baselines its evaluation tables are missing"
 author: "Jongha Jeon"

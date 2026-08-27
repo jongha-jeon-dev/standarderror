@@ -32,6 +32,8 @@ Run: `standarderror run exp006_inspection_paradox --publish`
 
 from __future__ import annotations
 
+from datetime import date
+
 import os
 
 import numpy as np
@@ -41,6 +43,9 @@ import standarderror as se
 from standarderror.render import Post
 from standarderror.viz import charts, theme
 
+#: Pinned so a rebuild cannot silently re-date a published post.
+#: `Post.date` defaults to today, which is correct exactly once.
+POST_DATE = date(2026, 8, 7)
 IMG = se.SETTINGS.build_dir / "img"
 EXT = os.environ.get("SERR_FIG_EXT", "png")
 SEED = se.SETTINGS.seed
@@ -309,6 +314,7 @@ def build() -> Post:
     post = Post(
         title="Why Every Bus You Catch Is on a Longer-Than-Average Gap",
         slug="why-every-bus-is-on-a-longer-than-average-gap",
+        date=POST_DATE,
         subtitle=("Your class was bigger than average, your queue was slower, and "
                   "your bus was late. One formula, and no bias in sight"),
         summary=(f"Buses that average a {MEAN_GAP:.0f}-minute gap will, if the "

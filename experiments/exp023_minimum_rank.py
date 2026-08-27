@@ -58,6 +58,8 @@ company, product or institution.
 
 from __future__ import annotations
 
+from datetime import date
+
 import json
 import os
 import time
@@ -69,6 +71,10 @@ from standarderror.models import scaffold as sf
 from standarderror.render.post import Post, Section
 from standarderror.render.snippet import Session
 from standarderror.viz import charts, theme
+
+#: Pinned so a rebuild cannot silently re-date a published post.
+#: `Post.date` defaults to today, which is correct exactly once.
+POST_DATE = date(2026, 8, 26)
 
 IMG = se.SETTINGS.build_dir / "img"
 EXT = os.environ.get("SERR_FIG_EXT", "png")
@@ -723,6 +729,7 @@ def build() -> Post:
     post = Post(
         title="A Rank That Measures Your Optimiser, Not Your Task",
         slug="minimum-rank-measures-the-optimiser",
+        date=POST_DATE,
         subtitle=("Adapters over a frozen random network recover full-training "
                   "accuracy, and the rank where that happens is read as the "
                   "task's intrinsic dimension. On a task whose dimension is "

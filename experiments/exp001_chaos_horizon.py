@@ -20,6 +20,8 @@ Run: `python -m standarderror.cli run exp001_chaos_horizon --publish`
 
 from __future__ import annotations
 
+from datetime import date
+
 import time
 from dataclasses import replace
 
@@ -32,6 +34,9 @@ from standarderror.render import Post
 from standarderror.viz import charts
 from standarderror.xai import reservoir_probes
 
+#: Pinned so a rebuild cannot silently re-date a published post.
+#: `Post.date` defaults to today, which is correct exactly once.
+POST_DATE = date(2026, 8, 4)
 IMG = se.SETTINGS.build_dir / "img"
 DT = 0.02
 N_TRAIN = 15000
@@ -447,6 +452,7 @@ def build() -> Post:
     post = Post(
         title="How Far Ahead Can You Forecast Chaos?",
         slug="how-far-ahead-can-you-forecast-chaos",
+        date=POST_DATE,
         subtitle=(f"A reproducible benchmark on Lorenz-63, and why the "
                   f"interpretable model is only "
                   f"{esn['vpt_median'] - ngrc['vpt_median']:.2f} Lyapunov times behind "

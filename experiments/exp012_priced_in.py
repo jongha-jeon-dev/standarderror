@@ -70,6 +70,8 @@ Run: `standarderror run exp012_priced_in --publish`
 
 from __future__ import annotations
 
+from datetime import date
+
 import os
 
 import numpy as np
@@ -79,6 +81,10 @@ import standarderror as se
 from standarderror.render import Post
 from standarderror.uq import evidence
 from standarderror.viz import charts, theme
+
+#: Pinned so a rebuild cannot silently re-date a published post.
+#: `Post.date` defaults to today, which is correct exactly once.
+POST_DATE = date(2026, 8, 19)
 
 IMG = se.SETTINGS.build_dir / "img"
 EXT = os.environ.get("SERR_FIG_EXT", "png")
@@ -434,6 +440,7 @@ def build() -> Post:
     post = Post(
         title="Two Thirds of the Move Happens Before the Headline",
         slug="two-thirds-of-the-move-before-the-headline",
+        date=POST_DATE,
         subtitle=("A paper measured 'buy the rumour, sell the news' on 4.57 million "
                   "articles, and the sayings mostly hold"),
         summary=(

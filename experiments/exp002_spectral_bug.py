@@ -17,12 +17,18 @@ Run: `standarderror run exp002_spectral_bug --publish`
 
 from __future__ import annotations
 
+from datetime import date
+
 import numpy as np
 
 import standarderror as se
 from standarderror.dynamics import lyapunov, ode, pde
 from standarderror.render import Post
 from standarderror.viz import charts, theme
+
+#: Pinned so a rebuild cannot silently re-date a published post.
+#: `Post.date` defaults to today, which is correct exactly once.
+POST_DATE = date(2026, 8, 6)
 
 IMG = se.SETTINGS.build_dir / "img"
 EPS = float(np.finfo(float).eps)
@@ -494,6 +500,7 @@ def build() -> Post:
     post = Post(
         title="Why My Integrator Exploded at t = 355, Every Single Time",
         slug="why-my-integrator-exploded-at-355",
+        date=POST_DATE,
         subtitle=("Two silent numerical bugs, and the kind of test that actually "
                   "catches them"),
         summary=(f"A spectral solver that blew up at the same moment whatever I "

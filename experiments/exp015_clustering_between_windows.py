@@ -55,6 +55,8 @@ Run: `standarderror run exp015_clustering_between_windows --publish`
 
 from __future__ import annotations
 
+from datetime import date
+
 import hashlib
 import json
 import os
@@ -71,13 +73,17 @@ from standarderror.sources import prices
 from standarderror.sources.fred import MANDATORY_DISCLAIMER
 from standarderror.viz import charts, theme
 
+#: Pinned so a rebuild cannot silently re-date a published post.
+#: `Post.date` defaults to today, which is correct exactly once.
+POST_DATE = date(2026, 8, 20)
+
 IMG = se.SETTINGS.build_dir / "img"
 EXT = os.environ.get("SERR_FIG_EXT", "png")
 SEED = se.SETTINGS.seed
 DATA = Path("data/fred")
 
 # --- what exp013 predicted, so the post can be checked against it ---------------
-EXP013_SLUG = "fat-tails-are-free"
+EXP013_SLUG = "your-generative-model-was-not-compared-against-a-shuffle"
 EXP013_PREDICTION = 0.002        # within-32-step clustering at persistence 0.98
 
 # --- the series ----------------------------------------------------------------
@@ -581,6 +587,7 @@ def build() -> Post:
     post = Post(
         title="Most Volatility Clustering Does Not Fit Inside the Window",
         slug="clustering-does-not-fit-inside-the-window",
+        date=POST_DATE,
         subtitle=("77 years of Nikkei and 55 of NASDAQ, against a prediction a "
                   "simulation made three posts ago"),
         summary=(

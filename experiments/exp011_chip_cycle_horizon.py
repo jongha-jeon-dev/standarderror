@@ -66,6 +66,8 @@ Run: `standarderror run exp011_chip_cycle_horizon --publish`
 
 from __future__ import annotations
 
+from datetime import date
+
 import os
 
 import numpy as np
@@ -77,6 +79,9 @@ from standarderror.models import ESN, ESNConfig
 from standarderror.render import Post
 from standarderror.viz import charts, theme
 
+#: Pinned so a rebuild cannot silently re-date a published post.
+#: `Post.date` defaults to today, which is correct exactly once.
+POST_DATE = date(2026, 8, 18)
 IMG = se.SETTINGS.build_dir / "img"
 EXT = os.environ.get("SERR_FIG_EXT", "png")
 SEED = se.SETTINGS.seed
@@ -515,6 +520,7 @@ def build() -> Post:
     post = Post(
         title="The Chip Cycle Is Forecastable. The Shortage Is a Different Question.",
         slug="the-chip-cycle-is-forecastable",
+        date=POST_DATE,
         subtitle=("A delayed feedback loop, an echo state network, and a result I "
                   "had the wrong way round"),
         summary=(
