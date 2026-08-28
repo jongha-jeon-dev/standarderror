@@ -1317,6 +1317,58 @@ def strip_card(
         return fig, ax
 
 
+def lecture_hero(
+    *,
+    series: str,
+    episode: int,
+    headline: str,
+    panels,
+    note: str = "",
+    alt: str = "",
+    mode: str = "light",
+    path: str | None = None,
+):
+    """A `strip_card` with the series badge where the masthead goes.
+
+    An episode of a course is not a standalone post and its cover should not read
+    like one. The drawing grammar stays identical to the rest of the blog — three
+    hand-drawn frames, a number under each — and only the corner changes: the
+    masthead becomes `LINEAR ALGEBRA · 3`, so three of these side by side read as
+    one syllabus and a reader who meets episode 3 first can see what they have
+    walked into.
+
+    A wrapper rather than a convention, because a convention is a thing I remember
+    and this is a thing episode 7 gets for free. It also fixes the badge's shape,
+    which is the only part that has to be identical across episodes for the set to
+    look like a set.
+
+    Exactly three panels: two is a punchline and a lecture is not a joke, and the
+    third frame is where "and here is what to do instead" goes.
+    """
+    panels = list(panels)
+    if len(panels) != 3:
+        raise ValueError(
+            f"a lecture hero takes three panels — the mechanism, the damage and "
+            f"the remedy — got {len(panels)}")
+    if episode < 1:
+        raise ValueError(f"episode must be 1 or more, got {episode}")
+    if not series.strip():
+        raise ValueError("a lecture hero needs a series name for the badge")
+    # `strip_card` wraps a label at 24 characters and sets the note just below
+    # where a second line lands, so a wrapped label crowds the paragraph under
+    # it. On a body figure that is untidy; on a cover it is the first thing a
+    # reader sees, so one line is a rule rather than a preference.
+    too_long = [label for _, _, label in panels if len(str(label)) > 24]
+    if too_long:
+        raise ValueError(
+            "a lecture hero's panel labels must fit one line of 24 characters, "
+            "or they wrap into the note: " + ", ".join(repr(t) for t in too_long))
+    return strip_card(
+        headline=headline, panels=panels, note=note,
+        footer=f"{series.strip().upper()} \u00b7 {episode}",
+        alt=alt, caption="", mode=mode, path=path)
+
+
 def social_card(
     *,
     headline: str,

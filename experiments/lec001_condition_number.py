@@ -398,7 +398,76 @@ def figures(res: dict) -> dict:
                  "times worse."),
         path=str(IMG / f"lec01-t1-digits.{EXT}"))[0]
 
+    out["hero"] = _hero(res)
     return out
+
+
+def _hero(res: dict):
+    """The cover: the check passes, the answer is wrong, the basis fixes it.
+
+    Three frames of the same story the episode tells, drawn rather than plotted —
+    nothing in a frame is a measurement, and the three numbers under them are.
+    """
+    head = {s["n"]: s for s in res["solves"]}[HEADLINE_SIZE]
+    hb = {b["degree"]: b for b in res["bases"]}[HEADLINE_DEGREE]
+
+    def sliver(panel, m):
+        # Two equations whose lines cross at a shallow angle: the near-solutions
+        # are a long thin region, not a point.
+        x = np.linspace(0.04, 0.96, 2)
+        lo, hi = 0.30 * x + 0.30, 0.62 * x + 0.14
+        panel.fill_between(x, lo, hi, color=m.series[0], alpha=0.35, lw=0)
+        panel.plot(x, lo, color=m.ink, lw=2.0)
+        panel.plot(x, hi, color=m.ink, lw=2.0)
+        panel.set_xlim(0, 1); panel.set_ylim(0, 1)
+
+    def spikes(panel, m):
+        # Every entry of the answer should be the dashed line. This is what came
+        # back instead.
+        k = np.arange(14)
+        y = 0.5 + 0.42 * np.sin(k * 2.1) * np.array(
+            [0.15, 0.3, 0.5, 0.7, 0.85, 1.0, 1.0, 0.95, 0.8, 0.6, 0.45, 0.3,
+             0.2, 0.12])
+        panel.plot([-0.5, 13.5], [0.5, 0.5], color=m.muted, lw=2.0,
+                   ls=(0, (4, 3)))
+        panel.plot(k, y, color=m.ink, lw=2.0)
+        panel.set_xlim(-0.5, 13.5); panel.set_ylim(0, 1)
+
+    def right_angle(panel, m):
+        # Two columns that each answer a question the other cannot.
+        x0, y0 = 0.22, 0.20
+        for dx, dy in ((0.60, 0.0), (0.0, 0.62)):
+            panel.annotate("", xy=(x0 + dx, y0 + dy), xytext=(x0, y0),
+                           arrowprops=dict(arrowstyle="-|>", color=m.ink,
+                                           lw=2.4, shrinkA=0, shrinkB=0,
+                                           mutation_scale=18))
+        panel.plot([x0 + 0.11, x0 + 0.11, x0], [y0, y0 + 0.11, y0 + 0.11],
+                   color=m.muted, lw=1.8)
+        panel.set_xlim(0, 1); panel.set_ylim(0, 1)
+
+    return charts.lecture_hero(
+        series=SERIES_TAG, episode=1,
+        headline="The check passes and the answer is wrong",
+        panels=[
+            #: Two lines of 24 characters is all that clears the note, so each
+            #: label is held under ~44 characters rather than left to wrap into
+            #: the paragraph below it.
+            (sliver, f"{head['residual']:.1e}", "the residual"),
+            (spikes, f"{head['error'] * 100:.0f}%", "the error in the answer"),
+            (right_angle, f"{hb['legendre']:.0f}", "same fit, new basis"),
+        ],
+        note=("A 14 by 14 Hilbert system, solved to a residual at the last bit a "
+              "double holds, returning entries between -4.9 and +8.5. The "
+              "condition number predicts exactly that before the solve, and the "
+              "same regression in an orthogonal basis has none of the problem."),
+        alt=("A three-panel hand-drawn strip. The first frame shows two nearly "
+             "parallel lines with a long thin shaded sliver between them, marked "
+             f"{head['residual']:.1e}. The second shows a wildly oscillating "
+             "line against a flat dashed reference, marked "
+             f"{head['error'] * 100:.0f} percent. The third shows two arrows at "
+             f"a right angle, marked {hb['legendre']:.0f}."),
+        mode="light",
+        path=str(IMG / f"lec01-hero.{EXT}"))[0]
 
 
 # ---------------------------------------------------------------- the post
@@ -908,6 +977,7 @@ raw, with the columns centred, and with the columns standardised. Which of the
 three steps does the work — and does the answer change if one of your columns is
 a dummy variable? The answer is at the top of episode 2.""")
 
+    post.hero = figs["hero"]
     return post
 
 

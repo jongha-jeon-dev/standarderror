@@ -8,6 +8,7 @@ author: "Jongha Jeon"
 tags: ["linear-algebra", "covariance", "missing-data", "lectures", "data-science"]
 series: ["Linear Algebra for Data Science, Taught Through What Breaks"]
 weight: 3
+images: ["lec03-hero.png"]
 ---
 
 Disclosure: this post was written with the assistance of an AI system (Claude), which wrote the analysis code, ran the experiments and drafted the text. The topic, the constraints, the data choices and the final review are the author's.

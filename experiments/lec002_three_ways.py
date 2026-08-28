@@ -246,12 +246,20 @@ def figures(res: dict) -> dict:
         # Bottom-left is the only empty region of this chart, and both labels
         # belong together anyway: the point is that one number is the other
         # squared.
-        ax.annotate(f"κ(X)   = {sp['X'][0] / sp['X'][-1]:.1e}   "
-                    f"— {np.log10(sp['X'][0] / sp['X'][-1]):.1f} decades",
+        #
+        # Single spaces, deliberately. These two lines used runs of spaces to
+        # column-align the `=` and the em dash, which reads well in a PNG and
+        # survives nothing else: scour collapses whitespace inside a text node
+        # when the SVG is minified for Notion, and HTML collapses it too. The
+        # label-diff gate in tools/notion_figures.py refused the file rather
+        # than publish a silently re-spaced label, which is the right answer —
+        # the fix is not to depend on the spacing.
+        ax.annotate(f"κ(X) = {sp['X'][0] / sp['X'][-1]:.1e}, "
+                    f"{np.log10(sp['X'][0] / sp['X'][-1]):.1f} decades",
                     (0.02, 0.10), xycoords="axes fraction", ha="left",
                     va="bottom", fontsize=9, color="0.30")
-        ax.annotate(f"κ(X'X) = {sp['gram'][0] / sp['gram'][-1]:.1e}   "
-                    f"— {np.log10(sp['gram'][0] / sp['gram'][-1]):.1f} decades, "
+        ax.annotate(f"κ(X'X) = {sp['gram'][0] / sp['gram'][-1]:.1e}, "
+                    f"{np.log10(sp['gram'][0] / sp['gram'][-1]):.1f} decades, "
                     f"exactly twice",
                     (0.02, 0.03), xycoords="axes fraction", ha="left",
                     va="bottom", fontsize=9, color="0.30")
@@ -331,7 +339,75 @@ def figures(res: dict) -> dict:
                  "converged fit."),
         path=str(IMG / f"lec02-t1-methods.{EXT}"))[0]
 
+    out["hero"] = _hero(res)
     return out
+
+
+def _hero(res: dict):
+    """The cover: one object in three states.
+
+    Episode 1 called a double "a ruler with about 16 significant marks on it", so
+    the three frames are that same ruler — marks the matrix has eaten struck
+    through — which is what makes the two covers read as consecutive episodes
+    rather than two posts about matrices.
+    """
+    import math
+
+    e = {s["degree"]: s for s in res["sweep"]}[HEADLINE_DEGREE]
+    total = 16
+    available = res["digits_available"]
+
+    def ruler(eaten: float):
+        """A ruler of 16 marks, the ones already spent worn down to stubs.
+
+        Read as a fuel gauge rather than a strikethrough: what is left is what is
+        dark and full height, so the second frame having nothing dark on it is the
+        whole finding, visible at thumbnail size without reading a number.
+        """
+        spent = int(round(min(max(eaten, 0.0), total)))
+
+        def draw(panel, m):
+            xs = np.linspace(0.07, 0.93, total)
+            base = 0.30
+            panel.plot([0.04, 0.96], [base, base], color=m.ink, lw=2.4)
+            for i, x in enumerate(xs):
+                if i < spent:
+                    panel.plot([x, x], [base, base + 0.07], color=m.grid, lw=2.0)
+                else:
+                    panel.plot([x, x], [base, base + (0.34 if i % 4 == 0
+                                                      else 0.24)],
+                               color=m.ink, lw=3.0 if i % 4 == 0 else 2.2)
+            if spent:
+                panel.plot([xs[0] - 0.03, xs[min(spent, total - 1)] + 0.02],
+                           [base - 0.11, base - 0.11], color=m.muted, lw=2.0)
+            panel.set_xlim(0, 1); panel.set_ylim(0, 1)
+        return draw
+
+    return charts.lecture_hero(
+        series=SERIES_TAG, episode=2,
+        headline="Forming X'X spends the digits twice",
+        panels=[
+            (ruler(math.log10(e["kappa_X"])), f"{e['kappa_X']:.1e}",
+             "what X alone costs"),
+            (ruler(math.log10(e["kappa_gram"])), f"{e['kappa_gram']:.1e}",
+             "after forming X'X"),
+            (ruler(available - e["methods"]["qr"]["digits_correct"]),
+             f"{e['methods']['qr']['digits_correct']:.1f}",
+             "digits QR keeps"),
+        ],
+        note=(f"Each frame is one double: sixteen significant marks, with the "
+              f"ones a degree-{HEADLINE_DEGREE} polynomial fit has already spent "
+              f"worn down to stubs. What is left is what is dark. The problem "
+              f"itself is survivable; the normal equations are not, and they are "
+              f"the ones every textbook writes down."),
+        alt=("A three-panel hand-drawn strip. Each frame is the same ruler of "
+             "sixteen tick marks, where the marks already spent are worn down to "
+             "stubs and the ones left are full height: about half remain in the "
+             "first frame, none in the second, and most in the third. The "
+             f"numbers beneath are {e['kappa_X']:.1e}, {e['kappa_gram']:.1e} and "
+             f"{e['methods']['qr']['digits_correct']:.1f}."),
+        mode="light",
+        path=str(IMG / f"lec02-hero.{EXT}"))[0]
 
 
 # ---------------------------------------------------------------- the post
@@ -759,6 +835,7 @@ covariance from whatever rows have both variables. Then find the smallest
 eigenvalue of each. One of them can be negative — which would mean some portfolio
 of your variables has negative variance. Which one, and why? Episode three.""")
 
+    post.hero = figs["hero"]
     return post
 
 

@@ -39,10 +39,14 @@ def hugo_page_bundle(post: Post, *, site_dir: Path | None = None,
     bundle = site / "content" / section / post.slug
     bundle.mkdir(parents=True, exist_ok=True)
 
-    for fig in post.figures:
+    for fig in list(post.figures) + ([post.hero] if post.hero else []):
         src = Path(fig.path)
         if src.exists():
             shutil.copy2(src, bundle / src.name)
+        elif fig is post.hero:
+            raise FileNotFoundError(
+                f"the hero {src} does not exist, so front matter would name an "
+                f"image the bundle does not contain")
 
     (bundle / "index.md").write_text(post.hugo_markdown(image_base=""),
                                      encoding="utf-8")
@@ -85,8 +89,13 @@ def medium_bundle(post: Post, *, out_dir: Path | None = None,
         "subtitle": post.subtitle,
         "canonical_url": canonical,
         "tags": post.tags[:5],       # Medium caps at 5
+        "cover": (f"{image_base}/{Path(post.hero.path).name}"
+                  if post.hero else None),
         "images": [f"{image_base}/{Path(f.path).name}" for f in post.figures],
-        "checklist": table_notes + [
+        "checklist": table_notes + ([
+            f"Set the story's featured image to {Path(post.hero.path).name} — "
+            f"Medium defaults to the first image in the body, and the cover is "
+            f"not in the body."] if post.hero else []) + [
             "Publish the Hugo page first so the image URLs above resolve.",
             "Import via https://medium.com/p/import — it sets rel=canonical.",
             "Medium keeps at most 5 tags.",
@@ -258,6 +267,7 @@ def write_manifest(post: Post, *, out_dir: Path | None = None) -> Path:
         "draft": post.draft,
         "tags": post.tags, "word_count": post.word_count(),
         "figures": [asdict(f) for f in post.figures],
+        "hero": asdict(post.hero) if post.hero else None,
         "data_sources": post.data_sources,
         "licence_warnings": post.licence_warnings,
         "reproducibility": post.reproducibility,

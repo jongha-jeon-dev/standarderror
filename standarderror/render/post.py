@@ -94,6 +94,13 @@ class Post:
     # substitutes these images. The Hugo page keeps the real table.
     table_figures: list[Figure] = field(default_factory=list)
 
+    #: The post's cover: the one image a reader sees before deciding to read.
+    #: Deliberately *not* in `figures` — it is not evidence, it carries no
+    #: caption, and it must not be copied into the body. Fifteen experiments set
+    #: this attribute for months while nothing read it, so the hero existed as a
+    #: file on disk and appeared nowhere; the writers below consume it now.
+    hero: Figure | None = None
+
     # ---------- lecture series ----------
     # Hugo content section. Lectures live under their own section so the site can
     # offer them as a menu item; the crosspost does not care.
@@ -253,6 +260,13 @@ class Post:
             # Ascending weight orders a Hugo section by episode instead of by
             # date, which is what a curriculum needs.
             lines.append(f"weight: {self.episode}")
+        if self.hero is not None:
+            # Page-relative, because `hugo_page_bundle` copies the file in beside
+            # index.md. `images` is what Hugo's own OpenGraph and Twitter-card
+            # internal templates read, so this is the field that becomes the
+            # preview thumbnail rather than a name of our own invention.
+            from pathlib import Path as _P
+            lines.append(f'images: ["{_P(self.hero.path).name}"]')
         if self.canonical_url:
             lines.append(f'canonicalURL: "{self.canonical_url}"')
         lines.append("---")
@@ -326,6 +340,13 @@ class Post:
                 problems.append(f"figure {i} ({f.path}) has no usable alt text")
             if not f.caption:
                 problems.append(f"figure {i} ({f.path}) has no caption")
+        if self.hero is not None:
+            if not self.hero.alt or len(self.hero.alt) < 12:
+                problems.append(f"hero ({self.hero.path}) has no usable alt text")
+            if self.hero.path in {f.path for f in self.figures}:
+                problems.append(
+                    f"hero ({self.hero.path}) is also a body figure, so the cover "
+                    f"appears twice in the post")
         if not self.data_sources:
             problems.append("no data citations — every figure needs a source line")
         # A declared table image is only ever *substituted* for a markdown table in

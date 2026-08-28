@@ -65,7 +65,13 @@ def build(experiment: str) -> list[Path]:
     os.environ["SERR_FIG_EXT"] = "svg"
     mod = importlib.import_module(f"experiments.{experiment}")
     mod.IMG.mkdir(parents=True, exist_ok=True)
-    return [Path(f.path) for f in mod.figures(mod.compute()).values()]
+    figs = mod.figures(mod.compute())
+    # The cover is skipped, and not because it is optional. A hand-drawn card is
+    # xkcd-wobbled, so every straight line is a many-point path: lec01-hero is
+    # 890 KB of SVG and 453 KB after scour, against Notion's 200 KiB inline cap.
+    # A cover reaches Notion by `source_url` once the site is live, or by hand.
+    return [Path(f.path) for name, f in figs.items()
+            if name != "hero" and not name.startswith("_")]
 
 
 def minify(path: Path) -> tuple[int, int]:

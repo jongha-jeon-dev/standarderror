@@ -411,7 +411,82 @@ def figures(res: dict) -> dict:
                  "limits are, because it has found a direction where risk is "
                  "free and unbounded."),
         path=str(IMG / f"lec03-t1-leverage.{EXT}"))[0]
+    out["hero"] = _hero(res)
     return out
+
+
+def _hero(res: dict):
+    """The cover: the contradiction, then the thing that does not fix it, then
+    the thing that does."""
+    pan = res["panel"]
+    last = res["regime"][-1]
+
+    def angles(panel, m):
+        # Three vectors whose pairwise angles cannot all hold at once: two of
+        # them are close, the third is far from both, and the arc that would have
+        # to close does not.
+        import math
+        for deg in (78.0, 62.0, 4.0):
+            r = math.radians(deg)
+            panel.annotate("", xy=(0.5 + 0.44 * math.cos(r),
+                                   0.22 + 0.62 * math.sin(r)),
+                           xytext=(0.5, 0.22),
+                           arrowprops=dict(arrowstyle="-|>", color=m.ink, lw=2.2,
+                                           shrinkA=0, shrinkB=0,
+                                           mutation_scale=16))
+        t = np.linspace(math.radians(4.0), math.radians(62.0), 40)
+        panel.plot(0.5 + 0.24 * np.cos(t), 0.22 + 0.34 * np.sin(t),
+                   color=m.muted, lw=1.8, ls=(0, (3, 3)))
+        panel.set_xlim(0, 1); panel.set_ylim(0, 1)
+
+    def flat_below_zero(panel, m):
+        # However far right the panel grows, the line does not come back up.
+        x = np.linspace(0.06, 0.82, 40)
+        panel.plot([0.04, 0.96], [0.62, 0.62], color=m.muted, lw=2.0,
+                   ls=(0, (4, 3)))
+        panel.plot(x, 0.30 + 0.015 * np.sin(x * 9), color=m.ink, lw=2.4)
+        panel.annotate("", xy=(0.96, 0.30), xytext=(0.84, 0.30),
+                       arrowprops=dict(arrowstyle="-|>", color=m.ink, lw=2.0,
+                                       shrinkA=0, shrinkB=0, mutation_scale=16))
+        panel.set_xlim(0, 1); panel.set_ylim(0, 1)
+
+    def kept_rows(panel, m):
+        # One subsample of the same data: the rows every variable was observed
+        # in, and the ragged part above it thrown away.
+        from matplotlib.patches import Rectangle
+        panel.add_patch(Rectangle((0.24, 0.12), 0.52, 0.30,
+                                  facecolor=m.ink, edgecolor="none"))
+        panel.add_patch(Rectangle((0.24, 0.50), 0.52, 0.36, fill=False,
+                                  edgecolor=m.muted, lw=1.8,
+                                  linestyle=(0, (4, 3))))
+        panel.set_xlim(0, 1); panel.set_ylim(0, 1)
+
+    return charts.lecture_hero(
+        series=SERIES_TAG, episode=3,
+        headline="Three defensible correlations, one impossible matrix",
+        panels=[
+            (angles, f"{pan['report'].min_eigenvalue:+.3f}",
+             "smallest eigenvalue"),
+            (flat_below_zero, f"{last['min_eigenvalue']:+.2f}",
+             f"unchanged, {last['n_total']:,} rows"),
+            (kept_rows, f"{last['min_eigenvalue_complete']:+.2f}",
+             "complete cases only"),
+        ],
+        note=("Each correlation is estimated on whatever rows have both "
+              "variables, which is the default in every statistical package. "
+              "The result claims a portfolio with negative variance, and more "
+              "data sharpens the contradiction instead of resolving it — so a "
+              "negative eigenvalue in a large dataset is information, not noise."),
+        alt=("A three-panel hand-drawn strip. The first frame shows three arrows "
+             "from one origin with a dashed arc that fails to close between two "
+             f"of them, marked {pan['report'].min_eigenvalue:+.3f}. The second "
+             "shows a flat line running well below a dashed zero line with an "
+             f"arrow continuing to the right, marked "
+             f"{last['min_eigenvalue']:+.2f}. The third shows a solid block of "
+             "rows with a dashed empty block discarded above it, marked "
+             f"{last['min_eigenvalue_complete']:+.2f}."),
+        mode="light",
+        path=str(IMG / f"lec03-hero.{EXT}"))[0]
 
 
 # ---------------------------------------------------------------- the post
@@ -907,6 +982,7 @@ order across the bootstrap. Then look at the loadings of the two components that
 swap most, and ask what a sentence beginning "the second component represents"
 would have meant. The answer is at the top of episode four.""")
 
+    post.hero = figs["hero"]
     return post
 
 
