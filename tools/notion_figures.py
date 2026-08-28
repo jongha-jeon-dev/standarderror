@@ -27,6 +27,14 @@ and the captions quoting those numbers would have disagreed with the picture. A
 size optimisation is not allowed to touch a value; this check is what makes that
 a fact rather than an intention.
 
+One thing about the upload side, learned the hard way. A `create_attachment`
+upload that is never attached to a page *expires*, and roughly an hour is enough:
+inserting six figures into episode 1 failed on the second one with `invalid status
+of expired`, because it had been uploaded while the rest were still being
+prepared. So upload and attach in the same breath — one batch of uploads, then
+immediately the `update_content` that references them — rather than uploading
+everything first and inserting afterwards.
+
     python tools/notion_figures.py lec001_condition_number lec002_three_ways
 """
 

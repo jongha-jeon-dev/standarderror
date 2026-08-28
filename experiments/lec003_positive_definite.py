@@ -244,7 +244,10 @@ def figures(res: dict) -> dict:
 
     # --- f1: the feasible band, and the point outside it -------------------
     def draw_band(ax, m):
-        grid = np.linspace(-1.0, 1.0, 401)
+        # 161 points, not 401: the boundary is a closed form, so the point
+        # count is rendering resolution and nothing else. At this width 401
+        # points put an 800-number path in the SVG for no visible gain.
+        grid = np.linspace(-1.0, 1.0, 161)
         a = C[0, 1]
         half = np.sqrt(np.clip((1 - a * a) * (1 - grid ** 2), 0.0, None))
         lo, hi = a * grid - half, a * grid + half
