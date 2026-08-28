@@ -2,7 +2,7 @@
 title: "Linear Algebra 2: Least Squares Three Ways, and Only Two Survive"
 date: 2026-08-27
 slug: "linear-algebra-2-least-squares-three-ways"
-draft: true
+draft: false
 description: "The closed form in every regression textbook is a correct formula and a bad algorithm. On exact data it returns coefficients wrong by 14 percent where two other routes get ten decimal places."
 author: "Jongha Jeon"
 tags: ["linear-algebra", "numerical-methods", "regression", "lectures", "data-science"]
@@ -87,6 +87,10 @@ And the dummy? Nothing. At a 20 percent rate its standardised design gives
 1.08. A rare dummy is a real problem, but it is not a
 conditioning problem — it is a leverage problem, and it arrives in episode
 six.
+
+![Four horizontal bars of digits lost, the first two long and nearly equal, the third short and the fourth almost zero.](lec02-fB-scaling.png)
+
+*The answer to episode one's exercise, read as digits. Centring removes 0.72 of a digit; scaling removes 6.17. The order they are usually taught in is the reverse of the order of their effect.*
 
 ## The formula everyone learns
 
@@ -201,6 +205,20 @@ why the route survives in production code, and it is almost never worth taking:
 you are buying a factor of two in time with half of your significant digits, and
 if *κ*(X) is small enough for that to be safe then the fit was never the
 expensive part of your pipeline anyway.
+
+The identity is worth looking at rather than only believing, because
+*κ* = *σ*ₘₐₓ/*σ*ₘᵢₙ hides that the squaring happens to *every* singular value,
+not just to the two at the ends. Plotted on a log axis, squaring is a doubling of
+slope, and the two spectra below are the same shape drawn at two scales. One
+detail in that figure is not decoration: the computed Gram spectrum matches the
+exact squares only to
+0.5 percent. The identity is exact in
+arithmetic; the discrepancy is the floating-point damage, already visible in the
+matrix before any solver has touched it.
+
+![Two descending lines on a log scale, the lower one falling twice as steeply, and a note giving the total span of each spectrum in decades.](lec02-fA-spectrum.png)
+
+*On a log axis, squaring doubles the slope: the Gram spectrum falls twice as far, because σ_i(X'X) = σ_i(X)². That is the whole of κ(X'X) = κ(X)², and it is why one multiplication costs half the digits — nothing the solver does afterwards can undo it. The crossing near 1 is the same fact from the other side: squaring pushes values above 1 up and values below 1 down, and a condition number is exactly how far apart those two ends are.*
 
 ## The picture: least squares is a right angle
 

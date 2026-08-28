@@ -689,8 +689,8 @@ itself: if A is {ang['angle_ab']:.0f}° from B, and A is {ang['angle_ac']:.0f}°
 from C, then C cannot be anywhere it likes relative to B. It can be as close to
 B as the difference of those two angles, {ang['lower']:.0f}°, or as far as their
 sum, {ang['upper']:.0f}°, and nothing in between is ruled out — those are the
-endpoints of an interval, not two options.
-distances.""",
+endpoints of an interval, not two options. This is the triangle inequality,
+on angles rather than on distances.""",
         figures=[figs["f0"]])
 
     post.add(
