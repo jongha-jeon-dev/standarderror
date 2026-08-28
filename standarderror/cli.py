@@ -6,6 +6,7 @@
     standarderror run exp001_lorenz_esn      # run an experiment -> post + figures
     standarderror audit build/*.manifest.json
     standarderror publish exp001_lorenz_esn --medium
+    standarderror run lec001_condition_number --gist   # code blocks -> one gist, for Medium
 """
 
 from __future__ import annotations
@@ -127,6 +128,12 @@ def cmd_run(args) -> int:
                       "wait for Pages, then --medium.")
             else:
                 print(f"  medium: {publish.medium_bundle(post)}")
+    if args.gist:
+        from .render import gist
+        d = gist.gist_bundle(post, gist_url=args.gist_url)
+        n = len(sorted(d.glob("*.py"))) or len([p for p in d.iterdir()
+                                                if p.name != "PASTE.md"])
+        print(f"  gist: {d}  ({n} file(s) + PASTE.md)")
     return 0
 
 
@@ -170,6 +177,12 @@ def main(argv: list[str] | None = None) -> int:
                    help="publish for real (draft: false). Omit to stay a draft.")
     r.add_argument("--medium", action="store_true",
                    help="also write the Medium crosspost bundle; requires --live")
+    r.add_argument("--gist", action="store_true",
+                   help="split the code blocks into files for one GitHub gist, "
+                        "plus the Medium paste order")
+    r.add_argument("--gist-url", default=None,
+                   help="the gist's URL, written into the paste order instead of "
+                        "the placeholder (use after you have created it)")
     r.set_defaults(func=cmd_run)
 
     a = sub.add_parser("audit", help="re-check written manifests")

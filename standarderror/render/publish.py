@@ -92,8 +92,10 @@ def medium_bundle(post: Post, *, out_dir: Path | None = None,
             "Medium keeps at most 5 tags.",
             "Check LaTeX: Medium has no math rendering. Convert display "
             "equations to images or restate them in prose.",
-            "Code blocks import as plain text; re-add language hints or embed a "
-            "GitHub gist.",
+            "Code blocks import as plain text, and a paste into Medium loses "
+            "indentation and curls quotes. Run `standarderror run <exp> "
+            "--gist` and embed the gist instead; build/gist/<slug>/PASTE.md "
+            "has the order.",
         ],
     }, indent=2, ensure_ascii=False), encoding="utf-8")
     return path
