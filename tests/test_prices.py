@@ -91,6 +91,9 @@ class TestLoadPrices:
         assert len(out) == 120
 
     def test_reads_an_excel_export(self, tmp_path):
+        # pandas does not pull in an Excel engine, and this package does not
+        # declare one, so the reader is optional and so is its test.
+        pytest.importorskip("openpyxl")
         dates, lv = _levels(120)
         p = tmp_path / "x.xlsx"
         pd.DataFrame({"날짜": dates, "종가": lv}).to_excel(p, index=False)

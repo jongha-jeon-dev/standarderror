@@ -32,7 +32,14 @@ jobs:
           fetch-depth: 0             # Hugo needs history for .Lastmod
       - uses: peaceiris/actions-hugo@v3
         with:
-          hugo-version: latest
+          # Pinned, like the theme. `latest` is what broke this build: PaperMod
+          # is pinned at v8.0 and Hugo has had breaking template changes since,
+          # so floating the toolchain meant the site could stop building with no
+          # change to the repository -- which is what happened. 0.123.7 extended
+          # is the version this site is verified to build under (80 pages, no
+          # errors). Bumping it means testing the build locally first, which is
+          # the point of a pin.
+          hugo-version: '0.123.7'
           extended: true
       - name: Build
         working-directory: site

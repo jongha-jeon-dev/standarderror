@@ -24,7 +24,11 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "pytest-cov", "ruff>=0.5"]
-extras = ["yfinance", "shap", "statsmodels"]
+extras = ["yfinance", "shap", "statsmodels", "xgboost", "openpyxl"]
+# `standarderror.models.scaffold` is the only module that needs torch, and torch
+# is a ~800 MB install, so it is an opt-in extra rather than a dependency. The
+# tests that use it skip without it; `pip install -e ".[dev,nn]"` runs them.
+nn = ["torch>=2.0"]
 
 [project.scripts]
 standarderror = "standarderror.cli:main"

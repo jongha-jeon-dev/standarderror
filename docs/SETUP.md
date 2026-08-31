@@ -25,7 +25,7 @@ each step is below.
 | git | everything | already have it |
 | Python ≥ 3.10 | the pipeline | already have it |
 | **gh** (GitHub CLI) | creating the repo, enabling Pages | `brew install gh` / `apt install gh` / `winget install GitHub.cli` |
-| **hugo-extended ≥ 0.112** | *local preview only* | `brew install hugo` / `apt install hugo` |
+| **hugo-extended 0.123.7** | *local preview only* | `brew install hugo` / `apt install hugo` — CI pins this exact version in `.github/workflows/pages.yml`, because PaperMod is pinned at v8.0 and `latest` stopped building the site. Match it locally before bumping the pin. |
 
 `gh` and `hugo` are both optional. Without `gh` you create the repo in the browser;
 without `hugo` you lose local preview but CI still builds and deploys.

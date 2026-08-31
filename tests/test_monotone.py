@@ -31,6 +31,15 @@ from standarderror.models.monotone import (
 )
 
 
+@pytest.fixture
+def xgb():
+    """xgboost, or skip. `monotone.fit_pair` imports it lazily, so only the tests
+    that actually fit a pair need it — sixteen of the twenty-two here do not, which
+    is why this is a fixture and not a module-level guard. Unguarded, these six
+    failed CI on every run: xgboost is not a dependency of this package."""
+    return pytest.importorskip("xgboost")
+
+
 class TestTheConstraintVector:
     def test_constraining_none_frees_everything(self):
         assert _constraint(0) == (0,) * 12
@@ -122,14 +131,14 @@ class TestTheGeneratedTruth:
 
 
 class TestFitPairContract:
-    def test_exactly_one_of_k_and_cst_is_required(self):
+    def test_exactly_one_of_k_and_cst_is_required(self, xgb):
         X, y = make_credit_like(200, seed=1)
         with pytest.raises(ValueError):
             fit_pair(X, y)
         with pytest.raises(ValueError):
             fit_pair(X, y, k=3, cst=SIGNS)
 
-    def test_constraining_nothing_returns_the_same_model_twice(self):
+    def test_constraining_nothing_returns_the_same_model_twice(self, xgb):
         # Same seed, same rows, same hyperparameters, and a constraint vector of
         # all zeros: the two fits must be bit-identical, which makes PoM exactly
         # zero. Any nonzero value at k=0 would mean the pairing is broken and every
@@ -172,7 +181,7 @@ class TestPairedBootstrap:
 class TestKnownAnswersOnLearnedQuantities:
     """The three cases where the sign of the answer is known before fitting."""
 
-    def test_correct_constraints_on_a_monotone_truth_do_not_read_as_a_cost(self):
+    def test_correct_constraints_on_a_monotone_truth_do_not_read_as_a_cost(self, xgb):
         # This is the module's central claim and the paper's headline runs the
         # other way, so it gets asserted directly. With the truth monotone and the
         # training set small, removing the freedom to fit non-monotone noise is
@@ -181,7 +190,7 @@ class TestKnownAnswersOnLearnedQuantities:
         assert rows[(700, 0)]["mean"] == 0.0
         assert rows[(700, 12)]["mean"] < -0.2, rows[(700, 12)]
 
-    def test_more_data_shrinks_the_effect_towards_nothing(self):
+    def test_more_data_shrinks_the_effect_towards_nothing(self, xgb):
         # The constraint removes a fixed amount of flexibility; what changes is how
         # much data there is to use it. The ratio, not the count, is what matters.
         rows = coverage_sweep([700, 6000], [12], repeats=4, seed=11)
@@ -189,7 +198,7 @@ class TestKnownAnswersOnLearnedQuantities:
         large = abs(rows[(6000, 12)]["mean"])
         assert large < small / 2.0, (small, large)
 
-    def test_flipped_signs_cost_far_more_than_correct_ones_ever_save(self):
+    def test_flipped_signs_cost_far_more_than_correct_ones_ever_save(self, xgb):
         # Constraining every feature the wrong way on a monotone truth is the
         # worst case the design allows, and it must dominate the correct-sign
         # effect by an order of magnitude rather than merely exceed it.
@@ -201,7 +210,7 @@ class TestKnownAnswersOnLearnedQuantities:
 
 
 class TestSplitVariance:
-    def test_it_reports_both_variances_and_their_ratio(self):
+    def test_it_reports_both_variances_and_their_ratio(self, xgb):
         # Small and cheap: this asserts the contract, not the finding. The finding
         # itself — that refitting moves PoM less than the bootstrap interval is
         # wide — is a result of the experiment, not something a test should pin.

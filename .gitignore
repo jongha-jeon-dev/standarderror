@@ -30,3 +30,6 @@ data/*
 # were chosen. Not secret, but not part of the record either.
 analysis/
 docs/CONTENT_BACKLOG.md
+
+# Hugo writes this while building; it is a lock, not content.
+site/.hugo_build.lock

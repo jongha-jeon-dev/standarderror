@@ -21,9 +21,18 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
-import torch
 
-from standarderror.models.scaffold import (
+# torch is not a dependency of this package -- only `standarderror.models.scaffold`
+# needs it, and installing it costs about 800 MB. So it is optional, and these
+# tests skip without it, the same way the xgboost, statsmodels and cairosvg tests
+# already do. It was a bare `import torch` until now, which meant CI collected
+# this module, failed on the import, and returned non-zero from `pytest -q` on
+# every run since the workflow was written. `standarderror.models.scaffold`
+# imports torch at its own module level, so the package import belongs inside the
+# guard as well.
+torch = pytest.importorskip("torch")
+
+from standarderror.models.scaffold import (  # noqa: E402  (after the guard, deliberately)
     MultiIndexTask,
     ScaffoldMLP,
     evaluate,
