@@ -1,9 +1,15 @@
 name: Build and deploy site
 
 on:
+  # Every push to main, with no `paths:` filter. There used to be one --
+  # `['site/**', '.github/workflows/pages.yml']` -- and it skipped the build on
+  # the one push that mattered: the first real push of the history, which was a
+  # force-push over an unrelated lineage. GitHub cannot compute changed paths
+  # across a rewritten history, so the filter matched nothing and the site never
+  # deployed. A Hugo build is seconds; the filter was saving nothing and cost
+  # exactly the run it existed to schedule.
   push:
     branches: [main]
-    paths: ['site/**', '.github/workflows/pages.yml']
   workflow_dispatch:
 
 permissions:
@@ -18,6 +24,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:
@@ -38,6 +45,11 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    # `deploy-pages` waits for a deployment that Pages must be configured to
+    # accept. Run #1 waited six hours and stopped only at the job limit, because
+    # Settings -> Pages had no source set. Ten minutes is long enough for a real
+    # deploy and short enough to read as the misconfiguration it is.
+    timeout-minutes: 10
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
