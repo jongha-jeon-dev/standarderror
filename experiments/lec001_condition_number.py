@@ -662,7 +662,7 @@ def build() -> Post:
     # ------------------------------------------------------------------ 1
     post.add(
         "A solve that works, and is wrong",
-        f"""Here is a linear system, its solution, and the check you would run
+        """Here is a linear system, its solution, and the check you would run
 on it. The matrix is a Hilbert matrix — entry *(i, j)* is 1/(i + j − 1) — which
 is symmetric, positive definite, and about as innocent as a matrix looks. The
 right-hand side is constructed from a solution of all ones, so the correct
@@ -767,21 +767,21 @@ that ratio more than in the best one.""",
     # ------------------------------------------------------------------ 2c
     post.add(
         "The inequality, one line at a time",
-        f"""The geometric statement turns into an algebraic one in three steps,
+        """The geometric statement turns into an algebraic one in three steps,
 and they are short enough to do here rather than cite.
 
 Start with the true system, *A**x* = *b*, and a perturbed one where the
 right-hand side is slightly off: *A*(*x* + *δx*) = *b* + *δb*. Subtract the first
 from the second. The *A**x* and *b* cancel and you are left with
 
-$$A \\, \\delta x = \\delta b \\qquad \\text{{so}} \\qquad \\delta x = A^{{-1}}
+$$A \\, \\delta x = \\delta b \\qquad \\text{so} \\qquad \\delta x = A^{-1}
 \\delta b$$
 
 The error in the answer is the error in the input, run through the inverse. Take
 norms — a norm is just a length, and any consistent choice works — and the
 definition of a matrix norm gives
 
-$$\\lVert \\delta x \\rVert \\;\\le\\; \\lVert A^{{-1}} \\rVert \\, \\lVert
+$$\\lVert \\delta x \\rVert \\;\\le\\; \\lVert A^{-1} \\rVert \\, \\lVert
 \\delta b \\rVert$$
 
 That is the whole mechanism: *how much can the inverse stretch things*. Second
@@ -789,16 +789,16 @@ step, and it is only there to make the statement *relative* rather than absolute
 because a relative error is what anybody actually cares about. From *b* = *A**x*,
 the same inequality the other way round gives ‖*b*‖ ≤ ‖*A*‖ ‖*x*‖, or
 
-$$\\frac{{1}}{{\\lVert x \\rVert}} \\;\\le\\; \\frac{{\\lVert A
-\\rVert}}{{\\lVert b \\rVert}}$$
+$$\\frac{1}{\\lVert x \\rVert} \\;\\le\\; \\frac{\\lVert A
+\\rVert}{\\lVert b \\rVert}$$
 
 Multiply the two together and the constant that falls out is not a choice
 somebody made:
 
-$$\\frac{{\\lVert \\delta x \\rVert}}{{\\lVert x \\rVert}} \\;\\le\\;
-\\underbrace{{\\lVert A \\rVert \\, \\lVert A^{{-1}}
-\\rVert}}_{{\\kappa(A)}} \\; \\frac{{\\lVert \\delta b \\rVert}}{{\\lVert b
-\\rVert}}$$
+$$\\frac{\\lVert \\delta x \\rVert}{\\lVert x \\rVert} \\;\\le\\;
+\\underbrace{\\lVert A \\rVert \\, \\lVert A^{-1}
+\\rVert}_{\\kappa(A)} \\; \\frac{\\lVert \\delta b \\rVert}{\\lVert b
+\\rVert}$$
 
 ‖*A*‖ ‖*A*⁻¹‖ is what is left over when you ask how far a solution can move, and
 in the two-norm it is exactly *σ*ₘₐₓ/*σ*ₘᵢₙ. The geometry and the algebra are the
@@ -826,7 +826,7 @@ you the rest.""", level=3)
     # ------------------------------------------------------------------ 2d
     post.add(
         "The same failure, measured",
-        f"""All of that is checkable in six lines, and the check is one you can
+        """All of that is checkable in six lines, and the check is one you can
 run on any matrix you are about to solve with — it costs one call.""")
 
     post.add(
@@ -885,7 +885,7 @@ writing one, what you want is a solve.""")
     # ------------------------------------------------------------------ 4
     post.add(
         "Where you have already met this matrix",
-        f"""So far this is a textbook pathology, and a fair objection is that
+        """So far this is a textbook pathology, and a fair objection is that
 nobody has a Hilbert matrix. Everybody does.
 
 Fit a polynomial in the obvious basis — 1, *t*, *t*², … — on the interval
@@ -915,7 +915,7 @@ plotted below.""",
     # ------------------------------------------------------------------ 4b
     post.add(
         "",
-        f"""Why does that help so much? Because of what the columns of *X* are being asked
+        """Why does that help so much? Because of what the columns of *X* are being asked
 to do. Suppose you have to describe a position using two given directions. If
 they are *north* and *east*, every position has one obvious, stable pair of
 coefficients. If instead you are handed *north-east* and
@@ -936,7 +936,7 @@ each coefficient answers a question the others do not.""",
     # ------------------------------------------------------------------ 4c
     post.add(
         "",
-        f"""That is the general lesson, and it is bigger than polynomials: **conditioning is
+        """That is the general lesson, and it is bigger than polynomials: **conditioning is
 a property of the parameterisation, not of the problem.** A design matrix whose
 columns are a duration in seconds, a probability and a currency amount is badly
 conditioned for reasons that have nothing to do with the statistics of the data,

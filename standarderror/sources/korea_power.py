@@ -33,7 +33,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 
 __all__ = ["read_supply_demand", "read_sales", "read_monthly_peak",

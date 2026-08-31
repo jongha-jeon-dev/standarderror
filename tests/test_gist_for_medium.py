@@ -7,14 +7,12 @@ block that was executed at build time. Everything else here defends that.
 
 from __future__ import annotations
 
-import re
 from datetime import date
 from pathlib import Path
 
 import pytest
 
-from standarderror.render import Post
-from standarderror.render import gist
+from standarderror.render import Post, gist
 
 REPO = Path(__file__).resolve().parents[1]
 

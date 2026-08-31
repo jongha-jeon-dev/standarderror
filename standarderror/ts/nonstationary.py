@@ -319,8 +319,8 @@ def spurious_draws(n: int, *, reps: int = 20000, drift: float = 0.0,
         r2s.append(fit.r2.copy())
         yc = y - y.mean(axis=1, keepdims=True)
         xc = x - x.mean(axis=1, keepdims=True)
-        rs.append(((yc * xc).sum(axis=1)
-                   / np.sqrt((yc ** 2).sum(axis=1) * (xc ** 2).sum(axis=1))))
+        rs.append((yc * xc).sum(axis=1)
+                   / np.sqrt((yc ** 2).sum(axis=1) * (xc ** 2).sum(axis=1)))
         del y, x, X, fit, yc, xc
     return {"t": np.concatenate(ts), "r2": np.concatenate(r2s),
             "r": np.concatenate(rs), "n": n}

@@ -53,9 +53,8 @@ Run: `standarderror run exp009_effective_bets --publish`
 
 from __future__ import annotations
 
-from datetime import date
-
 import os
+from datetime import date
 
 import numpy as np
 import pandas as pd

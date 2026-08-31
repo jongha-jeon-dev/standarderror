@@ -222,14 +222,14 @@ class TestScaleSweep:
     def test_an_equivariant_procedure_has_no_gap(self, data):
         X, y, Xt, _ = data
         gap = equivariance.equivariance_gap(
-            lambda A, b, s: np.full(len(Xt), b.mean()), X, y, Xt)
+            lambda A, b, s: np.full(len(Xt), b.mean()), X, y)
         assert gap < 1e-12
 
     def test_a_procedure_with_a_fixed_constant_in_it_does(self, data):
         X, y, Xt, _ = data
         gap = equivariance.equivariance_gap(
             lambda A, b, s: np.full(len(Xt), np.clip(b.mean(), -0.05, 0.05)),
-            X, y, Xt)
+            X, y)
         assert gap > 0.1
 
     def test_least_squares_is_exactly_equivariant(self, data):
@@ -237,7 +237,7 @@ class TestScaleSweep:
         from sklearn.linear_model import LinearRegression
         X, y, Xt, _ = data
         gap = equivariance.equivariance_gap(
-            lambda A, b, s: LinearRegression().fit(A, b).predict(Xt), X, y, Xt,
+            lambda A, b, s: LinearRegression().fit(A, b).predict(Xt), X, y,
             scales=(0.01, 1.0, 100.0))
         assert gap < 1e-9
 
@@ -245,16 +245,16 @@ class TestScaleSweep:
         X, y, Xt, _ = data
         bad = equivariance.equivariance_gap(
             lambda A, b, s: np.full(len(Xt), np.clip(b.mean(), -0.05, 0.05)),
-            X, y, Xt)
+            X, y)
         fixed = equivariance.equivariance_gap(
             lambda A, b, s: np.full(len(Xt), np.clip(b.mean(), -0.05 * s, 0.05 * s)),
-            X, y, Xt)
+            X, y)
         assert fixed < 1e-12 < bad
 
     def test_reference_scale_is_the_one_nearest_the_request(self, data):
         X, y, Xt, _ = data
         res = equivariance.scale_sweep(
-            lambda A, b, s: np.full(len(Xt), b.mean()), X, y, Xt,
+            lambda A, b, s: np.full(len(Xt), b.mean()), X, y,
             scales=(0.1, 3.0, 100.0), reference=3.0)
         assert res.scales[res.reference] == 3.0
 
@@ -269,27 +269,27 @@ class TestScaleSweep:
             out = np.full(len(Xt), b.mean())
             out[0] = 1e-11 * s + (1e-7 if s > 50 else 0.0)
             return out
-        res = equivariance.scale_sweep(fp, X, y, Xt, scales=(1.0, 100.0))
+        res = equivariance.scale_sweep(fp, X, y, scales=(1.0, 100.0))
         assert res.gap > 50.0
         assert res.rms_gap < 1e-6
 
     def test_rejects_non_positive_scales(self, data):
         X, y, Xt, _ = data
         with pytest.raises(ValueError):
-            equivariance.scale_sweep(lambda A, b, s: np.zeros(len(Xt)), X, y, Xt,
+            equivariance.scale_sweep(lambda A, b, s: np.zeros(len(Xt)), X, y,
                                      scales=(0.0, 1.0))
 
     def test_rejects_a_callback_that_changes_its_output_length(self, data):
         X, y, Xt, _ = data
         with pytest.raises(ValueError):
             equivariance.scale_sweep(
-                lambda A, b, s: np.zeros(3 if s < 1 else 4), X, y, Xt,
+                lambda A, b, s: np.zeros(3 if s < 1 else 4), X, y,
                 scales=(0.5, 2.0))
 
     def test_describe_mentions_both_summaries(self, data):
         X, y, Xt, _ = data
         res = equivariance.scale_sweep(lambda A, b, s: np.full(len(Xt), b.mean()),
-                                       X, y, Xt)
+                                       X, y)
         assert "gap" in res.describe() and "scales" in res.describe()
 
 
@@ -335,21 +335,21 @@ class TestScaleSweepOnRealBoosting:
         fp = self._fit("reg:squarederror")
         fp.X_test = Xt
         assert equivariance.equivariance_gap(
-            fp, X, y, Xt, scales=(0.1, 1.0, 10.0, 100.0)) < 1e-6
+            fp, X, y, scales=(0.1, 1.0, 10.0, 100.0)) < 1e-6
 
     def test_a_fixed_huber_slope_is_not(self, data):
         X, y, Xt, _ = data
         fp = self._fit("reg:pseudohubererror", slope=1.0)
         fp.X_test = Xt
         assert equivariance.equivariance_gap(
-            fp, X, y, Xt, scales=(0.1, 1.0, 10.0, 100.0)) > 0.05
+            fp, X, y, scales=(0.1, 1.0, 10.0, 100.0)) > 0.05
 
     def test_setting_the_slope_from_the_data_restores_it(self, data):
         X, y, Xt, _ = data
         fp = self._fit("reg:pseudohubererror", slope="auto")
         fp.X_test = Xt
         assert equivariance.equivariance_gap(
-            fp, X, y, Xt, scales=(0.1, 1.0, 10.0, 100.0)) < 1e-6
+            fp, X, y, scales=(0.1, 1.0, 10.0, 100.0)) < 1e-6
 
 
 class TestLeverageDistanceIsNotMonotone:

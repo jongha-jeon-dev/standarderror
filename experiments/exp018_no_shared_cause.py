@@ -55,11 +55,11 @@ striking pair and presenting it as a discovery.
 
 from __future__ import annotations
 
-from datetime import date
 import hashlib
 import json
 import os
 import time
+from datetime import date
 
 import numpy as np
 
@@ -497,7 +497,6 @@ def figures(res: dict) -> dict:
     # ---- F3: how ordinary a correlation of 0.96 is ----------------------
     drifting = np.asarray(res["sample"]["drifting"])
     plain = np.asarray(res["sample"]["plain"])
-    grid = np.linspace(0, 1, 240)
     dens, edges = np.histogram(plain, bins=60, range=(0, 1), density=True)
     centres = 0.5 * (edges[:-1] + edges[1:])
     c1600 = corr["drifting"][str(HISTOGRAM_T)]
@@ -787,12 +786,9 @@ def build() -> Post:
     mis_last = mis[str(CV_SIZES[-1])]
     lev_u = real["levels"]["unrelated"]
     dif_u = real["differenced"]["unrelated"]
-    top_urban = sum(1 for t in real["top_pairs"]
-                    if "urban" in (t["a_indicator"] + t["b_indicator"]))
     top_fert = sum(1 for t in real["top_pairs"]
                    if "fertility" in (t["a_indicator"] + t["b_indicator"]))
     lev_sc = real["levels"]["same country, different indicator"]
-    lev_si = real["levels"]["same indicator, different country"]
     dif_si = real["differenced"]["same indicator, different country"]
 
     # The spine, asserted rather than trusted. Any of these failing means a
@@ -1120,6 +1116,7 @@ came for.
 
 def _check_table_placement(post: Post) -> None:
     import re
+
     from standarderror.render import publish
 
     was_draft = post.draft

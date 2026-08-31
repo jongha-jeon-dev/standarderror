@@ -82,23 +82,30 @@ class SweepResult:
                 f"rms gap {self.rms_gap:.3g}")
 
 
-def scale_sweep(fit_predict, X, y, X_test=None, *,
+def scale_sweep(fit_predict, X, y, *,
                 scales=(0.1, 1.0, 10.0, 100.0), reference: float = 1.0
                 ) -> SweepResult:
     """Refit `fit_predict` at each scale of `y` and rescale the predictions back.
 
-    `fit_predict(X, y, scale)` must fit on `(X, y)` and return predictions on the
-    test matrix. The `scale` argument is passed through so a procedure that wants to
+    `fit_predict(X, y, scale)` must fit on `(X, y)` and return predictions on
+    whatever test matrix it wants to be judged on — it closes over that matrix
+    itself. The `scale` argument is passed through so a procedure that wants to
     set its own scale constant from the data can do so — which is exactly the
     intervention being tested, and the reason this is a callback rather than an
     estimator interface.
+
+    There used to be an `X_test` parameter here. It was converted to an array and
+    then never passed to the callback, which takes three arguments and so could
+    not have received it — so every caller was already closing over its own test
+    matrix, and the ones in `tests/test_robust.py` were doing *both*, setting
+    `fp.X_test` as well as passing the argument that did nothing. Removing it is
+    the honest version of what the function has always done.
     """
     scales = np.asarray(list(scales), dtype=float)
     if np.any(scales <= 0):
         raise ValueError("scales must be positive")
     X = np.asarray(X, dtype=float)
     y = np.asarray(y, dtype=float)
-    Xt = X if X_test is None else np.asarray(X_test, dtype=float)
     rows = [np.asarray(fit_predict(X, y * s, s), dtype=float).ravel() / s
             for s in scales]
     widths = {r.size for r in rows}
@@ -108,9 +115,9 @@ def scale_sweep(fit_predict, X, y, X_test=None, *,
     return SweepResult(scales, np.vstack(rows), reference=ref_idx)
 
 
-def equivariance_gap(fit_predict, X, y, X_test=None, **kw) -> float:
+def equivariance_gap(fit_predict, X, y, **kw) -> float:
     """`scale_sweep(...).rms_gap` — one number, zero if the procedure is equivariant."""
-    return scale_sweep(fit_predict, X, y, X_test, **kw).rms_gap
+    return scale_sweep(fit_predict, X, y, **kw).rms_gap
 
 
 def huber_slope_for(y, *, scale_estimate=None, multiple: float = 1.0) -> float:

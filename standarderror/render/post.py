@@ -13,14 +13,12 @@ claim with no data citation, or a source you are not licensed to redistribute.
 
 from __future__ import annotations
 
-from ..config import SETTINGS
-
 import re
 from dataclasses import dataclass, field
 from datetime import date
 
+from ..config import SETTINGS
 from ..viz.charts import Figure
-
 
 #: Medium requires a plain-language label on any story written with AI assistance,
 #: placed "within the first two paragraphs". The stated consequence of omitting it

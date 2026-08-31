@@ -65,12 +65,11 @@ Run: `standarderror run exp025_crisis_correlation --publish`
 
 from __future__ import annotations
 
-from datetime import date
-
 import hashlib
 import json
 import os
 import time
+from datetime import date
 from pathlib import Path
 
 import numpy as np
@@ -736,8 +735,8 @@ def build() -> Post:
                 f"{k}: {v['sha256'][:16]}" for k, v in res["vintage"].items()),
             "returns": ("log returns in percent, `100 * diff(log(close))`, with "
                         "non-trading days dropped rather than bridged"),
-            "alignment": (f"NASDAQ day t against the Nikkei's next trading day; "
-                          f"the same-day pairing is reported as a control"),
+            "alignment": ("NASDAQ day t against the Nikkei's next trading day; "
+                          "the same-day pairing is reported as a control"),
             "null": (f"{nl['reps']} replicates; scale paths from a one-sided "
                      f"EWMA with lambda 0.94 and a 250-day warm-up, and from a "
                      f"centred 21-day window as a look-ahead control"),
@@ -796,7 +795,7 @@ the variance ratio a real equity index shows in its worst tenth of days —
     # ------------------------------------------------------------------ 2
     post.add(
         "The correction is twenty-four years old, and it is also wrong",
-        f"""None of the above is new. Forbes and Rigobon made this argument in
+        """None of the above is new. Forbes and Rigobon made this argument in
 2002 under the title *No Contagion, Only Interdependence*, inverted the identity
 into a correction, and used it to reread the contagion literature of the 1990s.
 Their correction takes the correlation measured in the turbulent subsample and
@@ -832,7 +831,7 @@ safer.""",
     # ------------------------------------------------------------------ 3
     post.add(
         "A null that keeps the volatility and throws away the story",
-        f"""If the identity over-predicts and the correction over-corrects, the
+        """If the identity over-predicts and the correction over-corrects, the
 way out is to stop looking for a formula and simulate the null directly. Take
 each series' estimated volatility path, impose a single constant correlation on
 the pair, and generate. The result has the volatility clustering the data has —
@@ -968,7 +967,7 @@ finding. And when a stress scenario needs a correlation, remember which term of
     # ------------------------------------------------------------------ 7
     post.add(
         "What this does not say",
-        f"""One pair, one frequency, one alignment. Two large equity indices in
+        """One pair, one frequency, one alignment. Two large equity indices in
 different time zones are a hard case for measuring co-movement and an easy case
 for finding an alignment that flatters a conclusion, which is why both
 alignments are here. Nothing in this generalises to credit, to currencies, or to

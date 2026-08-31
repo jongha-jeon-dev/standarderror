@@ -12,9 +12,8 @@ Run: `standarderror run exp003_persistence --publish`
 
 from __future__ import annotations
 
-from datetime import date
-
 import os
+from datetime import date
 
 import numpy as np
 import pandas as pd

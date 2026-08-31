@@ -250,8 +250,8 @@ def scale_ratio(x, *, early: tuple[int, int], late: tuple[int, int],
                              f"differences")
         return seg
 
-    e, l = slice_of(early), slice_of(late)
-    point = robust_scale(l, robust=robust) / robust_scale(e, robust=robust)
+    e, lt = slice_of(early), slice_of(late)
+    point = robust_scale(lt, robust=robust) / robust_scale(e, robust=robust)
     rng = rng or np.random.default_rng(0)
     draws = np.empty(int(reps))
     for b in range(int(reps)):
@@ -259,7 +259,7 @@ def scale_ratio(x, *, early: tuple[int, int], late: tuple[int, int],
         # two scales, and pairing them would impose a relationship that the data
         # is being asked about.
         ee = e[rng.integers(0, e.size, e.size)]
-        ll = l[rng.integers(0, l.size, l.size)]
+        ll = lt[rng.integers(0, lt.size, lt.size)]
         draws[b] = (robust_scale(ll, robust=robust)
                     / robust_scale(ee, robust=robust))
     lo_q = (1.0 - float(level)) / 2.0
@@ -270,7 +270,7 @@ def scale_ratio(x, *, early: tuple[int, int], late: tuple[int, int],
                                                    robust=robust),
             "sigma_late": second_difference_scale(a[late[0]:late[1]],
                                                   robust=robust),
-            "n_early": int(e.size), "n_late": int(l.size),
+            "n_early": int(e.size), "n_late": int(lt.size),
             "reps": int(reps), "level": float(level)}
 
 

@@ -39,10 +39,9 @@ Run: `standarderror run exp007_kospi_tails --publish`
 
 from __future__ import annotations
 
-from datetime import date
-
 import itertools
 import os
+from datetime import date
 
 import numpy as np
 import pandas as pd

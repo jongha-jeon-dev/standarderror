@@ -62,7 +62,7 @@ Sources for every constant are in `PUBLISHED_FITS` and in the module-level const
 from __future__ import annotations
 
 import warnings
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 import numpy as np
 from scipy.stats import norm
@@ -409,7 +409,8 @@ def simulate_calorimetry(*, n_per_group: int, true_effect: float, rng,
 
     m0 = rng.normal(mass_control_g, mass_sd_g, n_per_group)
     m1 = rng.normal(mass_treated_g, mass_sd_g, n_per_group)
-    base = lambda m: intercept_w + slope_w_per_g * m
+    def base(mass):
+        return intercept_w + slope_w_per_g * mass
     ee0 = base(m0) + rng.normal(0.0, noise_w, n_per_group)
     ee1 = base(m1) * (1.0 + float(true_effect)) + rng.normal(0.0, noise_w,
                                                              n_per_group)

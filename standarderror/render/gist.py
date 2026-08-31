@@ -146,7 +146,7 @@ def _guide(post: Post, blocks: list[dict], gist_url: str) -> str:
             lines += [
                 f"## code {b['index']} — {where}",
                 "",
-                f"Put this on a line of its own; Medium turns it into the embed:",
+                "Put this on a line of its own; Medium turns it into the embed:",
                 "",
                 f"    {gist_url}?file={_filename(b)}",
                 "",

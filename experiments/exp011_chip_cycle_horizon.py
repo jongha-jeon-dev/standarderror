@@ -66,9 +66,8 @@ Run: `standarderror run exp011_chip_cycle_horizon --publish`
 
 from __future__ import annotations
 
-from datetime import date
-
 import os
+from datetime import date
 
 import numpy as np
 import pandas as pd
@@ -514,7 +513,7 @@ def build() -> Post:
     res = analyse()
     figs = figures(res)
     dom = res["dominant"]
-    fs, ss, sh = res["fast_sweep"], res["slow_sweep"], res["shock_sweep"]
+    fs, sh = res["fast_sweep"], res["shock_sweep"]
     table_body = "\n".join("| " + " | ".join(r) + " |" for r in table_rows(res))
 
     post = Post(

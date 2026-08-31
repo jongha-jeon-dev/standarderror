@@ -62,12 +62,11 @@ Run: `standarderror run exp024_smoother_than_the_survey --publish`
 
 from __future__ import annotations
 
-from datetime import date
-
 import hashlib
 import json
 import os
 import time
+from datetime import date
 from pathlib import Path
 
 import numpy as np
@@ -486,8 +485,6 @@ def figures(res: dict) -> dict:
         path=str(IMG / f"a17-t1-documents.{EXT}"))[0]
 
     # --- t2: the windows ----------------------------------------------------
-    sc = res["scaling"]
-    lat = res["lattice"]
     trows = []
     for w in res["windows"]:
         trows.append([f"{w['label']} — {w['note']}",
@@ -621,7 +618,7 @@ def _snippets(res: dict) -> dict:
         print("  rungs available to it: " + ", ".join(f"{r:.4f}" for r in rungs))
     """, expect=["rungs available to it: 0.0605, 0.1211, 0.1816"])
 
-    out["bridge"] = s.run(f"""
+    out["bridge"] = s.run("""
         Z90 = 1.6449
 
         def implied_detectable(sigma_second_diff, rho):
@@ -638,10 +635,10 @@ def _snippets(res: dict) -> dict:
         # BLS's technical note states +/-0.3 pp *at a 6.0 percent rate*, and its
         # report says a 0.18 pp change now needs two months.
         print(f"note, rescaled to 4.2%   "
-              f"{{rescale_for_rate(0.30, 6.0, 4.2):.4f}}")
-        print(f"report, two months -> one  {{0.18*np.sqrt(2):.4f}}")
+              f"{rescale_for_rate(0.30, 6.0, 4.2):.4f}")
+        print(f"report, two months -> one  {0.18*np.sqrt(2):.4f}")
         print(f"naive ratio of the two published figures  "
-              f"{{0.30/0.18:.3f}}x")
+              f"{0.30/0.18:.3f}x")
     """, expect=["note, rescaled to 4.2%   0.2534",
                  "report, two months -> one  0.2546",
                  "naive ratio of the two published figures  1.667x"])
@@ -793,7 +790,7 @@ not it means anything.""",
     # ------------------------------------------------------------------ 2
     post.add(
         "Asking the series instead",
-        f"""There is a way to check an agency's stated precision that needs no
+        """There is a way to check an agency's stated precision that needs no
 microdata, no variance estimation and no cooperation: the published series has
 the noise in it. Difference it twice — which annihilates any local level and
 trend — take a robust scale of what is left, and divide out the factor of six
@@ -943,7 +940,7 @@ deal.""",
     # ------------------------------------------------------------------ 8
     post.add(
         "What this does not say",
-        f"""It does not say the unemployment rate is wrong, that BLS is
+        """It does not say the unemployment rate is wrong, that BLS is
 overstating its own errors, or that seasonal adjustment should stop. Every step
 here is about one statistic — the month-to-month variability of a published
 series — and about whether it can be compared with a design-based standard error.

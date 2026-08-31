@@ -57,12 +57,11 @@ Run: `standarderror run exp014_huber_slope_is_a_scale --publish`
 
 from __future__ import annotations
 
-from datetime import date
-
 import hashlib
 import json
 import os
 import time
+from datetime import date
 
 import numpy as np
 
@@ -597,11 +596,11 @@ def build() -> Post:
                 f"one — the inflation is why a one-shot rescaling is not the same "
                 f"thing as a two-step procedure"),
             "numerical_floor": (
-                f"at the smallest scale tested (1e-3) even the equivariant losses "
-                f"move, by 1-2% for squared error and more for the Huber variants, "
-                f"consistent with float32 arithmetic in the library rather than with "
-                f"any property of the loss; the sweep is trustworthy from about 1e-2 "
-                f"upward"),
+                "at the smallest scale tested (1e-3) even the equivariant losses "
+                "move, by 1-2% for squared error and more for the Huber variants, "
+                "consistent with float32 arithmetic in the library rather than with "
+                "any property of the loss; the sweep is trustworthy from about 1e-2 "
+                "upward"),
             "leverage_construction": (
                 f"a fraction of rows moved to +/- `distance` standard deviations in "
                 f"the first feature only, with y set to the true mean at the new "

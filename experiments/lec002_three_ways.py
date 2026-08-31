@@ -568,7 +568,7 @@ def build() -> Post:
     # ------------------------------------------------------------------ 0
     post.add(
         "Last episode's exercise",
-        f"""The exercise was: take a design matrix you actually use, compute
+        """The exercise was: take a design matrix you actually use, compute
 *κ*(X) raw, with the columns centred, and with them standardised, and work out
 which step does the work.
 
@@ -612,12 +612,12 @@ six.""",
     # ------------------------------------------------------------------ 1
     post.add(
         "The formula everyone learns",
-        f"""Now the episode proper. Every regression course arrives at the same
+        """Now the episode proper. Every regression course arrives at the same
 place. You want the *β* minimising ‖*y* − *X**β*‖², you differentiate, you set
 the derivative to zero, and out comes
 
-$$X^{{\\top}} X \\beta = X^{{\\top}} y \\qquad \\text{{so}} \\qquad \\hat\\beta =
-(X^{{\\top}} X)^{{-1}} X^{{\\top}} y$$
+$$X^{\\top} X \\beta = X^{\\top} y \\qquad \\text{so} \\qquad \\hat\\beta =
+(X^{\\top} X)^{-1} X^{\\top} y$$
 
 This is not wrong. It is the unique correct answer, it is what every textbook
 prints, and it is what the standard-error formulas are written in terms of.
@@ -640,19 +640,19 @@ almost nobody is taught are right to ten decimal places.""",
     # ------------------------------------------------------------------ 2
     post.add(
         "Why: one squaring",
-        f"""Recall from episode one that the singular values of a matrix are the
+        """Recall from episode one that the singular values of a matrix are the
 semi-axis lengths of the ellipse it turns the unit sphere into, and
 *κ* = *σ*ₘₐₓ/*σ*ₘᵢₙ. Now write the Gram matrix in terms of the SVD. If
 *X* = *U**Σ**V*ᵗ with *U* and *V* orthogonal, then
 
-$$X^{{\\top}} X = V \\Sigma^{{\\top}} U^{{\\top}} U \\Sigma V^{{\\top}} = V
-\\Sigma^{{2}} V^{{\\top}}$$
+$$X^{\\top} X = V \\Sigma^{\\top} U^{\\top} U \\Sigma V^{\\top} = V
+\\Sigma^{2} V^{\\top}$$
 
 because *U*ᵗ*U* = *I*. The middle matrix is *Σ*², so **the singular values of
 *X*ᵗ*X* are the squares of the singular values of *X***, and therefore
 
-$$\\kappa(X^{{\\top}} X) = \\frac{{\\sigma_{{\\max}}^{{2}}}}{{\\sigma_{{\\min}}^{{2}}}}
-= \\kappa(X)^{{2}}$$
+$$\\kappa(X^{\\top} X) = \\frac{\\sigma_{\\max}^{2}}{\\sigma_{\\min}^{2}}
+= \\kappa(X)^{2}$$
 
 Two lines, no approximation. And by episode one's accounting, a squared condition
 number is a *doubled* number of lost digits.""")
@@ -693,7 +693,7 @@ matrix before any solver has touched it.""",
     # ------------------------------------------------------------------ 3
     post.add(
         "The picture: least squares is a right angle",
-        f"""Why does QR escape? Not by being clever. By not needing the step that
+        """Why does QR escape? Not by being clever. By not needing the step that
 costs.
 
 Here is what a least-squares problem is, geometrically. The columns of *X* are
@@ -711,7 +711,7 @@ answer is the one every geometry course gives — drop a perpendicular. The fit
 residual *y* − *X**β̂* is at right angles to the whole subspace, which means it is
 orthogonal to every column:
 
-$$X^{{\\top}} (y - X \\hat\\beta) = 0$$
+$$X^{\\top} (y - X \\hat\\beta) = 0$$
 
 Look at what that is. Multiply it out and you get *X*ᵗ*X**β̂* = *X*ᵗ*y*. **The
 normal equations are not a formula that fell out of calculus; they are the
@@ -721,7 +721,7 @@ is not decoration — "normal" means perpendicular.""",
 
     post.add(
         "",
-        f"""Now the point of the picture. Projecting onto a subspace is easy when
+        """Now the point of the picture. Projecting onto a subspace is easy when
 you have an *orthonormal* basis for it: the coefficients are just inner products,
 because each basis direction answers a question none of the others touch. It is
 hard when your basis is a set of columns pointing in nearly the same direction —
@@ -739,7 +739,7 @@ the problem.""", level=3)
     # ------------------------------------------------------------------ 4
     post.add(
         "And the check that defines the answer cannot find the error",
-        f"""There is an obvious diagnostic sitting in the last section. The
+        """There is an obvious diagnostic sitting in the last section. The
 defining property of a least-squares fit is that the residual is orthogonal to
 the columns. So compute *X*ᵗ(*y* − *X**β̂*) and see how close to zero it is.""")
 
@@ -804,7 +804,7 @@ instead.""")
     # ------------------------------------------------------------------ 6
     post.add(
         "What to take away",
-        f"""**Never compute `(X'X)^-1 X'y`, or `solve(X.T @ X, X.T @ y)`
+        """**Never compute `(X'X)^-1 X'y`, or `solve(X.T @ X, X.T @ y)`
 either.** Call a least-squares routine — `numpy.linalg.lstsq`, `scipy`'s
 `lstsq`, R's `lm`, any of which use QR or the SVD underneath. The textbook
 formula is for deriving things with, not for evaluating.

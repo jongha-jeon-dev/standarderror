@@ -21,7 +21,6 @@ from scipy.stats import norm
 
 from standarderror.uq import survival as sv
 
-
 # name, allocation ratio, HR, CI low, CI high, CI level, events treated, events control
 PUBLISHED = [
     ("KEYNOTE-054", 1.0, 0.57, 0.43, 0.74, 0.984, 135, 216),

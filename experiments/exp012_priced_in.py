@@ -70,9 +70,8 @@ Run: `standarderror run exp012_priced_in --publish`
 
 from __future__ import annotations
 
-from datetime import date
-
 import os
+from datetime import date
 
 import numpy as np
 import pandas as pd
@@ -627,7 +626,7 @@ If you want one mechanism for it, the attribute list already contains the candid
 weeks. A story is priced by whoever finds it most exciting, immediately.
 """.strip(), figures=[figs["tags"]])
 
-    post.add("Finding three: news has a width", f"""
+    post.add("Finding three: news has a width", """
 The third result is the one I would have missed, and it is about the second moment
 rather than the first.
 

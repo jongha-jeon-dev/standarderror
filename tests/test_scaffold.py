@@ -23,9 +23,15 @@ import numpy as np
 import pytest
 import torch
 
-from standarderror.models.scaffold import (MultiIndexTask, ScaffoldMLP, evaluate,
-                                       make_multi_index, minimum_rank, recovery,
-                                       train)
+from standarderror.models.scaffold import (
+    MultiIndexTask,
+    ScaffoldMLP,
+    evaluate,
+    make_multi_index,
+    minimum_rank,
+    recovery,
+    train,
+)
 
 
 class TestTheTaskIsWhatItClaims:
@@ -135,7 +141,7 @@ class TestModelContract:
 
     def test_the_zero_scaffold_really_has_no_backbone(self):
         m = ScaffoldMLP(16, 2, hidden=(8, 8), rank=2, scaffold="zero")
-        assert all(float(l.W_seed.abs().sum()) == 0 for l in m.layers)
+        assert all(float(x.W_seed.abs().sum()) == 0 for x in m.layers)
 
     def test_dropping_the_scaffold_changes_the_function(self):
         m = ScaffoldMLP(16, 2, hidden=(8, 8), rank=2, seed=8)
@@ -174,10 +180,10 @@ class TestTrainingAndReadout:
     def test_a_frozen_backbone_stays_bit_identical_through_training(self):
         task, tr, va, te = make_multi_index(1200, d=16, k=2, seed=10)
         m = ScaffoldMLP(16, 2, hidden=(16, 16), rank=2, seed=0)
-        before = [l.W_seed.clone() for l in m.layers]
+        before = [x.W_seed.clone() for x in m.layers]
         train(m, *tr, val=va, epochs=4)
-        for w0, l in zip(before, m.layers):
-            assert torch.equal(w0, l.W_seed)
+        for w0, layer in zip(before, m.layers):
+            assert torch.equal(w0, layer.W_seed)
 
     def test_recovery_is_measured_above_chance(self):
         # Dividing accuracies directly, as the paper does, makes a coin flip

@@ -72,13 +72,12 @@ can see exactly how much the specification choice is worth.
 
 from __future__ import annotations
 
-from datetime import date
 import hashlib
 import json
 import os
 import re
 import time
-from pathlib import Path
+from datetime import date
 
 import numpy as np
 import pandas as pd
@@ -250,9 +249,9 @@ def misplacement_map(n: int) -> dict:
     for tau in GRID:
         q = bd.noise_free_step_date(n, tau, trend=TREND_DEGREE,
                                     seasonal=SEASONAL)
-        l = bd.noise_free_step_date(n, tau, trend=1, seasonal=0)
+        lin = bd.noise_free_step_date(n, tau, trend=1, seasonal=0)
         out["quadratic"].append(q)
-        out["linear"].append(l)
+        out["linear"].append(lin)
     # The bias is a share of the sample, not a number of months: this row is the
     # claim that no quantity of data removes it.
     for m in (100, 200, 400, 800, 1600, 3200):
@@ -580,7 +579,6 @@ def _mean_without_seasonals(y: np.ndarray, tau: int, kind: str,
 def figures(res: dict) -> dict:
     figs = {}
     dates = pd.to_datetime(res["dates"])
-    sdates = pd.to_datetime(res["share_dates"])
     ly = np.log(np.array(res["volume"]))
     r_vol = res["races"]["volume"]
     r_sw = res["races"]["share_weight"]
@@ -603,7 +601,7 @@ def figures(res: dict) -> dict:
         ticks = [1, 2, 5, 10, 25, 50, 100, 200, 400]
         ax.set_yticks(ticks)
         ax.set_yticklabels([str(t) for t in ticks])
-        for tau, lab in ((bend_tau, "bend"), (step_tau, "step")):
+        for tau, _kind in ((bend_tau, "bend"), (step_tau, "step")):
             ax.axvline(dates[tau], color=m.muted, lw=1.3, ls=(0, (4, 3)),
                        zorder=1)
         ax.text(dates[step_tau], 1.05,
@@ -798,13 +796,13 @@ def figures(res: dict) -> dict:
 
     # ---- T1: the misplacement table -------------------------------------
     mis_rows = []
-    for q, l in zip(mis["quadratic"], mis["linear"]):
+    for q, lin in zip(mis["quadratic"], mis["linear"]):
         mis_rows.append([
             f"{dates[q['tau']]:%b %Y}",
             f"{dates[q['step_date']]:%b %Y}",
             f"{q['step_error']:+d} months",
-            f"{dates[l['step_date']]:%b %Y}",
-            f"{l['step_error']:+d} months",
+            f"{dates[lin['step_date']]:%b %Y}",
+            f"{lin['step_error']:+d} months",
         ])
     figs["t1"], _ = charts.table_image(
         mis_rows, header=MIS_HEADER,
@@ -1038,7 +1036,7 @@ average away, which means every gap in the two "off by" columns is bias. In the
 specification this post actually uses — the quadratic column — the misplacement
 runs from {min(q_errs)} to {max(q_errs)} months, median
 {np.median(q_errs):.0f}; under a linear trend it reaches
-{max(abs(l['step_error']) for l in mis['linear'])} months.
+{max(abs(r['step_error']) for r in mis['linear'])} months.
 
 Two things about it are worse than the size.
 

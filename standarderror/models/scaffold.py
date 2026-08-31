@@ -248,8 +248,8 @@ class ScaffoldMLP(nn.Module):
             lin.drop_scaffold()
 
     def betas(self) -> list[float]:
-        return [float(l.beta.detach()) for l in self.layers
-                if hasattr(l, "beta")]
+        return [float(layer.beta.detach()) for layer in self.layers
+                if hasattr(layer, "beta")]
 
     def trainable(self) -> int:
         return sum(p.numel() for p in self.parameters() if p.requires_grad)

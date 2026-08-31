@@ -642,7 +642,7 @@ def build() -> Post:
     # ------------------------------------------------------------------ 0
     post.add(
         "Last episode's exercise",
-        f"""The exercise was: take a dataset with missing values, compute its
+        """The exercise was: take a dataset with missing values, compute its
 correlation matrix twice — once dropping every row with any missing entry, once
 computing each pair from whatever rows have both variables — and find the
 smallest eigenvalue of each. One of them can come out negative. Which, and why?
@@ -653,7 +653,7 @@ single matrix *Z* — centred, scaled — and the correlation matrix is
 *Z*ᵗ*Z*/(*n*−1). That is a Gram matrix, the same object whose condition number
 we spent last episode complaining about, and for any weights *w*
 
-$$w^{{\\top}} Z^{{\\top}} Z w = \\lVert Z w \\rVert^{{2}} \\;\\ge\\; 0$$
+$$w^{\\top} Z^{\\top} Z w = \\lVert Z w \\rVert^{2} \\;\\ge\\; 0$$
 
 A squared length. There is no arrangement of data that makes it negative, so a
 complete-case correlation matrix is feasible by construction rather than by
@@ -695,15 +695,15 @@ does not exist.""", level=3)
     # ------------------------------------------------------------------ 2
     post.add(
         "What positive semi-definiteness actually says",
-        f"""That is worth slowing down on, because "positive semi-definite"
+        """That is worth slowing down on, because "positive semi-definite"
 usually arrives as a condition a matrix has to satisfy, with no account of why
 anybody would care.
 
 Take any weights *w* and form the combination *w*ᵗ*x* — a portfolio, an index, a
 factor score, a difference between two of your variables. Its variance is
 
-$$\\operatorname{{Var}}(w^{{\\top}} x) = \\sum_i \\sum_j w_i w_j
-\\operatorname{{Cov}}(x_i, x_j) = w^{{\\top}} S w$$
+$$\\operatorname{Var}(w^{\\top} x) = \\sum_i \\sum_j w_i w_j
+\\operatorname{Cov}(x_i, x_j) = w^{\\top} S w$$
 
 That is not a definition being introduced; it is the same expansion you would do
 by hand for two variables, written for *n*. And since the left-hand side is a
@@ -715,7 +715,7 @@ the statement that the matrix describes something real.
 The eigenvalues are how you check it without trying every *w*. If *S**v* = *λ**v*
 with ‖*v*‖ = 1, then
 
-$$v^{{\\top}} S v = v^{{\\top}} (\\lambda v) = \\lambda$$
+$$v^{\\top} S v = v^{\\top} (\\lambda v) = \\lambda$$
 
 so each eigenvalue is literally the variance of one particular portfolio — the
 one its eigenvector describes. The smallest eigenvalue is the smallest variance
@@ -727,14 +727,14 @@ on.""")
 
     post.add(
         "",
-        f"""And the practical consequence is worse than a wrong number, because
+        """And the practical consequence is worse than a wrong number, because
 *w*ᵗ*S**w* is quadratic in *w*. Double the position and the variance
 quadruples — including when it is negative.""",
         figures=[figs["t1"]], level=3)
 
     post.add(
         "",
-        f"""One aside on how to test for this, since the code above did it two
+        """One aside on how to test for this, since the code above did it two
 ways. `np.linalg.cholesky` raises if and only if the matrix is not positive
 *definite*, it costs about a third of what an eigendecomposition does, and it is
 what a well-written library calls before it trusts a covariance matrix. But note
@@ -811,7 +811,7 @@ one.""", level=3)
 
     post.add(
         "",
-        f"""It is worth looking at the whole feasible region rather than one
+        """It is worth looking at the whole feasible region rather than one
 interval, because the shape of it is the useful intuition: a correlation is not
 a parameter you get to choose, it is a parameter the other correlations have
 already spent.""",
@@ -820,7 +820,7 @@ already spent.""",
     # ------------------------------------------------------------------ 4
     post.add(
         "So how does anyone build a matrix like that?",
-        f"""Nobody types in three contradictory correlations on purpose. They
+        """Nobody types in three contradictory correlations on purpose. They
 arrive one entry at a time, each from a defensible calculation, and the standard
 way that happens is missing data.
 
@@ -854,7 +854,7 @@ there.""", level=3)
 
     post.add(
         "",
-        f"""Now the part I expected to go the other way. The folk version of
+        """Now the part I expected to go the other way. The folk version of
 this is "pairwise deletion gives you non-positive-definite matrices", stated
 about missing data in general. So: how often, if the missingness is the benign
 kind — every value dropped independently, no relationship to anything?""")
@@ -875,7 +875,7 @@ sampling noise, and noise is what more data removes.""",
 
     post.add(
         "",
-        f"""The unequal-histories version does not behave like that at all.""",
+        """The unequal-histories version does not behave like that at all.""",
         figures=[figs["f3"]], level=3)
 
     post.add(
@@ -941,7 +941,7 @@ And the negative eigenvalue was the only evidence you had.""", level=3)
     # ------------------------------------------------------------------ 6
     post.add(
         "What to take away, and what is still hiding",
-        f"""Four things.
+        """Four things.
 
 **Read a negative eigenvalue as a sentence, not as a number.** Its eigenvector
 is a portfolio, its value is that portfolio's variance, and "this combination of

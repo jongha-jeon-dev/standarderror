@@ -55,12 +55,11 @@ Run: `standarderror run exp015_clustering_between_windows --publish`
 
 from __future__ import annotations
 
-from datetime import date
-
 import hashlib
 import json
 import os
 import time
+from datetime import date
 from pathlib import Path
 
 import numpy as np
@@ -133,7 +132,7 @@ def _config_key() -> str:
     return hashlib.sha256(blob.encode()).hexdigest()[:16]
 
 
-def returns(mnemonic: str) -> "np.ndarray":
+def returns(mnemonic: str) -> np.ndarray:
     """Log returns in percent from the hand-downloaded FRED file."""
     path = DATA / f"{mnemonic}.csv"
     if not path.exists():

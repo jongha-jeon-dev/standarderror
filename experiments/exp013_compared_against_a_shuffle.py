@@ -79,13 +79,12 @@ Run: `standarderror run exp013_compared_against_a_shuffle --publish`
 
 from __future__ import annotations
 
-from datetime import date
-
 import hashlib
 import json
 import os
 import time
 import warnings
+from datetime import date
 
 import numpy as np
 
@@ -567,7 +566,6 @@ def figures(res: dict, sch: dict) -> dict:
     # columns up is the argument.
     z = z_errors(res)
     matrix = [[z[name][k] for k in Z_KEYS] for name in ROW_ORDER]
-    biggest = max((abs(v), n, k) for n, row in z.items() for k, v in row.items())
     fig_meta, _ = charts.coefficient_matrix(
         matrix, row_labels=list(ROW_ORDER),
         col_labels=[FACT_LABELS[k] for k in Z_KEYS], mode="light", annotate=True,
@@ -851,10 +849,7 @@ def build() -> Post:
     textbook = sch["runs"][SCHEDULES[0]]
     kurt_share = ddpm["excess_kurtosis"]["value"] / pop["excess_kurtosis"]["value"]
     clust_share = ddpm["acf1_abs"]["value"] / pop["acf1_abs"]["value"]
-    sched_clust = [sch["runs"][n]["facts"]["acf1_abs"]["value"] for n in SCHEDULES]
     ladder_clust = [r["facts"]["acf1_abs"]["value"] for r in res["ladder"]]
-    sched_range = max(sched_clust) - min(sched_clust)
-    ladder_range = max(ladder_clust) - min(ladder_clust)
 
     post = Post(
         title="Your Generative Model Was Not Compared Against a Shuffle",
@@ -966,7 +961,7 @@ question about *evaluation* rather than about any paper: **when a generative mod
 returns matches the stylised facts, how much has it demonstrated?**
 """.strip())
 
-    post.add("The table that settles these arguments", f"""
+    post.add("The table that settles these arguments", """
 There is a standard table: a row for fat tails, a row for the absence of autocorrelation
 in returns, a row for autocorrelation in *absolute* returns — volatility clustering — and
 often one for the leverage effect. The model's numbers sit next to the data's, they are
@@ -1176,7 +1171,7 @@ under 250 times the training compute** — and it preferred the configuration I 
 wrong.
 """.strip())
 
-    post.add("What to ask of an evaluation table", f"""
+    post.add("What to ask of an evaluation table", """
 None of this argues against the model class, and the survey's four appeals are untouched —
 a bootstrap has none of them. Conditioning matters most in practice and is exactly what a
 resampling scheme cannot do: if you want scenarios given a state, a bootstrap has nothing

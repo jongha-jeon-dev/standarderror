@@ -56,13 +56,12 @@ them. That chain is reported in full rather than stopped at the flattering step.
 
 from __future__ import annotations
 
-from datetime import date
 import hashlib
 import json
 import os
 import re
 import time
-from pathlib import Path
+from datetime import date
 
 import numpy as np
 import pandas as pd
@@ -430,7 +429,6 @@ LADDER_HEADER = ["series", "largest |t|, naive", "largest |t|, corrected",
 
 
 def figures(res: dict) -> dict:
-    import matplotlib.pyplot as plt
 
     figs = {}
     dates = pd.to_datetime(res["dates"])
@@ -754,7 +752,7 @@ def build() -> Post:
     figs = figures(res)
 
     dates = pd.to_datetime(res["dates"])
-    a_vol, a_val = res["analysis"]["volume"], res["analysis"]["value"]
+    a_vol = res["analysis"]["volume"]
     a_sw = res["share"]["analysis"]["weight"]
     a_sv = res["share"]["analysis"]["value"]
     top = a_vol["top"][0]
@@ -955,7 +953,7 @@ share and a commentator quoting the kilogram share are not disagreeing about
 interpretation. They are describing different quantities, and only one of them
 has moved in a way that survives a test.
 """, figures=[figs["f4"]] ) ,
-        Section(heading="Where this breaks", body=f"""
+        Section(heading="Where this breaks", body="""
 **Exports to China are China as a customer, not China as a competitor.** This is
 the limitation that matters most, and it is not a small one. A falling share of
 Korea's chip exports going to China is consistent with Chinese domestic

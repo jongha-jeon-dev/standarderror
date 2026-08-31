@@ -71,11 +71,11 @@ comparable across years rather than against a figure built from generation.
 
 from __future__ import annotations
 
-from datetime import date
 import hashlib
 import json
 import os
 import time
+from datetime import date
 
 import numpy as np
 import pandas as pd
@@ -519,7 +519,6 @@ CLASS_LABEL = {"industrial": "industrial", "general": "general service",
 
 def _fitted_path(res: dict) -> tuple[np.ndarray, np.ndarray]:
     """The fitted trend-plus-kink, and its extension at the post-kink slope."""
-    years = np.array(res["years"])
     y = np.log(np.array(res["peak_mw"]))
     a = res["annual"]
     X = bd.bend_design(y.size, tau=a["tau"], kind="bend", trend=1)
@@ -535,7 +534,6 @@ def figures(res: dict) -> dict:
     years = np.array(res["years"])
     peak = np.array(res["peak_mw"]) / 1000.0
     a = res["annual"]
-    ci = res["date_ci"]
     req = res["requirement"]
     labels = list(req)
     fitted, ext = _fitted_path(res)
@@ -636,12 +634,12 @@ def figures(res: dict) -> dict:
         pf,
         title=(f"The question stops being open around "
                f"{res['crossing'][labels[0]]:.0f}"),
-        subtitle=(f"Probability that a correctly-sized test detects the plan's "
-                  f"asserted change of slope, by the year the data reaches. The "
-                  f"break date is treated as known — the plan announces it — so "
-                  f"there is no search penalty and this is the favourable case. "
-                  f"The lower line is what the textbook 1.96 does on data where "
-                  f"nothing has changed."),
+        subtitle=("Probability that a correctly-sized test detects the plan's "
+                  "asserted change of slope, by the year the data reaches. The "
+                  "break date is treated as known — the plan announces it — so "
+                  "there is no search penalty and this is the favourable case. "
+                  "The lower line is what the textbook 1.96 does on data where "
+                  "nothing has changed."),
         xlabel="", ylabel="probability of detection",
         source=(f"Simulated by moving-block bootstrap of the fitted model's "
                 f"residuals, {POWER_REPS} replications per point, against a "
@@ -1373,6 +1371,7 @@ pairs of dates costs more than most people expect.
 def _check_table_placement(post: Post) -> None:
     """Table images are matched to markdown tables positionally, so verify."""
     import re
+
     from standarderror.render import publish
 
     was = post.draft

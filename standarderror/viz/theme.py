@@ -19,10 +19,9 @@ inverted light palette.
 
 from __future__ import annotations
 
+import os as _os
 import pathlib as _pathlib
 from dataclasses import dataclass
-
-import os as _os
 
 import matplotlib as mpl
 import matplotlib.font_manager as _fm

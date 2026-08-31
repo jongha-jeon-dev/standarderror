@@ -79,9 +79,8 @@ Run: `standarderror run exp010_jeonse_tranche --publish`
 
 from __future__ import annotations
 
-from datetime import date
-
 import os
+from datetime import date
 
 import numpy as np
 import pandas as pd
@@ -416,7 +415,6 @@ def figures(res: dict) -> dict:
     t = res["table"]
     apt = t["Seoul apartment, Jan 2026"]
     villa22 = t["Seoul villa, Dec 2022"]
-    villa24 = t["Seoul villa, Dec 2024"]
 
     # F1 — the trigger. Exact, and the whole argument.
     def mark_cohorts(_fig, ax):
@@ -573,7 +571,6 @@ def build() -> Post:
     apt = t["Seoul apartment, Jan 2026"]
     villa22 = t["Seoul villa, Dec 2022"]
     villa24 = t["Seoul villa, Dec 2024"]
-    nation = t["nationwide, all housing, 2025"]
     hug = res["hug"]
     vc, hc, mc = res["vol_control"], res["haircut_control"], res["mortgage_control"]
     table_body = "\n".join("| " + " | ".join(r) + " |" for r in table_rows(res))
@@ -708,7 +705,7 @@ def build() -> Post:
         },
     )
 
-    post.add("A contract with a number missing", f"""
+    post.add("A contract with a number missing", """
 Korea has a rental arrangement that exists nowhere else at scale. Under **jeonse**,
 a tenant hands the landlord a lump sum — commonly half to four fifths of what the
 home is worth — lives there for two years paying **no monthly rent at all**, and

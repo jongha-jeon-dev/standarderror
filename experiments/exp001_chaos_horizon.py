@@ -20,10 +20,9 @@ Run: `python -m standarderror.cli run exp001_chaos_horizon --publish`
 
 from __future__ import annotations
 
-from datetime import date
-
 import time
 from dataclasses import replace
+from datetime import date
 
 import numpy as np
 

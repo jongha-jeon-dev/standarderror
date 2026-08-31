@@ -187,7 +187,8 @@ class TestSimulate:
         """
         elastic = delay.simulate(n_months=600, seed=5)
         inelastic = delay.simulate(n_months=600, demand_elasticity=0.0, seed=5)
-        spread = lambda r: float(np.log(r.price).max() - np.log(r.price).min())
+        def spread(r):
+            return float(np.log(r.price).max() - np.log(r.price).min())
         assert spread(inelastic) > spread(elastic)
         assert np.isfinite(inelastic.price).all()
 

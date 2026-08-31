@@ -32,9 +32,8 @@ Run: `standarderror run exp006_inspection_paradox --publish`
 
 from __future__ import annotations
 
-from datetime import date
-
 import os
+from datetime import date
 
 import numpy as np
 import pandas as pd

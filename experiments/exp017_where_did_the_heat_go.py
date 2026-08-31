@@ -59,13 +59,12 @@ Run: `standarderror run exp017_where_did_the_heat_go --publish`
 
 from __future__ import annotations
 
-from datetime import date
-
 import hashlib
 import json
 import os
 import time
 import warnings
+from datetime import date
 
 import numpy as np
 import pandas as pd
@@ -712,7 +711,7 @@ def build() -> Post:
     table_body = md_table(TABLE_HEADER, table_rows(res))
 
     # The spine, asserted rather than trusted.
-    if not warm["fully_absorbed"] is False:
+    if warm["fully_absorbed"] is not False:
         raise AssertionError("at the thermoneutral point nothing should be absorbed")
     if abs(warm["gap"]) > 0.01:
         raise AssertionError(

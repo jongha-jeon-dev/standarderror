@@ -393,13 +393,26 @@ def minimum_detectable_shift(resid: np.ndarray, *, n_pre: int, n_post: int,
     if use not in ("hac", "ols"):
         raise ValueError("use must be 'hac' or 'ols'")
     key = f"power_{use}"
-    seed = kw.pop("rng", None)
+
+    # Each rung of the bisection gets its own generator, so the search is
+    # reproducible and two runs cannot disagree about where the boundary is.
+    # A caller's `rng` used to be popped out of `kw` here and then dropped on
+    # the floor -- accepted, ignored, and silent about it. It is honoured now,
+    # and `None` keeps the original fixed seeds so no published number moves.
+    base = kw.pop("rng", None)
+    if base is not None and not isinstance(base, (int, np.integer)):
+        base = int(base.integers(0, 2**63 - 1))
+
+    def _rng(rung: int) -> np.random.Generator:
+        return (np.random.default_rng(rung) if base is None
+                else np.random.default_rng([base, rung]))
+
     lo_p = detection_power(resid, n_pre=n_pre, n_post=n_post, shift=lo,
                            block=block, reps=reps, critical=critical,
-                           rng=np.random.default_rng(1), **kw)[key]
+                           rng=_rng(1), **kw)[key]
     hi_p = detection_power(resid, n_pre=n_pre, n_post=n_post, shift=hi,
                            block=block, reps=reps, critical=critical,
-                           rng=np.random.default_rng(2), **kw)[key]
+                           rng=_rng(2), **kw)[key]
     if hi_p < target:
         return {"mde": float("inf"), "power_at_hi": hi_p, "hi": hi,
                 "note": "even the largest shift searched is not detectable"}
@@ -408,7 +421,7 @@ def minimum_detectable_shift(resid: np.ndarray, *, n_pre: int, n_post: int,
         mid = 0.5 * (lo + hi)
         p = detection_power(resid, n_pre=n_pre, n_post=n_post, shift=mid,
                             block=block, reps=reps, critical=critical,
-                            rng=np.random.default_rng(100 + it), **kw)[key]
+                            rng=_rng(100 + it), **kw)[key]
         if p < target:
             lo = mid
         else:

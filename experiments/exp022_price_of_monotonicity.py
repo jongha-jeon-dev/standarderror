@@ -55,18 +55,17 @@ figures are quoted as published and are the only external numbers used.
 
 from __future__ import annotations
 
-from datetime import date
-
 import json
 import os
 import time
+from datetime import date
 
 import numpy as np
 import pandas as pd
 
 import standarderror as se
 from standarderror.models import monotone as mono
-from standarderror.render.post import Post, Section
+from standarderror.render.post import Post
 from standarderror.render.snippet import Session
 from standarderror.viz import charts, theme
 
@@ -162,7 +161,7 @@ def compute(*, force: bool = False, verbose: bool = True) -> dict:
                               seed=SEED)
     res["coverage"] = {f"{n}|{k}": v for (n, k), v in cov.items()}
     for n in COVERAGE_N:
-        say("  n=%-6d " % n + "  ".join(
+        say(f"  n={n:<6d} " + "  ".join(
             f"k={k}: {cov[(n, k)]['mean']:+.2f}" for k in COVERAGE_K))
 
     # ---- 2. the interval on the single strongest cell

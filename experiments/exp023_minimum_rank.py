@@ -58,17 +58,16 @@ company, product or institution.
 
 from __future__ import annotations
 
-from datetime import date
-
 import json
 import os
 import time
+from datetime import date
 
 import numpy as np
 
 import standarderror as se
 from standarderror.models import scaffold as sf
-from standarderror.render.post import Post, Section
+from standarderror.render.post import Post
 from standarderror.render.snippet import Session
 from standarderror.viz import charts, theme
 
@@ -168,7 +167,7 @@ def compute(*, force: bool = False, verbose: bool = True) -> dict:
             + f"   r*={sf.minimum_rank(sw['rows'], target=TARGET)}", flush=True)
 
     # ---- A. the three scaffold conditions at one task and one width
-    say("A. scaffold conditions, k=%d width=%d" % (BASE_K, BASE_WIDTH))
+    say(f"A. scaffold conditions, k={BASE_K} width={BASE_WIDTH}")
     task = sf.MultiIndexTask(d=D_IN, k=BASE_K, seed=SEED, freq=FREQ)
     res["conditions"] = {}
     for cond in ("normal", "zero", "ablate"):
@@ -370,7 +369,7 @@ def figures(res: dict, prot: dict) -> dict:
         index=ranks)
     figs["f1"], _ = charts.lines(
         frame, logx=True, direct_labels=False, decorate=threshold,
-        xlabel="LoRA rank (of a possible %d)" % BASE_WIDTH,
+        xlabel=f"LoRA rank (of a possible {BASE_WIDTH})",
         ylabel="share of the fully trained model's\nabove-chance accuracy (%)",
         title="On this task the frozen random backbone is load-bearing",
         subtitle=(f"A {DEPTH}-layer network of width {BASE_WIDTH}, on a task whose "

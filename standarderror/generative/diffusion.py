@@ -269,7 +269,7 @@ class DDPM:
     @classmethod
     def budget(cls, length: int = 64, *, hidden: int = 256, max_iter: int = 80,
                noise_per_window: int = 6, steps: int = 1000,
-               schedule: Schedule | None = None, seed: int = 0) -> "DDPM":
+               schedule: Schedule | None = None, seed: int = 0) -> DDPM:
         """A configuration at a stated compute budget, everything else fixed.
 
         The three knobs are width, passes and noisings per window, and they are
@@ -343,7 +343,7 @@ class DDPM:
 
     # -- fit and sample --------------------------------------------------------
     def fit(self, windows: np.ndarray, *,
-            rng: np.random.Generator | None = None) -> "DDPM":
+            rng: np.random.Generator | None = None) -> DDPM:
         """Standardise, manufacture noise pairs, regress.
 
         The standardisation is by a single scalar across all windows, not per
