@@ -57,10 +57,10 @@ from a calculation that a working data scientist would write, and that is wrong 
 sometimes silently, by a few digits; sometimes catastrophically, by a sign — and
 then finds the piece of linear algebra that says why.
 
-The last episode lands on a credit scorecard, from nothing but least squares.
-That is not a detour: a scorecard *is* iteratively reweighted least squares, and
-arriving there from the geometry rather than from a library call is the point of
-the seven episodes before it.
+The last episode lands on logistic regression, from nothing but least squares.
+That is not a detour: the standard way to fit one *is* iteratively reweighted
+least squares, and arriving there from the geometry rather than from a library
+call is what makes its failure modes legible instead of mysterious.
 
 | # | Episode | The calculation that breaks |
 |---|---|---|
@@ -70,11 +70,14 @@ the seven episodes before it.
 | 4 | PCA When Two Eigenvalues Are Equal | the two *largest* eigenvalues 0.02 apart, so the component carrying the most variance is the one whose axis swings 42° between samples — and the bootstrap you would run reports a third of it |
 | 5 | What Ridge Does to the Geometry | every VIF at 1.00 on a design with a condition number near a billion, ridge as a per-direction multiplier s²/(s²+α), and a cross-validated fit that spends 3.6 of its 9 parameters while the output reports 9 |
 | 6 | One Row Can Own the Fit | leverage as a diagonal of a projection whose trace is fixed at p, a row with leverage 1 whose residual is exactly zero, and one observation moving a slope by six standard errors |
-| 7 | The Scree Plot Lies | Eckart–Young, why truncating a factorisation is a modelling decision, and how to choose the rank without looking at an elbow |
-| 8 | Logistic Regression Is Least Squares, Repeated | IRLS from scratch on public credit data: where the weights come from, and why separable data sends a coefficient to infinity |
+| 7 | The Scree Plot Lies | the elbow asked about a matrix of pure noise: 18 different answers in 300 draws, never once "none" — while the rule with a theorem behind it reports zero components where three exist, on purpose |
+| 8 | When There Is No Closed Form | IRLS from scratch: a coefficient whose value is the iteration limit, a standard error equal to 1/√(k × the library's weight floor), and a p-value that crosses 0.05 on the way down |
 
 Episodes run 1,900–2,800 words. Everything runs on simulated data or on a public
 dataset named in the episode.
+
+**The series is complete.** Episode 8 closes it with a one-page recap of all
+eight, which is the fastest way to see whether any of it is for you.
 
 ### What this series is not
 

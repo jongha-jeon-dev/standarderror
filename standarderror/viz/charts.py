@@ -45,7 +45,40 @@ class Figure:
         return out
 
 
-def _ends(ax, x, y, color, label, mode):
+#: Minimum vertical separation, in points, between two direct labels. Below this
+#: they overlap into an unreadable smear, which is what happens whenever several
+#: series converge on the same final value.
+LABEL_GAP_POINTS = 11.0
+
+
+def _label_offsets(ax, values, gap: float = LABEL_GAP_POINTS):
+    """Vertical text offsets, in points, that keep direct labels legible.
+
+    The marker stays on the true final value; only the text moves, and it moves
+    the smallest distance that separates it from its neighbours. Written because
+    three series ending at exactly zero printed three labels on top of each
+    other, which is a silent failure -- the chart still renders.
+    """
+    ys = np.asarray(values, dtype=float)
+    height = max(ax.get_window_extent().height, 1.0) * 72.0 / ax.figure.dpi
+    lo, hi = ax.get_ylim()
+    span = (hi - lo) or 1.0
+    pos = (ys - lo) / span * height          # each label's y, in points
+    order = np.argsort(pos)
+    placed = pos.astype(float).copy()
+    for rank, idx in enumerate(order):       # push upwards, in order
+        if rank:
+            prev = placed[order[rank - 1]]
+            placed[idx] = max(placed[idx], prev + gap)
+    # Then slide the whole stack down if it has run off the top.
+    overflow = placed.max() - height
+    if overflow > 0:
+        placed -= overflow
+    return placed - pos
+
+
+def _ends(ax, x, y, color, label, mode, dy: float = 0.0,
+          colour_label: bool = False):
     """Direct-label the last point. Replaces reading a legend for line charts,
     and satisfies the relief rule for the low-contrast slots."""
     m = theme.MODES[mode]
@@ -55,9 +88,14 @@ def _ends(ax, x, y, color, label, mode):
     i = np.nonzero(finite)[0][-1]
     ax.plot([x[i]], [y[i]], marker="o", ms=4.5, color=color,
             markeredgecolor=m.surface, markeredgewidth=1.6, zorder=5)
+    # Labels are recessive grey when each one sits on its own value. As soon as
+    # any of them has had to move, every label in the chart carries its series
+    # colour -- including the ones that did not move, because their markers are
+    # now sitting under someone else's and the colour is the only mapping left.
     ax.annotate(f" {label}", (x[i], y[i]), textcoords="offset points",
-                xytext=(6, 0), va="center", fontsize=8.5,
-                color=m.ink_secondary, annotation_clip=False)
+                xytext=(6, dy), va="center", fontsize=8.5,
+                color=color if colour_label else m.ink_secondary,
+                annotation_clip=False)
 
 
 def lines(
@@ -100,9 +138,11 @@ def lines(
                 lw=2.0 if emphasised else 1.2,
                 alpha=1.0 if emphasised else 0.45, zorder=3 if emphasised else 2)
     if direct_labels and len(cols) <= 4:
-        for c, col in zip(cols, colors):
-            _ends(ax, x, frame[c].to_numpy(dtype=float), col, str(c), mode)
+        _pending_labels = [(c, col, frame[c].to_numpy(dtype=float))
+                           for c, col in zip(cols, colors)]
         ax.margins(x=0.06)
+    else:
+        _pending_labels = []
     if ylabel:
         ax.set_ylabel(ylabel)
     if xlabel:
@@ -117,6 +157,18 @@ def lines(
         ax.invert_xaxis()
     if decorate is not None:
         decorate(fig, ax)
+    # After every axis limit is settled, because the offsets are computed from
+    # the measured height of the axes and from the y-limits.
+    if _pending_labels:
+        finals = []
+        for _, _, ys in _pending_labels:
+            ok = np.isfinite(ys)
+            finals.append(ys[np.nonzero(ok)[0][-1]] if ok.any() else np.nan)
+        offsets = _label_offsets(ax, np.nan_to_num(finals, nan=0.0))
+        crowded = bool(np.any(np.abs(offsets) > 0.5))
+        for (c, col, ys), dy in zip(_pending_labels, offsets):
+            _ends(ax, x, ys, col, str(c), mode, dy=float(dy),
+                  colour_label=crowded)
     theme.finish(ax, title=title, subtitle=subtitle, source=source, mode=mode,
                  legend=not (direct_labels and len(cols) <= 4))
     if path:
