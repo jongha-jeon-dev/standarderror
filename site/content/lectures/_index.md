@@ -68,8 +68,8 @@ the seven episodes before it.
 | 2 | Least Squares Three Ways, and Only Two Survive | normal equations against QR against SVD on the same fit — κ(AᵗA) = κ(A)² and half the digits are gone |
 | 3 | Your Covariance Matrix Is Not Positive Definite | pairwise-deleted covariance with a negative eigenvalue, and a portfolio variance that comes out below zero |
 | 4 | PCA When Two Eigenvalues Are Equal | the two *largest* eigenvalues 0.02 apart, so the component carrying the most variance is the one whose axis swings 42° between samples — and the bootstrap you would run reports a third of it |
-| 5 | What Ridge Does to the Geometry | VIF says the design is fine, the singular values say it is not; ridge as eigenvalue shifting and Σλ/(λ+α) as the degrees of freedom you actually spent |
-| 6 | One Row Can Own the Fit | leverage as a diagonal of a projection, and a single observation moving a coefficient by three standard errors |
+| 5 | What Ridge Does to the Geometry | every VIF at 1.00 on a design with a condition number near a billion, ridge as a per-direction multiplier s²/(s²+α), and a cross-validated fit that spends 3.6 of its 9 parameters while the output reports 9 |
+| 6 | One Row Can Own the Fit | leverage as a diagonal of a projection whose trace is fixed at p, a row with leverage 1 whose residual is exactly zero, and one observation moving a slope by six standard errors |
 | 7 | The Scree Plot Lies | Eckart–Young, why truncating a factorisation is a modelling decision, and how to choose the rank without looking at an elbow |
 | 8 | Logistic Regression Is Least Squares, Repeated | IRLS from scratch on public credit data: where the weights come from, and why separable data sends a coefficient to infinity |
 
