@@ -67,7 +67,7 @@ the seven episodes before it.
 | 1 | The Condition Number Is the Error Bar on Your Solve | `inv(A) @ b` on a design matrix with two nearly-collinear columns: coefficients flip sign under a perturbation of 1e-10 |
 | 2 | Least Squares Three Ways, and Only Two Survive | normal equations against QR against SVD on the same fit — κ(AᵗA) = κ(A)² and half the digits are gone |
 | 3 | Your Covariance Matrix Is Not Positive Definite | pairwise-deleted covariance with a negative eigenvalue, and a portfolio variance that comes out below zero |
-| 4 | PCA When Two Eigenvalues Are Equal | bootstrap the sample and watch the second and third components change places; "we interpret PC2 as" |
+| 4 | PCA When Two Eigenvalues Are Equal | the two *largest* eigenvalues 0.02 apart, so the component carrying the most variance is the one whose axis swings 42° between samples — and the bootstrap you would run reports a third of it |
 | 5 | What Ridge Does to the Geometry | VIF says the design is fine, the singular values say it is not; ridge as eigenvalue shifting and Σλ/(λ+α) as the degrees of freedom you actually spent |
 | 6 | One Row Can Own the Fit | leverage as a diagonal of a projection, and a single observation moving a coefficient by three standard errors |
 | 7 | The Scree Plot Lies | Eckart–Young, why truncating a factorisation is a modelling decision, and how to choose the rank without looking at an elbow |
