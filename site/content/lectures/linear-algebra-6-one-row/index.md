@@ -151,7 +151,7 @@ That is not a failure of the leverage measure. It is what leverage means. *hᵢ*
 
 ![A scatter where the right-most points, at the highest leverage, are not the highest points.](lec06-f2-not-influence.png)
 
-*The rows furthest to the right are not the rows furthest up. Leverage is a property of x alone; influence needs the observation to be unusual in x *and* off the line in y, and most high-leverage rows are neither surprising nor wrong.*
+*The rows furthest to the right are not the rows furthest up. Leverage is a property of x alone; influence needs the observation to be unusual in x **and** off the line in y, and most high-leverage rows are neither surprising nor wrong.*
 
 The two combine multiplicatively, which is what makes the position dangerous rather than merely unusual. The change in a coefficient from deleting row *i* is proportional to *eᵢ* /(1 − *hᵢ*): the residual, amplified by how much of its own fitted value the row supplied.
 

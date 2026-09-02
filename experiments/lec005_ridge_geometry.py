@@ -233,7 +233,9 @@ def figures(res: dict) -> dict:
     # --- f2: the coefficient, direction by direction -----------------------
     fit = ridge["fit"]
     out["f2"] = charts.ranked_bars(
-        [f"direction {i + 1}  (s = {v:.2f})" for i, v in enumerate(s)],
+        # One space: see the note in lec004 -- SVG collapses runs of whitespace,
+        # so two spaces render as one and only desynchronise PNG from SVG.
+        [f"direction {i + 1} (s = {v:.2f})" for i, v in enumerate(s)],
         list(fit.shrinkage),
         title="What survived, in the basis where the design is diagonal",
         subtitle=(f"The multiplier applied to each direction at the "

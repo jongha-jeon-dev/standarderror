@@ -92,8 +92,11 @@ def _ends(ax, x, y, color, label, mode, dy: float = 0.0,
     # any of them has had to move, every label in the chart carries its series
     # colour -- including the ones that did not move, because their markers are
     # now sitting under someone else's and the colour is the only mapping left.
-    ax.annotate(f" {label}", (x[i], y[i]), textcoords="offset points",
-                xytext=(6, dy), va="center", fontsize=8.5,
+    # No leading space in the label: the 6-point x-offset below already does the
+    # spacing, and a leading space is character data that an SVG minifier strips
+    # -- which then reads as a changed label to the Notion transport's diff gate.
+    ax.annotate(f"{label}", (x[i], y[i]), textcoords="offset points",
+                xytext=(7, dy), va="center", fontsize=8.5,
                 color=color if colour_label else m.ink_secondary,
                 annotation_clip=False)
 

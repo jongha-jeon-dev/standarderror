@@ -1,9 +1,25 @@
 """Build a post's figures as SVGs small enough to hand to Notion inline.
 
 Notion's attachment API takes a file either from a public URL or as inline UTF-8
-text, capped at 200 KiB. `api.notion.com` is not reachable from this container or
-from the author's machine, so the upload URL that `create_file_upload` hands back
-cannot be POSTed to: inline text is the only route, and that means SVG.
+text, capped at 200 KiB. The upload URL that `create_file_upload` hands back
+points at `api.notion.com`, and the egress proxy on this container refuses the
+CONNECT, so it cannot be POSTed to. Inline text is one route, and that means SVG.
+
+Do not read a successful TCP connect to `api.notion.com:443` as reachability: it
+reaches the local proxy, which then rejects the tunnel. The only check that means
+anything is an actual request.
+
+The better route, once a commit is pushed: `create_attachment` also takes
+`source_url`, and Notion downloads it server-side, so the container's proxy is
+irrelevant. A figure committed to this public repo is fetchable at
+`https://raw.githubusercontent.com/<owner>/<repo>/main/<path>` and goes in as the
+full-quality PNG with no 200 KiB cap. Use that whenever the page bundle is on
+GitHub; the SVG path below is for figures that are not pushed yet.
+
+One thing about the substitution afterwards. Notion escapes `{` and `}` in
+character data, so a `{{FIG:name.png}}` placeholder written into a page reads
+back as `\\{\\{FIG:name.png\\}\\}` -- and that escaped form is what an
+`update_page` `content_updates` `old_str` has to match.
 
 Three steps, in this order:
 

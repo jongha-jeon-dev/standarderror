@@ -290,7 +290,7 @@ def figures(res: dict) -> dict:
              "are not the highest points."),
         caption=("The rows furthest to the right are not the rows furthest up. "
                  "Leverage is a property of x alone; influence needs the "
-                 "observation to be unusual in x *and* off the line in y, and "
+                 "observation to be unusual in x **and** off the line in y, and "
                  "most high-leverage rows are neither surprising nor wrong."),
         path=str(IMG / f"lec06-f2-not-influence.{EXT}"))[0]
 

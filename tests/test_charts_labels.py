@@ -106,3 +106,19 @@ class TestTheChartUsesThem:
                 assert txt.xyann[1] == 0.0, lbl
                 assert txt.get_color() != line_colour[lbl], lbl
         plt.close("all")
+
+
+class TestLabelsSurviveTheNotionTransport:
+    """SVG minification strips leading and trailing whitespace from character
+    data, and `tools/notion_figures.py` fails the build when a label changes. A
+    label must therefore not carry whitespace it does not need."""
+
+    def test_a_direct_label_has_no_padding_whitespace(self):
+        frame = pd.DataFrame({"α = 0.1": [1.0, 0.4], "β": [0.2, 0.9]},
+                             index=[1, 2])
+        fig, ax = charts.lines(frame, title="t", alt="a")
+        drawn = [t.get_text() for t in ax.texts]
+        assert "α = 0.1" in drawn and "β" in drawn, drawn
+        for txt in drawn:
+            assert txt == txt.strip(), repr(txt)
+        plt.close("all")

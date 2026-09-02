@@ -261,7 +261,10 @@ def figures(res: dict) -> dict:
 
     # --- f2: ordered by variance, and not ordered by anything else ---------
     out["f2"] = charts.ranked_bars(
-        [f"PC{r['component']}  ({r['variance_share']:.1%})" for r in table],
+        # One space, not two: SVG and HTML collapse runs of whitespace, so a
+        # double space here renders as one anyway and only makes the label
+        # differ between the PNG and the SVG that goes to Notion.
+        [f"PC{r['component']} ({r['variance_share']:.1%})" for r in table],
         [r["median_angle"] for r in table],
         title="Ordered by share of variance, largest first",
         subtitle=("If the share of variance told you which components to trust, "
