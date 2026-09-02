@@ -2,7 +2,7 @@
 title: "Linear Algebra 7: The Scree Plot Lies"
 date: 2026-09-01
 slug: "linear-algebra-7-scree-plot"
-draft: true
+draft: false
 description: "Asked about a matrix of pure noise, the elbow returns 18 different answers across 300 draws and never once returns none — while three calibrated rules get it right. And the rule that is provably optimal reports zero components where three exist."
 author: "Jongha Jeon"
 tags: ["linear-algebra", "svd", "dimensionality-reduction", "pca", "lectures", "data-science"]

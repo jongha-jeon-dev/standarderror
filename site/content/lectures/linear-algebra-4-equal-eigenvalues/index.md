@@ -2,7 +2,7 @@
 title: "Linear Algebra 4: PCA When Two Eigenvalues Are Equal"
 date: 2026-08-31
 slug: "linear-algebra-4-equal-eigenvalues"
-draft: true
+draft: false
 description: "A correlation matrix whose two largest eigenvalues differ by 0.02, where the component carrying the most variance is the one that moves 42 degrees between samples — and the resampling check reports a third of it."
 author: "Jongha Jeon"
 tags: ["linear-algebra", "pca", "dimensionality-reduction", "lectures", "data-science"]

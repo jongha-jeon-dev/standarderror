@@ -2,7 +2,7 @@
 title: "Linear Algebra 5: What Ridge Does to the Geometry"
 date: 2026-09-01
 slug: "linear-algebra-5-ridge-geometry"
-draft: true
+draft: false
 description: "Every variance inflation factor at 1.00 on a design with a condition number near a billion, a cross-validated ridge fit that spends 3.6 of its 9 parameters, and a nominal 95 percent interval that covers 34 percent."
 author: "Jongha Jeon"
 tags: ["linear-algebra", "ridge-regression", "regularisation", "lectures", "data-science"]

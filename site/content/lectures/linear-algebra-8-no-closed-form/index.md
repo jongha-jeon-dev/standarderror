@@ -2,7 +2,7 @@
 title: "Linear Algebra 8: When There Is No Closed Form"
 date: 2026-09-01
 slug: "linear-algebra-8-no-closed-form"
-draft: true
+draft: false
 description: "A logistic regression where one coefficient's value is the iteration limit, its standard error is a constant the library author chose, and its p-value crosses 0.05 on the way down — while every other coefficient in the table is correct to three decimal places."
 author: "Jongha Jeon"
 tags: ["linear-algebra", "logistic-regression", "glm", "separation", "lectures", "data-science"]

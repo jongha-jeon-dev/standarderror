@@ -2,7 +2,7 @@
 title: "Linear Algebra 6: One Row Can Own the Fit"
 date: 2026-09-01
 slug: "linear-algebra-6-one-row"
-draft: true
+draft: false
 description: "A single observation with a residual of exactly zero, a Cook's distance of 0/0, and a coefficient that stops existing when you delete it — and, separately, one row moving a slope by six standard errors."
 author: "Jongha Jeon"
 tags: ["linear-algebra", "regression-diagnostics", "leverage", "lectures", "data-science"]
