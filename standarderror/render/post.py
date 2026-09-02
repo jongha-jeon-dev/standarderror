@@ -199,6 +199,58 @@ class Post:
 
     # ---------- rendering ----------
 
+    #: LaTeX escapes Hugo's markdown renderer eats. Goldmark treats a backslash
+    #: before ASCII punctuation as a *markdown* escape and strips the backslash
+    #: before the maths renderer ever sees the span, so `\;` arrives at KaTeX as
+    #: `;`, `\,` as `,`, `\!` as `!` and `\|` as `|` -- and once `\|` is a bare
+    #: `|`, a following `_F` is free to be read as emphasis. Longest first, so
+    #: `\;\le\;` matches before `\;`.
+    EQUATION_SUBS = (
+        (r"\;=\;", " = "), (r"\;\le\;", r" \le "), (r"\;\ge\;", r" \ge "),
+        (r"\;\approx\;", r" \approx "), (r", \;\; ", r", \quad "),
+        (r"\left[\; ", r"\left[ "), (r"\; ", r" \quad "), (r"\;", " "),
+        (r"\, ", " "), (r"\,", " "), (r"\!", ""),
+    )
+
+    @classmethod
+    def _safe_equation(cls, eq: str) -> str:
+        """One line, and nothing goldmark will rewrite.
+
+        Two separate failures, both found by diffing a Hugo build against the
+        source rather than by reading the markdown:
+
+        * the escapes in `EQUATION_SUBS`, and
+        * a *wrapped* equation whose continuation line began `+ `, which
+          goldmark read as a bullet and turned into `</p><ul><li>` in the middle
+          of the maths. Joining the span onto one line removes every
+          line-initial character markdown cares about at once, which is why this
+          collapses newlines instead of escaping the `+`.
+        """
+        eq = " ".join(eq.split())
+        for a, b in cls.EQUATION_SUBS:
+            eq = eq.replace(a, b)
+        parts = eq.split(r"\|")
+        if len(parts) == 3:
+            eq = parts[0] + r"\lVert" + parts[1] + r"\rVert" + parts[2]
+        return " ".join(eq.split())
+
+    @classmethod
+    def _harden_equations(cls, body: str) -> str:
+        """Apply `_safe_equation` to every `$$...$$` span, outside code fences."""
+        out, fence = [], False
+        for chunk in re.split(r"(```)", body):
+            if chunk == "```":
+                fence = not fence
+                out.append(chunk)
+                continue
+            if fence:
+                out.append(chunk)
+                continue
+            out.append(re.sub(r"\$\$(.+?)\$\$",
+                              lambda m: "$$\n" + cls._safe_equation(m.group(1))
+                              + "\n$$", chunk, flags=re.S))
+        return "".join(out)
+
     def body_markdown(self, image_base: str = "") -> str:
         parts: list[str] = []
         # First paragraph, before the lede: Medium counts from the top of the
@@ -215,7 +267,7 @@ class Post:
         for s in self.sections:
             parts.append(s.markdown(image_base))
         parts += self._footer()
-        return "\n".join(parts).rstrip() + "\n"
+        return self._harden_equations("\n".join(parts).rstrip()) + "\n"
 
     def _footer(self) -> list[str]:
         out: list[str] = ["---", ""]

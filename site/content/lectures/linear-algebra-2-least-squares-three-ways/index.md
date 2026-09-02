@@ -99,8 +99,9 @@ Now the episode proper. Every regression course arrives at the same
 place. You want the *β* minimising ‖*y* − *X**β*‖², you differentiate, you set
 the derivative to zero, and out comes
 
-$$X^{\top} X \beta = X^{\top} y \qquad \text{so} \qquad \hat\beta =
-(X^{\top} X)^{-1} X^{\top} y$$
+$$
+X^{\top} X \beta = X^{\top} y \qquad \text{so} \qquad \hat\beta = (X^{\top} X)^{-1} X^{\top} y
+$$
 
 This is not wrong. It is the unique correct answer, it is what every textbook
 prints, and it is what the standard-error formulas are written in terms of.
@@ -158,14 +159,16 @@ semi-axis lengths of the ellipse it turns the unit sphere into, and
 *κ* = *σ*ₘₐₓ/*σ*ₘᵢₙ. Now write the Gram matrix in terms of the SVD. If
 *X* = *U**Σ**V*ᵗ with *U* and *V* orthogonal, then
 
-$$X^{\top} X = V \Sigma^{\top} U^{\top} U \Sigma V^{\top} = V
-\Sigma^{2} V^{\top}$$
+$$
+X^{\top} X = V \Sigma^{\top} U^{\top} U \Sigma V^{\top} = V \Sigma^{2} V^{\top}
+$$
 
 because *U*ᵗ*U* = *I*. The middle matrix is *Σ*², so **the singular values of
 *X*ᵗ*X* are the squares of the singular values of *X***, and therefore
 
-$$\kappa(X^{\top} X) = \frac{\sigma_{\max}^{2}}{\sigma_{\min}^{2}}
-= \kappa(X)^{2}$$
+$$
+\kappa(X^{\top} X) = \frac{\sigma_{\max}^{2}}{\sigma_{\min}^{2}} = \kappa(X)^{2}
+$$
 
 Two lines, no approximation. And by episode one's accounting, a squared condition
 number is a *doubled* number of lost digits.
@@ -241,7 +244,9 @@ answer is the one every geometry course gives — drop a perpendicular. The fit
 residual *y* − *X**β̂* is at right angles to the whole subspace, which means it is
 orthogonal to every column:
 
-$$X^{\top} (y - X \hat\beta) = 0$$
+$$
+X^{\top} (y - X \hat\beta) = 0
+$$
 
 Look at what that is. Multiply it out and you get *X*ᵗ*X**β̂* = *X*ᵗ*y*. **The
 normal equations are not a formula that fell out of calculus; they are the

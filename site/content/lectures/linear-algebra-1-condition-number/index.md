@@ -160,7 +160,9 @@ the matrix, stretched by 1/*σ* in each direction. Its aspect ratio is therefore
 *σ*ₘₐₓ/*σ*ₘᵢₙ — which is the number that figure labels, and which finally has a
 name:
 
-$$\kappa(A) = \frac{\sigma_{\max}}{\sigma_{\min}}$$
+$$
+\kappa(A) = \frac{\sigma_{\max}}{\sigma_{\min}}
+$$
 
 **The condition number is how eccentric the ellipse is.** One means a circle:
 every direction treated alike, nothing amplified. A thousand means a thousand-fold
@@ -181,31 +183,33 @@ Start with the true system, *A**x* = *b*, and a perturbed one where the
 right-hand side is slightly off: *A*(*x* + *δx*) = *b* + *δb*. Subtract the first
 from the second. The *A**x* and *b* cancel and you are left with
 
-$$A \, \delta x = \delta b \qquad \text{so} \qquad \delta x = A^{-1}
-\delta b$$
+$$
+A \delta x = \delta b \qquad \text{so} \qquad \delta x = A^{-1} \delta b
+$$
 
 The error in the answer is the error in the input, run through the inverse. Take
 norms — a norm is just a length, and any consistent choice works — and the
 definition of a matrix norm gives
 
-$$\lVert \delta x \rVert \;\le\; \lVert A^{-1} \rVert \, \lVert
-\delta b \rVert$$
+$$
+\lVert \delta x \rVert \le \lVert A^{-1} \rVert \lVert \delta b \rVert
+$$
 
 That is the whole mechanism: *how much can the inverse stretch things*. Second
 step, and it is only there to make the statement *relative* rather than absolute,
 because a relative error is what anybody actually cares about. From *b* = *A**x*,
 the same inequality the other way round gives ‖*b*‖ ≤ ‖*A*‖ ‖*x*‖, or
 
-$$\frac{1}{\lVert x \rVert} \;\le\; \frac{\lVert A
-\rVert}{\lVert b \rVert}$$
+$$
+\frac{1}{\lVert x \rVert} \le \frac{\lVert A \rVert}{\lVert b \rVert}
+$$
 
 Multiply the two together and the constant that falls out is not a choice
 somebody made:
 
-$$\frac{\lVert \delta x \rVert}{\lVert x \rVert} \;\le\;
-\underbrace{\lVert A \rVert \, \lVert A^{-1}
-\rVert}_{\kappa(A)} \; \frac{\lVert \delta b \rVert}{\lVert b
-\rVert}$$
+$$
+\frac{\lVert \delta x \rVert}{\lVert x \rVert} \le \underbrace{\lVert A \rVert \lVert A^{-1} \rVert}_{\kappa(A)} \quad \frac{\lVert \delta b \rVert}{\lVert b \rVert}
+$$
 
 ‖*A*‖ ‖*A*⁻¹‖ is what is left over when you ask how far a solution can move, and
 in the two-norm it is exactly *σ*ₘₐₓ/*σ*ₘᵢₙ. The geometry and the algebra are the

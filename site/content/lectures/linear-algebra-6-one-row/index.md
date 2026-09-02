@@ -69,7 +69,7 @@ And its residual is 0e+00, against a typical residual of 0.69 elsewhere in the s
 The fitted values are *Xβ̂* = *Hy* where *H* = *X*(*X*ᵗ*X*)⁻¹*X*ᵗ is the projection onto the column space, and *hᵢ* — the *i*-th diagonal entry — is how much of the *i*-th fitted value comes from the *i*-th observation. Its trace is
 
 $$
-\mathrm{tr}(H) \;=\; \mathrm{tr}\!\left( (X^{\top}X)^{-1} X^{\top}X \right) \;=\; p
+\mathrm{tr}(H) = \mathrm{tr}\left( (X^{\top}X)^{-1} X^{\top}X \right) = p
 $$
 
 using only that the trace does not care about the order of a product. So the leverages sum to *p* no matter what the data looks like, the mean is *p*/*n* = 0.004 here, and every threshold you have seen — 2*p*/*n*, 3*p*/*n* — is a multiple of a quantity you already know before collecting anything.

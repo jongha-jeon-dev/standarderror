@@ -46,7 +46,7 @@ Seven episodes, every one of them about *X*ᵗ*X* — its condition number, its 
 Logistic regression breaks that. The log-likelihood is
 
 $$
-\ell(\beta) \;=\; \sum_i \left[ y_i \, x_i^{\top}\beta - \log\!\left(1 + e^{x_i^{\top}\beta}\right) \right]
+\ell(\beta) = \sum_i \left[ y_i x_i^{\top}\beta - \log\left(1 + e^{x_i^{\top}\beta}\right) \right]
 $$
 
 and setting its gradient to zero gives *X*ᵗ(*y* − *p*) = 0 where *p* depends on β. Non-linear. No formula.
@@ -54,7 +54,7 @@ and setting its gradient to zero gives *X*ᵗ(*y* − *p*) = 0 where *p* depends
 So it is iterated. And the iteration is not a new piece of machinery — it is the old one, applied repeatedly. Newton's method needs the Hessian, which here is −*X*ᵗ*WX* with *W* = diag(*p*(1 − *p*)), and one Newton step written out is
 
 $$
-\beta_{\text{new}} \;=\; \left(X^{\top} W X\right)^{-1} X^{\top} W z, \qquad z \;=\; X\beta + W^{-1}(y - p)
+\beta_{\text{new}} = \left(X^{\top} W X\right)^{-1} X^{\top} W z, \qquad z = X\beta + W^{-1}(y - p)
 $$
 
 which is a weighted least squares fit of a *working response* `z` on the same *X*. That is the whole algorithm. Iteratively reweighted least squares, and it is Newton's method wearing episode one's clothes.

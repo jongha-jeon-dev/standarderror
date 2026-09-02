@@ -112,7 +112,7 @@ One thing about low-rank approximation is completely settled, and it is worth st
 Eckart and Young, 1936. Among all matrices of rank *k*, the one closest to *Y* in Frobenius norm is *Y*'s own truncated SVD, and the error is the tail of the spectrum:
 
 $$
-\min_{\mathrm{rank}(B) = k} \| Y - B \|_F \;=\; \sqrt{\sum_{j > k} s_j^2}
+\min_{\mathrm{rank}(B) = k} \lVert Y - B \rVert_F = \sqrt{\sum_{j > k} s_j^2}
 $$
 
 Both halves are exact. The minimiser is *U*ₖ diag(*s*ₖ) *V*ₖᵗ and the value is the square root of the sum of the discarded squared singular values — no approximation, no asymptotics, no assumption about where *Y* came from. It is why every low-rank method in use is a truncated factorisation, and it is one of the few results in this series that never breaks.

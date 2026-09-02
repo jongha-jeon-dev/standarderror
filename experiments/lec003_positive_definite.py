@@ -653,7 +653,7 @@ single matrix *Z* — centred, scaled — and the correlation matrix is
 *Z*ᵗ*Z*/(*n*−1). That is a Gram matrix, the same object whose condition number
 we spent last episode complaining about, and for any weights *w*
 
-$$w^{\\top} Z^{\\top} Z w = \\lVert Z w \\rVert^{2} \\;\\ge\\; 0$$
+$$w^{\\top} Z^{\\top} Z w = \\lVert Z w \\rVert^{2}  \\ge  0$$
 
 A squared length. There is no arrangement of data that makes it negative, so a
 complete-case correlation matrix is feasible by construction rather than by
@@ -782,18 +782,18 @@ rather than only the leading ones. Take the whole determinant of the 3 × 3
 correlation matrix, which multiplies out to
 
 $$\\det R = 1 + 2 \\rho_{{ab}} \\rho_{{ac}} \\rho_{{bc}} - \\rho_{{ab}}^{{2}} -
-\\rho_{{ac}}^{{2}} - \\rho_{{bc}}^{{2}} \\;\\ge\\; 0$$
+\\rho_{{ac}}^{{2}} - \\rho_{{bc}}^{{2}}  \\ge  0$$
 
 and read it as a quadratic in the one correlation we want to solve for:
 
-$$-\\rho_{{bc}}^{{2}} + 2 \\rho_{{ab}} \\rho_{{ac}} \\, \\rho_{{bc}} + \\left(1 -
-\\rho_{{ab}}^{{2}} - \\rho_{{ac}}^{{2}}\\right) \\;\\ge\\; 0$$
+$$-\\rho_{{bc}}^{{2}} + 2 \\rho_{{ab}} \\rho_{{ac}}  \\rho_{{bc}} + \\left(1 -
+\\rho_{{ab}}^{{2}} - \\rho_{{ac}}^{{2}}\\right)  \\ge  0$$
 
 A downward parabola, so the feasible set is the closed interval between its two
 roots, and the quadratic formula gives them directly:
 
-$$\\rho_{{bc}} \\in \\left[\\; \\rho_{{ab}} \\rho_{{ac}} - \\sqrt{{(1 -
-\\rho_{{ab}}^{{2}})(1 - \\rho_{{ac}}^{{2}})}}, \\;\\; \\rho_{{ab}} \\rho_{{ac}}
+$$\\rho_{{bc}} \\in \\left[ \\rho_{{ab}} \\rho_{{ac}} - \\sqrt{{(1 -
+\\rho_{{ab}}^{{2}})(1 - \\rho_{{ac}}^{{2}})}}, \\quad \\rho_{{ab}} \\rho_{{ac}}
 + \\sqrt{{(1 - \\rho_{{ab}}^{{2}})(1 - \\rho_{{ac}}^{{2}})}} \\;\\right]$$
 
 Now substitute *ρ*_ab_ = cos *α* and *ρ*_ac_ = cos *β*. The square root becomes

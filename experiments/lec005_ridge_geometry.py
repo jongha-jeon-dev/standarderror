@@ -535,7 +535,7 @@ So the two statistics disagree in both directions, and it is not that one of the
 Write the design by its singular value decomposition, *X* = *UΣV*ᵗ. Then the ridge solution is
 
 $$
-\\hat\\beta_{{\\alpha}} = V \\, \\mathrm{{diag}}\\!\\left(\\frac{{s_i}}{{s_i^{{2}} + \\alpha}}\\right) U^{{\\top}} y
+\\hat\\beta_{{\\alpha}} = V  \\mathrm{{diag}}\\left(\\frac{{s_i}}{{s_i^{{2}} + \\alpha}}\\right) U^{{\\top}} y
 $$
 
 and comparing it with least squares, which is the same expression with 1/*sᵢ* in the middle, the entire difference is a multiplier per direction:
@@ -556,7 +556,7 @@ That is the whole of it, and it is why the method works: the directions it destr
         f"""Add those multipliers up and you get the trace of the ridge hat matrix, which is the number of parameters the fit actually used:
 
 $$
-\\mathrm{{df}}(\\alpha) \\;=\\; \\sum_i \\frac{{s_i^{{2}}}}{{s_i^{{2}} + \\alpha}}
+\\mathrm{{df}}(\\alpha)  =  \\sum_i \\frac{{s_i^{{2}}}}{{s_i^{{2}} + \\alpha}}
 $$
 
 At *α* = 0 it is *p*. As *α* grows it falls smoothly, and there is nothing discrete about it — a direction can count as 0.3 of a parameter.

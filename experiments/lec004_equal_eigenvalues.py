@@ -564,7 +564,7 @@ The share of variance does not order the stability. It does not even correlate w
 That is not a coincidence of this matrix, it is a theorem. The Davis-Kahan *sin θ* theorem bounds how far an eigenvector can move when the matrix is perturbed by *E*, and in the form Yu, Wang and Samworth state for statisticians it reads
 
 $$
-\\sin \\theta \\;\\le\\; \\frac{{2^{{3/2}} \\, \\lVert E \\rVert_{{\\mathrm{{op}}}}}}{{\\min(\\lambda_{{j-1}} - \\lambda_j, \\; \\lambda_j - \\lambda_{{j+1}})}}
+\\sin \\theta  \\le  \\frac{{2^{{3/2}}  \\lVert E \\rVert_{{\\mathrm{{op}}}}}}{{\\min(\\lambda_{{j-1}} - \\lambda_j,  \\quad \\lambda_j - \\lambda_{{j+1}})}}
 $$
 
 The numerator is how much noise there is. The denominator is the gap. Nothing in that expression is the share of variance.""",
@@ -622,7 +622,7 @@ PC1 and PC2 are {top['gap']:.2f} apart and the axis moves {top['measured']:.0f} 
 First-order perturbation theory says where the rest of it went. The movement of the *j*-th eigenvector under a perturbation *E* is a sum over the other eigenvectors,
 
 $$
-\\delta v_j \\;\\approx\\; \\sum_{{k \\ne j}} \\frac{{v_k^{{\\top}} E \\, v_j}}{{\\lambda_j - \\lambda_k}} \\, v_k
+\\delta v_j  \\approx  \\sum_{{k \\ne j}} \\frac{{v_k^{{\\top}} E  v_j}}{{\\lambda_j - \\lambda_k}}  v_k
 $$
 
 and the gap is only the denominator. The numerator is how strongly the noise you actually got connects those two particular directions, and it is not a constant: measured across {COUPLING_REPS} samples it is {top['coupling']:.4f} for the top pair and {bot['coupling']:.4f} for the bottom one — a factor of {top['coupling'] / bot['coupling']:.0f}, inside one matrix.
