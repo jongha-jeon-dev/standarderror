@@ -130,7 +130,10 @@ def main(episodes: list[str]) -> int:
         pages = sorted(SITE.glob(f"linear-algebra-{ep}-*/index.md"))
         if len(pages) != 1:
             raise SystemExit(f"episode {ep}: found {len(pages)} pages")
-        hero = f"lec0{ep}-hero-notion.svg"
+        # The PNG, not the SVG wrapper: `create_attachment`'s `source_url`
+        # downloads from the public repo server-side, so the 200 KiB inline cap
+        # that forced the wrapper does not apply.
+        hero = f"lec0{ep}-hero.png"
         md, figs = convert(pages[0], hero)
         dest = OUT / f"lec0{ep}.md"
         dest.write_text(md, encoding="utf-8")
