@@ -211,3 +211,122 @@ class TestTheGradientCheck:
         loss, grad, v = self._design()
         got = fd.smallest_detectable_bug(loss, grad, v, 1e-17, index=2)
         assert np.isnan(got["detectable"]) or got["detectable"] > 0.5
+
+
+class TestTheBfloat16Quantiser:
+    """Written by hand rather than imported, so it needs checking against the
+    thing it claims to be."""
+
+    def test_it_agrees_with_torch_on_three_thousand_values(self):
+        torch = pytest.importorskip("torch")
+        rng = np.random.default_rng(0)
+        vals = np.concatenate([
+            rng.standard_normal(2000).astype(np.float32),
+            (rng.standard_normal(500) * 1e-6).astype(np.float32),
+            (rng.standard_normal(500) * 1e6).astype(np.float32)])
+        mine = fd.to_bfloat16(vals)
+        theirs = (torch.tensor(vals).to(torch.bfloat16)
+                  .to(torch.float32).numpy())
+        assert np.array_equal(mine, theirs)
+
+    def test_its_epsilon_is_two_to_the_minus_seven(self):
+        """The gap convention, matching `np.finfo`. Unit roundoff -- 2**-8 --
+        is a different number and mixing the two costs a factor of two."""
+        one = np.float32(1.0)
+        assert float(fd.to_bfloat16(one + np.float32(2.0 ** -7))) > 1.0
+        assert float(fd.to_bfloat16(one + np.float32(2.0 ** -9))) == 1.0
+        assert fd.EPS_BY_PRECISION["bfloat16"] == 2.0 ** -7
+
+    def test_it_keeps_float32s_exponent_range(self):
+        """Which is the entire reason the format exists: 1e-30 survives in
+        bfloat16 and is zero in float16."""
+        assert float(fd.to_bfloat16(np.float32(1e-30))) > 0.0
+        assert float(np.float16(1e-30)) == 0.0
+
+    def test_an_unknown_precision_is_refused(self):
+        with pytest.raises(ValueError, match="unknown precision"):
+            fd.quantise(1.0, "float8")
+
+
+class TestThePrecisionTable:
+    @pytest.fixture(scope="class")
+    def rows(self):
+        hs = 10.0 ** -np.arange(-1.5, 9, 0.25)
+        return {r["precision"]: r
+                for r in fd.precision_table(np.sin, np.cos, 1.0, hs)}
+
+    def test_epsilon_spans_thirteen_orders_of_magnitude(self, rows):
+        assert (rows["bfloat16"]["eps"] / rows["float64"]["eps"]) > 1e13
+
+    def test_the_optimal_step_moves_with_the_cube_root_of_eps(self, rows):
+        """The exponent transfers across all four formats, which is the claim
+        that makes one derivation worth four measurements."""
+        for name, r in rows.items():
+            assert 0.05 < r["measured_h"] / r["predicted_h"] < 20, name
+
+    def test_the_predicted_floor_is_optimistic_in_every_row(self, rows):
+        """And by one to two decades, because the derivation drops the
+        derivative constants. So the formula scales an expectation; it does not
+        predict an error."""
+        for name, r in rows.items():
+            ratio = r["predicted_floor"] / r["measured_error"]
+            assert ratio > 5.0, (name, ratio)
+
+    def test_the_error_still_rises_by_ten_orders_across_the_formats(self, rows):
+        assert (rows["bfloat16"]["measured_error"]
+                / rows["float64"]["measured_error"]) > 1e10
+
+    def test_a_step_below_the_smallest_subnormal_is_not_a_measurement(self):
+        """It rounds to zero, and a zero step is undefined rather than
+        inaccurate. `argmin` would have picked the NaN."""
+        hs = np.array([1e-2, 1e-30])
+        s = fd.precision_sweep(np.sin, np.cos, 1.0, hs, precision="float16")
+        assert np.isnan(s.error[1])
+        assert s.measured == 1
+        assert s.best_h == 1e-2
+
+    def test_an_unknown_scheme_is_refused_here_too(self):
+        with pytest.raises(ValueError, match="unknown scheme"):
+            fd.difference_in(np.sin, 1.0, 1e-5, precision="float32",
+                             kind="backward")
+
+
+class TestWhatTheCheckCanSeeInEachPrecision:
+    """The episode's payoff, and the number I got wrong before measuring it."""
+
+    @pytest.fixture(scope="class")
+    def best(self):
+        loss, grad, v = fd.gradient_check_design()
+        hs = 10.0 ** -np.arange(-1.5, 9, 0.25)
+        return {p: fd.best_detectable(loss, grad, v, hs, index=2, precision=p)
+                for p in fd.PRECISIONS}
+
+    def test_float64_resolves_a_ten_billionth(self, best):
+        assert best["float64"]["detectable"] < 1e-9
+
+    def test_float32_loses_five_orders_of_magnitude(self, best):
+        assert 1e-5 < best["float32"]["detectable"] < 1e-4
+        assert best["float32"]["detectable"] / best["float64"]["detectable"] > 1e4
+
+    def test_a_bfloat16_check_cannot_see_a_ten_percent_error(self, best):
+        """At *any* step, having searched. So in bfloat16 the gradient check is
+        not a weak test, it is not a test."""
+        assert best["bfloat16"]["detectable"] > 0.10
+        assert best["float16"]["detectable"] > 0.05
+
+    def test_deriving_that_number_from_eps_gets_it_wrong(self, best):
+        """`eps**(2/3)` for bfloat16 is 3.9e-02 and the measured answer is
+        1.7e-01. I wrote the derived one down first."""
+        derived = fd.error_floor("central",
+                                 eps=fd.EPS_BY_PRECISION["bfloat16"])
+        assert derived == pytest.approx(3.9e-2, rel=0.05)
+        assert best["bfloat16"]["detectable"] / derived > 3.0
+
+    def test_the_span_is_nine_orders_of_magnitude(self, best):
+        assert (best["bfloat16"]["detectable"]
+                / best["float64"]["detectable"]) > 1e8
+
+    def test_a_grid_that_detects_nothing_is_an_error_not_a_number(self):
+        loss, grad, v = fd.gradient_check_design()
+        with pytest.raises(ValueError, match="no step in the grid"):
+            fd.best_detectable(loss, grad, v, [1e-30], precision="float16")

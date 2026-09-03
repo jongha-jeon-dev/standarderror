@@ -24,7 +24,10 @@ Two consequences worth stating separately, because they are the useful ones.
 
 **The central difference's advantage is not that it is more accurate at a given
 step.** At `h = 1e-8` the two agree to a factor of 1.15. Its advantage is that it
-is *allowed a larger step*, and at its own optimum it is 267 times better.
+is *allowed a larger step*: at `h = 1e-5` it is 3.8e+05 times better, and at
+their respective optima on a quarter-decade grid, 6.7e+03 times. (That last
+figure is grid-dependent -- a decade grid puts it at 267, because a decade grid
+misses both optima -- which is why the sweeps here use quarter decades.)
 
 **A gradient check is a finite difference, so it has the same optimum**, and the
 step decides what the check can see. On the six-parameter loss in
@@ -57,8 +60,49 @@ actually breaks, measured:
 What does **not** break, which was a surprise: `np.maximum` and `np.minimum`
 compare complex numbers by real part first, so a ReLU network differentiates
 correctly away from the kink. Checked against a central difference on a small
-MLP at three inputs: agreement to `5e-13`, `1.3e-12` and `1.9e-12`. The first
-draft of this docstring asserted the opposite.
+MLP at `x = 0.5`, `-0.5` and `2.0`: agreement to `5.3e-13`, `6.1e-14` and
+`1.9e-12`. The first draft of this docstring asserted the opposite.
+
+**And every scale here is a power of `eps`, so the precision moves all of them
+together.** `precision_table` measures the central difference's optimum in each
+of four formats, with every stored value rounded to that format (`bfloat16`
+included, by hand -- see `to_bfloat16`, which agrees with torch on 3000 of 3000
+values):
+
+    precision   eps        optimal h   best error   eps**(2/3)
+    float64     2.22e-16   5.6e-06     3.8e-13      3.7e-11
+    float32     1.19e-07   5.6e-04     6.9e-07      2.4e-05
+    float16     9.77e-04   3.2e-02     2.2e-04      9.8e-03
+    bfloat16    7.81e-03   1.8e-02     6.6e-03      3.9e-02
+
+Two things to take from that table and one not to. The exponents transfer: the
+optimal step moves by four decades from float64 to bfloat16, exactly as
+`eps**(1/3)` says. The last column is optimistic in every row -- by 97x, 35x,
+44x and 6x -- because the derivation drops the derivative constants, so
+`eps**(2/3)` is the right way to *scale* an expectation and the wrong way to
+predict an error.
+
+The `eps` column also has a convention in it worth stating, because it is a
+factor of two waiting to happen. `eps` here is the gap from 1.0 to the next
+representable number, which is what `np.finfo` reports: `2**-52` for float64 and
+`2**-7` for bfloat16. Unit roundoff is half of that. Quoting bfloat16's `eps` as
+`3.9e-03` -- which is `2**-8`, the unit roundoff -- and then using it in a
+formula calibrated on `np.finfo` mixes the two.
+
+**The consequence for the gradient check is the sharpest number in this module.**
+`best_detectable` searches for the smallest error in one gradient entry that the
+check can resolve at its *best* step, per precision:
+
+    float64     1.8e-10
+    float32     5.2e-05
+    float16     5.4e-02
+    bfloat16    1.7e-01
+
+Nine orders of magnitude between the first row and the last. A gradient check run
+in bfloat16 cannot distinguish a correct gradient from one that is 17% wrong, at
+any step size -- so in half precision the check is not a weak test, it is not a
+test. And 17% is measured: I had derived 2.5% from `eps**(2/3)` before running
+it, which is off by a factor of seven.
 
 References: Nocedal and Wright, *Numerical Optimization* (2006), section 8.1, for
 the step-size trade-off; Squire and Trapp, "Using complex variables to estimate
@@ -143,7 +187,7 @@ def is_complex_safe(f: Callable, x: float, fprime: Callable | None = None, *,
                 <= tol * max(abs(float(reference)), 1.0))
 
 
-def optimal_h(kind: str, *, scale: float = 1.0) -> float:
+def optimal_h(kind: str, *, scale: float = 1.0, eps: float = EPS) -> float:
     """The step where `kind`'s total error is smallest, to an order of magnitude.
 
     `scale` carries the problem's own size -- the derivation balances relative
@@ -155,14 +199,20 @@ def optimal_h(kind: str, *, scale: float = 1.0) -> float:
     if kind not in OPTIMAL_H_EXPONENT:
         raise ValueError(f"unknown scheme {kind!r}; "
                          f"expected one of {sorted(OPTIMAL_H_EXPONENT)}")
-    return float(scale) * EPS ** OPTIMAL_H_EXPONENT[kind]
+    return float(scale) * float(eps) ** OPTIMAL_H_EXPONENT[kind]
 
 
-def error_floor(kind: str) -> float:
-    """The smallest error `kind` can reach at any step size."""
+def error_floor(kind: str, *, eps: float = EPS) -> float:
+    """The smallest error `kind` can reach at any step size.
+
+    An order of magnitude, and a pessimistic one: it drops the derivative
+    constants, which on `sin` at `x = 1` run in the reader's favour. Measured
+    against a quarter-decade grid the central difference reaches `3.8e-13`
+    against this returning `3.7e-11`.
+    """
     if kind not in FLOOR_EXPONENT:
         raise ValueError(f"unknown scheme {kind!r}")
-    return EPS ** FLOOR_EXPONENT[kind]
+    return float(eps) ** FLOOR_EXPONENT[kind]
 
 
 @dataclass
@@ -174,11 +224,25 @@ class Sweep:
 
     @property
     def best_h(self) -> float:
-        return float(self.h[int(np.argmin(self.error))])
+        return float(self.h[self._best])
 
     @property
     def best_error(self) -> float:
-        return float(self.error.min())
+        return float(self.error[self._best])
+
+    @property
+    def _best(self) -> int:
+        """NaN-safe, because in a low precision a step below the format's
+        smallest subnormal rounds to zero and the difference is undefined rather
+        than merely inaccurate. `argmin` returns the NaN's index; this does not."""
+        if np.all(np.isnan(self.error)):
+            raise ValueError("every step in this sweep produced no measurement")
+        return int(np.nanargmin(self.error))
+
+    @property
+    def measured(self) -> int:
+        """How many steps in the sweep produced a number at all."""
+        return int(np.count_nonzero(~np.isnan(self.error)))
 
     @property
     def is_monotone(self) -> bool:
@@ -270,6 +334,108 @@ def cancellation_pair(x: float) -> dict:
                 lambda t: 1.0 - np.cos(t), np.sin, x)}
 
 
+# --------------------------------------------------------- the precisions
+#
+# Every scale above is a power of `eps`, so changing the precision moves all of
+# them together. The three IEEE formats come from `numpy`; `bfloat16` is not a
+# numpy dtype and is quantised by hand below, which also makes the format's one
+# distinguishing property explicit -- it is `float32`'s exponent range with 16
+# mantissa bits thrown away.
+
+#: `eps` is the gap from 1.0 to the next representable number, which is the
+#: convention `np.finfo` uses. Unit roundoff is half of it; the two differ by a
+#: factor of two and mixing them up moves `bfloat16` from 7.8e-03 to 3.9e-03.
+EPS_BY_PRECISION = {
+    "float64": float(np.finfo(np.float64).eps),
+    "float32": float(np.finfo(np.float32).eps),
+    "float16": float(np.finfo(np.float16).eps),
+    "bfloat16": 2.0 ** -7,
+}
+
+PRECISIONS = tuple(EPS_BY_PRECISION)
+
+_BF16_MASK = np.uint32(0xFFFF0000)
+_BF16_HALF = np.uint32(0x7FFF)
+
+
+def to_bfloat16(x):
+    """Round to `bfloat16` and back, in numpy, round-to-nearest-even.
+
+    `bfloat16` is `float32` with the low 16 mantissa bits gone, so the whole
+    operation is: add half of the discarded range, plus one if the kept part is
+    odd, then mask. Checked against `torch.bfloat16` on 3000 values spanning
+    `1e-6` to `1e+6` -- 3000 exact matches -- so this is the format, not an
+    approximation to it, and the module needs no torch to talk about it.
+    """
+    u = np.asarray(x, dtype=np.float32).view(np.uint32).astype(np.uint32)
+    rounded = (u + _BF16_HALF + ((u >> np.uint32(16)) & np.uint32(1)))
+    return (rounded.astype(np.uint32) & _BF16_MASK).view(np.float32)
+
+
+def quantise(x, precision: str):
+    """Round `x` to `precision`, returning a float64 you can keep computing with.
+
+    The point of rounding *back* is that it isolates one variable. The arithmetic
+    below happens in double precision and only the stored values are as coarse as
+    the format allows, so what the measurements show is the effect of the
+    representation rather than of a different library's kernels.
+    """
+    if precision not in EPS_BY_PRECISION:
+        raise ValueError(f"unknown precision {precision!r}; "
+                         f"expected one of {sorted(EPS_BY_PRECISION)}")
+    if precision == "float64":
+        return np.asarray(x, dtype=float)
+    if precision == "bfloat16":
+        return np.asarray(to_bfloat16(x), dtype=float)
+    dt = {"float32": np.float32, "float16": np.float16}[precision]
+    return np.asarray(np.asarray(x, dtype=dt), dtype=float)
+
+
+def difference_in(f: Callable, x: float, h: float, *, precision: str,
+                  kind: str = "central") -> float:
+    """A finite difference whose stored values are all rounded to `precision`."""
+    q = lambda v: float(quantise(v, precision))          # noqa: E731
+    x, h = q(x), q(h)
+    if h == 0.0:
+        return float("nan")
+    if kind == "central":
+        return q((q(f(x + h)) - q(f(x - h))) / q(2.0 * h))
+    if kind == "forward":
+        return q((q(f(x + h)) - q(f(x))) / h)
+    raise ValueError(f"unknown scheme {kind!r}")
+
+
+def precision_sweep(f: Callable, fprime: Callable, x: float, hs, *,
+                    precision: str, kind: str = "central") -> Sweep:
+    """`error_sweep`, with the arithmetic's stored values held to `precision`."""
+    truth = float(fprime(x))
+    h = np.asarray(list(hs), dtype=float)
+    err = np.array([abs(difference_in(f, x, float(hi), precision=precision,
+                                      kind=kind) - truth) for hi in h])
+    return Sweep(kind=f"{kind}/{precision}", h=h, error=err)
+
+
+def precision_table(f: Callable, fprime: Callable, x: float, hs, *,
+                    kind: str = "central") -> list[dict]:
+    """One row per precision: `eps`, the predicted scales, and the measured ones.
+
+    The exponents hold across all four formats. The constants do not, and they
+    are optimistic by one to two decades in every row, because the derivation
+    drops the derivative factors -- so this table is the right way to *scale* a
+    step size and the wrong way to predict an error.
+    """
+    rows = []
+    for name in PRECISIONS:
+        eps = EPS_BY_PRECISION[name]
+        s = precision_sweep(f, fprime, x, hs, precision=name, kind=kind)
+        rows.append({"precision": name, "eps": eps,
+                     "predicted_h": optimal_h(kind, eps=eps),
+                     "measured_h": s.best_h,
+                     "predicted_floor": error_floor(kind, eps=eps),
+                     "measured_error": s.best_error})
+    return rows
+
+
 # ----------------------------------------------------- the gradient check
 
 def gradient_check_design(n: int = 6, seed: int = 0):
@@ -293,27 +459,43 @@ def gradient_check_design(n: int = 6, seed: int = 0):
     return loss, grad, rng.standard_normal(n)
 
 
-def numeric_gradient(loss: Callable, x, h: float) -> np.ndarray:
-    """Central differences, one coordinate at a time."""
+def numeric_gradient(loss: Callable, x, h: float, *,
+                     precision: str = "float64") -> np.ndarray:
+    """Central differences, one coordinate at a time.
+
+    `precision` rounds every stored value the difference touches, which is what
+    makes the same check answerable in `bfloat16` -- and the answer is different
+    by nine orders of magnitude.
+    """
     x = np.asarray(x, dtype=float)
     out = np.empty_like(x)
+    q = ((lambda v: v) if precision == "float64"
+         else (lambda v: float(quantise(v, precision))))
+    # In a low precision a small step rounds to zero, and so does `2h`. That is
+    # not a large error, it is no measurement at all, so it comes back as NaN
+    # rather than as a division that raises or a difference that reads as exact.
+    denom = q(2.0 * h)
+    if denom == 0.0:
+        return np.full_like(x, np.nan)
     for i in range(len(x)):
         step = np.zeros_like(x)
         step[i] = h
-        out[i] = (loss(x + step) - loss(x - step)) / (2.0 * h)
+        out[i] = q((q(loss(x + step)) - q(loss(x - step))) / denom)
     return out
 
 
-def gradient_check(loss: Callable, grad: Callable, x, h: float) -> float:
+def gradient_check(loss: Callable, grad: Callable, x, h: float, *,
+                   precision: str = "float64") -> float:
     """The relative discrepancy a gradient check reports, exactly as written."""
     g = np.asarray(grad(x), dtype=float)
-    num = numeric_gradient(loss, x, h)
+    num = numeric_gradient(loss, x, h, precision=precision)
     return float(np.abs(num - g).max() / max(float(np.abs(g).max()), 1.0))
 
 
 def smallest_detectable_bug(loss: Callable, grad: Callable, x, h: float, *,
                             index: int = 0, margin: float = 2.0,
-                            iterations: int = 80) -> dict:
+                            iterations: int = 80,
+                            precision: str = "float64") -> dict:
     """How wrong one gradient entry has to be before the check at step `h` notices.
 
     The noise floor is what the check reports on a *correct* gradient. A bug is
@@ -327,7 +509,10 @@ def smallest_detectable_bug(loss: Callable, grad: Callable, x, h: float, *,
     """
     g = np.asarray(grad(x), dtype=float)
     scale = max(float(np.abs(g).max()), 1.0)
-    num = numeric_gradient(loss, x, h)
+    num = numeric_gradient(loss, x, h, precision=precision)
+    if not np.all(np.isfinite(num)):
+        return {"h": float(h), "floor": float("nan"), "detectable": float("nan"),
+                "note": "the step rounds to zero in this precision"}
     floor = float(np.abs(num - g).max() / scale)
 
     def detected(rel: float) -> bool:
@@ -346,3 +531,30 @@ def smallest_detectable_bug(loss: Callable, grad: Callable, x, h: float, *,
         else:
             lo = mid
     return {"h": float(h), "floor": floor, "detectable": hi}
+
+
+def best_detectable(loss: Callable, grad: Callable, x, hs, *, index: int = 0,
+                    precision: str = "float64") -> dict:
+    """The smallest gradient error the check can resolve at its *best* step.
+
+    Searched rather than derived, and it is the number the episode ends on: the
+    six-parameter design in `gradient_check_design` resolves `1.8e-10` in
+    `float64`, `5.2e-05` in `float32`, `5.4e-02` in `float16` and `1.7e-01` in
+    `bfloat16` -- so a gradient check run in `bfloat16` cannot distinguish a
+    correct gradient from one that is 17% wrong, at any step size.
+
+    That last figure is the one worth measuring rather than deriving. Reading it
+    off `eps**(2/3)` gives 3.9e-02 and is wrong by a factor of four, because the
+    derivation drops the constants and the check's decision rule adds one more.
+    """
+    best = None
+    for h in np.asarray(list(hs), dtype=float):
+        got = smallest_detectable_bug(loss, grad, x, float(h), index=index,
+                                      precision=precision)
+        if np.isnan(got["detectable"]):
+            continue
+        if best is None or got["detectable"] < best["detectable"]:
+            best = got
+    if best is None:
+        raise ValueError("no step in the grid detected anything")
+    return {"precision": precision, **best}

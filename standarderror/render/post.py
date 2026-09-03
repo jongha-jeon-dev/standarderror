@@ -212,6 +212,19 @@ class Post:
         (r"\, ", " "), (r"\,", " "), (r"\!", ""),
     )
 
+    #: Goldmark runs SmartyPants before KaTeX sees the page, so these get
+    #: rewritten inside maths as if it were prose: an apostrophe becomes a curly
+    #: quote, three dots become an ellipsis. Longest first, so a triple prime is
+    #: consumed before a single one.
+    SMART_SUBS = (
+        ("'''", r"^{\prime\prime\prime}"),
+        ("''", r"^{\prime\prime}"),
+        ("'", r"^{\prime}"),
+        ("...", r"\dots"),
+        ("---", "-"),
+        ("--", "-"),
+    )
+
     @classmethod
     def _safe_equation(cls, eq: str) -> str:
         """One line, and nothing goldmark will rewrite.
@@ -225,9 +238,17 @@ class Post:
           of the maths. Joining the span onto one line removes every
           line-initial character markdown cares about at once, which is why this
           collapses newlines instead of escaping the `+`.
+
+        And a third, found the same way one episode later: **SmartyPants runs on
+        the maths too.** An apostrophe is the natural way to write a derivative,
+        and Hugo turns `f'(x)` into a curly-quoted version that KaTeX does not
+        read as a prime. `SMART_SUBS` rewrites primes as a backslash-prime, which is in
+        the backslash-plus-letters vocabulary that survives every pass.
         """
         eq = " ".join(eq.split())
         for a, b in cls.EQUATION_SUBS:
+            eq = eq.replace(a, b)
+        for a, b in cls.SMART_SUBS:
             eq = eq.replace(a, b)
         parts = eq.split(r"\|")
         if len(parts) == 3:

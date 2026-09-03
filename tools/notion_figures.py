@@ -77,15 +77,36 @@ def labels(text: str) -> list[str]:
 
 
 def build(experiment: str) -> list[Path]:
+    """Render `experiment`'s figures as SVG and return the body ones.
+
+    Called with an experiment module name it re-runs the figures; called with a
+    filename prefix such as `lec101` it takes whatever SVGs are already in the
+    build directory. The second form exists because `figures()` does not have
+    one signature across episodes -- episode 1 of the second series takes a
+    second argument for the network half -- and a tool that has to know each
+    experiment's call shape breaks every time one of them grows an argument.
+
+    The cover is skipped, and not because it is optional. A hand-drawn card is
+    xkcd-wobbled, so every straight line is a many-point path: lec01-hero is
+    890 KB of SVG and 453 KB after scour, against Notion's 200 KiB inline cap.
+    Use `tools/notion_hero.py` for those.
+    """
     os.environ["SERR_SVG_FONTS"] = "reference"
     os.environ["SERR_FIG_EXT"] = "svg"
-    mod = importlib.import_module(f"experiments.{experiment}")
+    try:
+        mod = importlib.import_module(f"experiments.{experiment}")
+    except ModuleNotFoundError:
+        import standarderror as se
+        found = sorted((se.SETTINGS.build_dir / "img").glob(f"{experiment}*.svg"))
+        if not found:
+            raise SystemExit(
+                f"{experiment!r} is neither an experiment module nor a prefix "
+                f"with rendered SVGs. Render with "
+                f"`SERR_FIG_EXT=svg standarderror run <experiment>` first."
+            ) from None
+        return [f for f in found if "hero" not in f.name]
     mod.IMG.mkdir(parents=True, exist_ok=True)
     figs = mod.figures(mod.compute())
-    # The cover is skipped, and not because it is optional. A hand-drawn card is
-    # xkcd-wobbled, so every straight line is a many-point path: lec01-hero is
-    # 890 KB of SVG and 453 KB after scour, against Notion's 200 KiB inline cap.
-    # A cover reaches Notion by `source_url` once the site is live, or by hand.
     return [Path(f.path) for name, f in figs.items()
             if name != "hero" and not name.startswith("_")]
 

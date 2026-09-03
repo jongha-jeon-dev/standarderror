@@ -25,6 +25,12 @@ LECTURES = sorted((REPO / "site" / "content" / "lectures").glob("*/index.md"))
 
 #: A backslash before any of these is a markdown escape, not a LaTeX macro.
 FRAGILE = re.compile(r"\\[;,!|\[\]{}_#$%&~^]")
+#: What SmartyPants rewrites. It runs before KaTeX and does not know it is
+#: looking at maths, so an apostrophe -- the natural way to write a
+#: derivative -- comes out as a curly quote KaTeX will not read as a prime.
+#: Found in episode 2 of the second series, by diffing a Hugo build again;
+#: nothing already in this file would have caught it.
+SMARTENED = (chr(39), chr(34), "...", "--")
 #: A line markdown would read as a list item or a heading.
 LINE_INITIAL = re.compile(r"^\s*([-+*>#]|\d+\.)\s")
 
@@ -99,3 +105,40 @@ class TestEveryPublishedLecture:
             if m and m.group(1) in {"+", "*"}:
                 raise AssertionError(
                     f"{page.parent.name}:{n} starts with {m.group(1)!r}: {line[:80]}")
+
+
+class TestSmartyPantsRunsOnTheMathsToo:
+    """The failure that got past every test above it."""
+
+    def test_the_hardener_turns_apostrophes_into_primes(self):
+        eq = "f" + chr(39) + "(x) + f" + chr(39) * 2 + "(x)"
+        got = Post._safe_equation(eq)
+        assert chr(39) not in got, got
+        assert got.count(chr(92) + "prime") == 3, got
+
+    def test_a_triple_prime_is_consumed_before_a_single_one(self):
+        got = Post._safe_equation("f" + chr(39) * 3 + "(x)")
+        assert got.count(chr(92) + "prime") == 3, got
+        assert chr(39) not in got
+
+    def test_it_replaces_an_ellipsis_and_a_dash_run(self):
+        got = Post._safe_equation("a + b + ... + z")
+        assert "..." not in got and (chr(92) + "dots") in got, got
+        assert "--" not in Post._safe_equation("a -- b")
+
+    def test_a_hardened_equation_has_nothing_left_to_smarten(self):
+        eq = (chr(92) + "frac{f(x+h) - f(x)}{h} = f" + chr(39)
+              + "(x) + O(h^2)")
+        got = Post._safe_equation(eq)
+        for bad in SMARTENED:
+            assert bad not in got, (bad, got)
+
+
+@pytest.mark.parametrize("page", LECTURES, ids=lambda p: p.parent.name)
+class TestNoPublishedEquationIsSmartenable:
+    def test_it(self, page):
+        for eq in equations(page.read_text(encoding="utf-8")):
+            for bad in SMARTENED:
+                assert bad not in eq, (
+                    f"{page.parent.name}: {bad!r} in "
+                    f"{chr(32).join(eq.split())[:110]}")

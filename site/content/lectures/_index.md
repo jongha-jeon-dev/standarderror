@@ -119,7 +119,8 @@ magnitude.
 | 5 | logsumexp, and the Softmax That Overflows | the max-subtraction trick as cancellation control, and what attention does in half precision where the exponent range binds before the mantissa does |
 | 6 | An Autoregressive Rollout Has a Lyapunov Time | a decode loop as an iterated map, so a one-token perturbation grows at a measurable rate — and past that horizon "the same prompt" stops being a meaningful phrase |
 
-Episode 1 is published. The rest are written in order and the table is the
-commitment; if an episode's opening claim does not survive its own measurement it
-gets corrected rather than quietly dropped, and episode 1 says where that
-already happened.
+Episodes 1 and 2 are published. The rest are written in order and the table is
+the commitment; if an episode's opening claim does not survive its own
+measurement it gets corrected rather than quietly dropped, and both published
+episodes say where that already happened — episode 1 about the edge of
+stability, episode 2 about what a bfloat16 gradient check can see.
