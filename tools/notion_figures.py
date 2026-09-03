@@ -52,6 +52,24 @@ immediately the `update_content` that references them — rather than uploading
 everything first and inserting afterwards.
 
     python tools/notion_figures.py lec001_condition_number lec002_three_ways
+
+
+WHICH ROUTE TO USE, settled by two failures rather than by preference.
+
+`source_url` is the only one that works in practice. Notion downloads the file
+server-side, so neither this container's egress policy nor the author's matters,
+and the file arrives at full quality with no size cap worth thinking about. It
+needs the figure to be fetchable, which means **the page bundle has to be pushed
+first** -- so the Notion page must be created *after* the push, not before. A
+page created first sits there with `{{FIG:...}}` placeholders in it, which is
+what the author kept seeing, four times.
+
+The inline-UTF-8 route below is real but I cannot drive it. The files are 37-46
+KB after `scour` and the cap is 200 KiB, so the sizes are fine; what fails is
+getting the exact bytes into a tool call, because the shell truncates any output
+over about 2 KB to a file and hands back a preview. So this module is for
+*preparing and checking* figures -- sizes, and the label-preservation gate below
+-- and the upload itself goes through `source_url` after a push.
 """
 
 from __future__ import annotations
