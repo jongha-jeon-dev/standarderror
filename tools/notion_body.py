@@ -37,6 +37,14 @@ AUTOLINK = re.compile(r"<(https?://[^>]+)>")
 #: Spans that must not be escaped: inline code, and markdown links.
 KEEP = re.compile(r"(`[^`]*`|\[[^\]]*\]\([^)]*\))")
 LANGS = {"text": "plain text", "txt": "plain text", "": "plain text"}
+#: A numbered list item is its own block. Without this, the six items of a
+#: "what to keep" list join into one paragraph, which is how episode 1 of the
+#: second series found this.
+ORDERED = re.compile(r"^\d+\.\s")
+#: The hero's filename, taken from the page's own front matter rather than
+#: guessed from the episode number -- the second series names its figures
+#: `lec101-*` and the guess only ever worked for the first.
+HERO = re.compile(r'^images:\s*\["([^"]+)"\]', re.M)
 
 
 def escape(line: str) -> str:
@@ -101,7 +109,8 @@ def convert(page: Path, hero: str | None) -> tuple[str, list[str]]:
         if not line.strip():
             flush()
             continue
-        if line.startswith(("#", "-", "*   ", "> ", "|")) or line == "---":
+        if (line.startswith(("#", "-", "*   ", "> ", "|")) or line == "---"
+                or ORDERED.match(line)):
             # A heading, a list item or a rule is its own block already.
             flush()
             lines.append(escape(AUTOLINK.sub(r"[\1](\1)", line)))
@@ -124,18 +133,29 @@ def convert(page: Path, hero: str | None) -> tuple[str, list[str]]:
     return out, figures
 
 
+def resolve(token: str) -> Path:
+    """A bare number means an episode of the first series; anything else is a
+    slug or a fragment of one."""
+    pattern = (f"linear-algebra-{token}-*/index.md" if token.isdigit()
+               else f"*{token}*/index.md")
+    pages = sorted(SITE.glob(pattern))
+    if len(pages) != 1:
+        raise SystemExit(f"{token!r}: matched {len(pages)} pages, need exactly 1")
+    return pages[0]
+
+
 def main(episodes: list[str]) -> int:
     OUT.mkdir(parents=True, exist_ok=True)
     for ep in episodes:
-        pages = sorted(SITE.glob(f"linear-algebra-{ep}-*/index.md"))
-        if len(pages) != 1:
-            raise SystemExit(f"episode {ep}: found {len(pages)} pages")
+        page = resolve(ep)
         # The PNG, not the SVG wrapper: `create_attachment`'s `source_url`
         # downloads from the public repo server-side, so the 200 KiB inline cap
         # that forced the wrapper does not apply.
-        hero = f"lec0{ep}-hero.png"
-        md, figs = convert(pages[0], hero)
-        dest = OUT / f"lec0{ep}.md"
+        found = HERO.search(page.read_text(encoding="utf-8"))
+        hero = found.group(1) if found else None
+        md, figs = convert(page, hero)
+        stem = page.parent.name
+        dest = OUT / f"{stem}.md"
         dest.write_text(md, encoding="utf-8")
         print(f"{dest}  {len(md.encode())/1024:.1f} KB, {len(figs)} figures")
         for f in figs:
