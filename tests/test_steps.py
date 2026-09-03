@@ -217,7 +217,8 @@ class TestTheEdgeOfStability:
     @classmethod
     def runs(cls):
         pytest.importorskip("torch")
-        return {lr: st.edge_of_stability(lr) for lr in (0.05, 0.2, 0.5, 0.8)}
+        return {lr: st.edge_of_stability(lr)
+                for lr in (0.05, 0.1, 0.2, 0.5, 0.8)}
 
     def test_the_naive_threshold_is_computed_at_initialisation(self):
         pytest.importorskip("torch")
@@ -231,8 +232,19 @@ class TestTheEdgeOfStability:
         assert runs[0.5]["loss"] < 1e-3
 
     def test_sharpness_lands_on_two_over_lr_across_a_five_fold_range(self, runs):
-        for lr in (0.2, 0.5):
-            assert runs[lr]["ratio"] == pytest.approx(1.0, abs=0.01), lr
+        for lr in (0.1, 0.2, 0.5):
+            assert runs[lr]["ratio"] == pytest.approx(1.0, abs=0.005), lr
+
+    def test_resolving_that_needs_more_power_iterations_than_the_quadratic(self):
+        """The top of a trained network's spectrum is crowded, so a cheap probe
+        under-reads it: at lr = 0.1, 60 iterations give a ratio of 0.990 and 400
+        give 1.000 -- the difference between "near the boundary" and "on it",
+        and the reason the default here is 200 rather than 60."""
+        pytest.importorskip("torch")
+        cheap = st.edge_of_stability(0.1, steps=4000, sharpness_iters=60)
+        dear = st.edge_of_stability(0.1, steps=4000, sharpness_iters=400)
+        assert cheap["ratio"] < 0.995 < dear["ratio"]
+        assert dear["ratio"] == pytest.approx(1.0, abs=0.002)
 
     def test_and_is_pushed_down_to_it_from_above(self, runs):
         """The two-sided version. `lam_max` starts at 7.36 and the `lr = 0.5`

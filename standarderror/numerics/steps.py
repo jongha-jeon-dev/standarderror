@@ -42,7 +42,8 @@ leaves exactly `kappa/(kappa+1)` -- 75% of the limit at `kappa = 3`, 99% at
 optimum is *on the cliff edge*, and "raise the learning rate until it breaks,
 then back off a little" is very nearly the right procedure, which is both why it
 survives as folklore and why it is dangerous: the target is within 1% of a
-threshold that costs four orders of magnitude to cross.
+threshold that costs seven orders of magnitude to cross: the run at 0.99x
+the limit ends at 4.43e-04 and the one at 1.01x at 3.92e+03.
 
 What it buys is small. At `kappa = 100` the optimal contraction is
 `(kappa-1)/(kappa+1) = 0.9802` per step, or **115 steps per decade** -- and no
@@ -65,15 +66,15 @@ where they went depends on `lr`. Full-batch gradient descent on a small tanh MLP
 regimes:
 
     lr = 0.02    lam_max ends  26.8    lam_max*lr/2 = 0.268    loss monotone
-    lr = 0.05                  29.5                   0.738    loss monotone
-    lr = 0.10                  20.0                   1.001    rose on 40% of steps
+    lr = 0.05                  29.5                   0.739    loss monotone
+    lr = 0.10                  20.0                   0.999    rose on 40% of steps
     lr = 0.20                  10.0                   1.002    rose on 26% of steps
-    lr = 0.50                   4.0                   1.002    rose on 46% of steps
+    lr = 0.50                   4.0                   1.003    rose on 46% of steps
     lr = 0.80    diverged at step 6
 
 At small `lr` the sharpness rises during training and then plateaus *below* the
 boundary. From `lr = 0.1` up it stops at the boundary instead: `lam_max` lands on
-`2/lr` to within 0.2% across a five-fold range of `lr`, and from either side --
+`2/lr` to within 0.3% across a five-fold range of `lr`, and from either side --
 starting at `lam_max = 7.36`, the `lr = 0.5` run is pushed *down* to `4.0`. This
 is the edge of stability (Cohen et al., 2021), and the honest version is
 two-sided: `2/lr` is an attractor, not a ceiling that sharpness climbs to.
@@ -342,7 +343,7 @@ def sharpness_ratio(lam_max: float, lr: float) -> float:
 def edge_of_stability(lr: float, *, steps: int = 4000, width: int = 40,
                       depth: int = 2, n: int = 200, d: int = 8,
                       seed: int = 0, probes: int = 13,
-                      sharpness_iters: int = 60) -> dict:
+                      sharpness_iters: int = 200) -> dict:
     """Full-batch gradient descent on a small tanh MLP, tracking `lam_max`.
 
     Full-batch on purpose: the edge-of-stability behaviour is a property of the
@@ -351,6 +352,12 @@ def edge_of_stability(lr: float, *, steps: int = 4000, width: int = 40,
 
     Returns the final loss, the final `lam_max`, `sharpness_ratio`, the fraction
     of the second half's steps on which the loss *rose*, and a coarse trace.
+
+    `sharpness_iters` is 200 rather than the 60 that suffices on the quadratic,
+    because the top of a trained network's spectrum is crowded: at `lr = 0.1`,
+    60 iterations return `lam_max = 19.790` and 400 return `19.998`, which is
+    the difference between a ratio of 0.990 and 1.000 -- between "close to the
+    boundary" and "on it".
     """
     import torch
 
