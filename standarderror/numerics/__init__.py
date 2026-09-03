@@ -25,6 +25,6 @@ Two consequences that recur, both measured:
 
 from __future__ import annotations
 
-from . import differencing
+from . import differencing, steps
 
-__all__ = ["differencing"]
+__all__ = ["differencing", "steps"]
