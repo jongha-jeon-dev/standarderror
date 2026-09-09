@@ -772,7 +772,11 @@ A gradient check computed in bfloat16 cannot distinguish a correct gradient from
 
     post.add(
         "",
-        f"""That 17% is measured, and I want to be explicit about why it had to be. Before running it I derived the figure from `eps^(2/3)`, which for bfloat16 is `{bf_derived:.1e}`, and wrote down "a bfloat16 gradient check cannot see an error below about 2.5%". The measured answer is {best['bfloat16']['detectable'] / bf_derived:.0f} times larger. The derivation was not wrong about the *scale* — the constants it drops are exactly the ones the previous section measured, and the check's decision rule contributes one more. It was wrong as a number, which is how I had used it.
+        f"""That 17% is measured, and I want to be explicit about why it had to be. Before running anything I wrote down "a bfloat16 gradient check cannot see an error below about 2.5%", and that number was wrong twice over.
+
+`2.5e-02` is `eps^(2/3)` computed with `eps = 3.9e-03` — the *unit roundoff*, which is the convention I had not separated from the `np.finfo` one two sections ago. With the right `eps` the same formula gives `{bf_derived:.1e}`. And then the formula itself is optimistic, for the reason the precision table already showed: it drops the derivative constants, and the check's decision rule adds one more. Measured, the answer is `{best['bfloat16']['detectable']:.2f}` — `{best['bfloat16']['detectable'] / bf_derived:.1f}` times the corrected derivation and `{best['bfloat16']['detectable'] / 0.025:.1f}` times what I had written.
+
+Neither mistake was about the scale. Both were about using a scaling argument as a measurement.
 
 The practical form of all this is short. A gradient check is a float64 instrument. If the forward pass runs in half precision, the check has to run on a cast-up copy of the model — and if that is not possible, the check is not evidence.""",
         level=3)
@@ -807,7 +811,7 @@ So the guard for this method cannot be a real-part check alone. It has to corrob
 
 The condition number of an evaluation, `|x f'(x) / f(x)|`, says how a relative error in the input becomes one in the output. It is a property of the *problem*. Two measurements bracket what it does and does not tell you.
 
-`f(x) = x - 1` at `x = 1.0001` has a condition number of `{easy['condition_number']:.0e}`: a relative perturbation of the input is amplified ten thousandfold. Its derivative comes back to `{easy['best_error']:.1e}` — exactly, in fact, because a linear function has no truncation term to trade against cancellation. **A badly conditioned evaluation does not imply a hard derivative.**
+`f(x) = x - 1` at `x = 1.0001` has a condition number of `{easy['condition_number']:.0e}`: a relative perturbation of the input is amplified ten thousandfold. Its derivative comes back *exact*: the measured error against the true value of 1.0 is `{easy['best_error']:.1e}`, and it is zero rather than small because a linear function has no truncation term to trade against cancellation. **A badly conditioned evaluation does not imply a hard derivative.**
 
 And `1 - cos x` at `x = 1e-4` has a condition number of `{cancel['condition_number']:.1f}`, as well conditioned as anything, while the obvious way to evaluate it loses seven digits: relative error `{cancel['naive_relative_error']:.1e}`, against `{cancel['rewritten_relative_error']:.1e}` for `2 sin^2(x/2)`, which is the same function by an exact identity. **A well conditioned problem can have an unstable algorithm.**
 
