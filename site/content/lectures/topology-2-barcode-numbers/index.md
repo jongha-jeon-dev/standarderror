@@ -47,9 +47,9 @@ for d in [2, 4, 8, 32, 128, 768]:
   768       36.814           0.087
 ```
 
-A factor of 62 from two dimensions to 768. And the mean death radius itself has gone up by a factor of 22.
+That single draw loses a factor of 46 of its spread between the two dimensions, and as a median over fifteen draws at each dimension it is 62 — 4.87 at *d* = 2 against 0.078 at 768. The other column moves the opposite way: the mean death radius grows from 0.20 to 36.8 in that draw. The typical distance between two *points* does the same thing — 1.76 to 39.16, a factor of 22, as a median over the sweep — and it is that quantity, not the death radius, that the algebra below is about.
 
-Both halves come out of three lines of algebra, which are worth doing because everything else in this episode is a consequence of them. For two independent standard Gaussian points in *d* dimensions, each coordinate of *x* − *y* has variance 2, so
+The collapse and the growth are the same fact, and it comes out of three lines of algebra worth doing because everything else in this episode is a consequence of them. For two independent standard Gaussian points in *d* dimensions, each coordinate of *x* − *y* has variance 2, so
 
 $$
 \lVert x - y \rVert^2 = 2 \chi^2_d, \qquad \mathbb{E} \lVert x - y \rVert^2 = 2d, \qquad \mathrm{Var} \lVert x - y \rVert^2 = 8d
@@ -81,7 +81,7 @@ Before blaming the display, check the method. How far apart do three clusters ha
 
 ![Two lines against dimension on a log x-axis, one rising and one falling, with a horizontal reference at one on the falling line's axis.](lec202-f1-separation.png)
 
-*The absolute separation rises from 4.16 to 10.49, which is the story people expect. Divided by the typical pairwise distance it falls from 2.32 to 0.27 — so relative to the scale of the space the clusters get **easier** to separate, and every purity in this sweep is above 0.98. Whatever is going wrong in high dimensions is not the clustering.*
+*The absolute separation rises from 4.16 to 10.49, which is the story people expect. Divided by the typical pairwise distance it falls from 2.32 to 0.27 — so relative to the scale of the space the clusters get **easier** to separate, and every purity in this sweep is at or above 0.989. Whatever is going wrong in high dimensions is not the clustering.*
 
 In absolute terms the answer rises, from 4.16 at two dimensions to 10.49 at 768, and that is the story everyone expects from the phrase "curse of dimensionality". But the scale of the space rose too — the typical pairwise distance went from 1.79 to 39.20 — and dividing one by the other gives 2.32 at two dimensions falling to 0.27 at 768.
 
@@ -124,21 +124,21 @@ Zero out of forty, at every dimension. Not "rarely" — never. The rule's one jo
 
 ![A step-like rising curve of the modal reported cluster count against dimension on log axes, starting at two and ending at 199, with reference lines at one and at 199.](lec202-f4-gap.png)
 
-*Zero of forty draws returned 1 at any dimension. The rule locates the largest jump in a sorted list, and a sorted list of pure noise has a largest jump. What changes with dimension is only **where** it is: at d = 2 the modal answer is 2, and from d = 32 it is 199, because in a concentrated barcode the biggest gap is the very first one. This is the scree plot's elbow, which also cannot say zero.*
+*Zero of forty draws returned 1 at any dimension. The rule locates the largest jump in a sorted list, and a sorted list of pure noise has a largest jump. What changes with dimension is only **where** it is: at d = 2 the modal answer is 2, and from d = 32 it is 199, because in a concentrated barcode the biggest gap is as often at the front as at the back — 18 draws of thirty against 10. This is the scree plot's elbow, which also cannot say zero.*
 
-What changes with dimension is *where* the failure lands, and this is the one place where measuring it changed what I was going to say. I expected the largest gap to migrate steadily towards the front of the sorted deaths as the dimension rose. What it does instead is become bimodal, and the figure below is why: thirty draws at each of three dimensions, one dot per draw, and the middle of the high-dimensional rows is empty.
-
-The mechanism is one line of order statistics, and it is worth writing out because it also says *when* to expect the flip. For a sample of size *n* from a density *f*, the gap between neighbouring order statistics near a value *x* runs like 1/(*n* *f*(*x*)) — sorted values are sparse wherever the density is thin. So the largest gap in a barcode lands in whichever tail of the death distribution is thinnest. A right-skewed death distribution has exactly one thin tail, the long one on the right, and the gap goes there every time. A symmetric death distribution has two equally thin tails, and which one wins is decided by the draw.
-
-That is measurable, so it does not have to stay a story. The skew of the deaths, as a median over the same thirty draws, is 2.18 at *d* = 2, 0.66 at *d* = 8, 0.14 at *d* = 32 and 0.09 at *d* = 768. Concentration is symmetrising the death distribution, which is the collapsing spread from the first section seen from another angle. And the position of the gap follows the skew rather than the dimension: at *d* = 2 it is in the last ten in 30 of 30 draws, at *d* = 8 — skew 0.66, halfway down — it is in the last ten 24 times and in the first ten 6, and by *d* = 768 it is 10 and 18.
-
-So the rule does not drift from one answer to another. It flips between the two most extreme answers available — 199 clusters or 2 — depending on which end of a noise barcode happens to have the bigger step, and that is exactly why `gap_rule_on_noise` reports a modal answer of 199 with a range of 2 to 199.
-
-There is a silver lining in it. 199 clusters from 200 points is *obviously* wrong, and a wrong answer that looks wrong is far less dangerous than the plausible 2 you get in the dimension people draw their examples in.
+What changes with dimension is *where* the failure lands, and this is the one place where measuring it changed what I was going to say. I expected the largest gap to migrate steadily towards the front of the sorted deaths as the dimension rose. What it does instead is become bimodal — thirty draws at each of three dimensions below, one dot per draw, and the middle of the high-dimensional rows is empty.
 
 ![Three rows of dots. The lowest row is piled entirely at the right edge; the highest row is split between the left and right edges with the middle empty.](lec202-f5-gap-position.png)
 
 *At d = 2 every one of the thirty draws puts the largest gap in the last ten positions, so the rule always answers 2. At d = 768 it is in the first ten 18 times and in the last ten 10 times, and in the whole of the middle 2 times. The skew of the death distribution is the mechanism: 2.18 at d = 2 against 0.09 at 768.*
+
+The mechanism is one line of order statistics, and it is worth writing out because it also says *when* to expect the flip. For a sample of size *n* from a density *f*, the gap between neighbouring order statistics near a value *x* runs like 1/(*n* *f*(*x*)) — sorted values are sparse wherever the density is thin. So the largest gap in a barcode lands in whichever tail of the death distribution is thinnest. A right-skewed death distribution has exactly one thin tail, the long one on the right, and the gap goes there every time. A symmetric death distribution has two equally thin tails, and which one wins is decided by the draw.
+
+That is measurable, so it does not have to stay a story. The skew of the deaths, as a median over the same thirty draws, is 2.18 at *d* = 2, 0.66 at *d* = 8, 0.14 at *d* = 32 and 0.09 at *d* = 768. Concentration is symmetrising the death distribution, which is the collapsing spread from the first section seen from another angle. And the position of the gap follows the skew rather than the dimension: at *d* = 2 it is in the last ten in 30 of 30 draws, at *d* = 8 — skew 0.66, halfway down — it is in the last ten 24 times and in the first ten 6, and by *d* = 768 it is in the last ten 10 times and in the first ten 18.
+
+So the rule does not drift from one answer to another. It flips between the two most extreme answers available — 199 clusters or 2 — depending on which end of a noise barcode happens to have the bigger step, and that is exactly why `gap_rule_on_noise` reports a modal answer of 199 with a range of 2 to 199.
+
+There is a silver lining in it. 199 clusters from 200 points is *obviously* wrong, and a wrong answer that looks wrong is far less dangerous than the plausible 2 you get in the dimension people draw their examples in.
 
 ## Third measurement, and it reversed the plan
 
@@ -178,7 +178,7 @@ d =  32   noise median 1.0191   signal median 1.0456   clusters recovered: 1.000
 d = 768   noise median 1.0049   signal median 1.0166   clusters recovered: 1.000
 ```
 
-Read the two-dimensional row again. Noise has a **higher** median ratio than the clustered cloud, on a cloud whose clusters are recovered at purity 0.989. The ratio is not a weak indicator at two dimensions; it is pointing the wrong way.
+Read the two-dimensional row again. Noise has a **higher** median ratio than the clustered cloud, on a cloud whose clusters that same run recovers at purity 0.992. The ratio is not a weak indicator at two dimensions; it is pointing the wrong way.
 
 ![Two pairs of horizontal ranges on a log x-axis. In the lower pair the grey noise range sits to the right of the coloured signal range; in the upper pair the order is reversed, and both ranges are fifty times closer to zero.](lec202-f2-overlap.png)
 

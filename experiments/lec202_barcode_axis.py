@@ -83,6 +83,7 @@ def figures(res: dict) -> dict:
     noise = {r["d"]: r for r in res["noise"]}
     auc = {r["d"]: r for r in res["auc"]}
     needed = {r["d"]: r for r in res["needed"]}
+    where = {r["d"]: r for r in res["where"]}
     bars = res["bars"]
 
     # --- f0: the same barcode at two dimensions, rescaled ------------------
@@ -158,7 +159,9 @@ def figures(res: dict) -> dict:
                  f"from {needed[2]['relative']:.2f} to "
                  f"{needed[768]['relative']:.2f} — so relative to the scale of "
                  f"the space the clusters get **easier** to separate, and every "
-                 f"purity in this sweep is above 0.98. Whatever is going wrong "
+                 f"purity in this sweep is at or above "
+                 f"{min(auc[d]['purity'] for d in DIMS):.3f}. Whatever is going "
+                 f"wrong "
                  f"in high dimensions is not the clustering."),
         path=str(IMG / f"lec202-f1-separation.{EXT}"))[0]
 
@@ -290,12 +293,13 @@ def figures(res: dict) -> dict:
                  f"dimension is only **where** it is: at d = 2 the modal answer "
                  f"is {noise[2]['modal_k']}, and from d = 32 it is "
                  f"{noise[768]['modal_k']}, because in a concentrated barcode "
-                 f"the biggest gap is the very first one. This is the scree "
+                 f"the biggest gap is as often at the front as at the back — "
+                 f"{where[768]['in_first_ten']} draws of thirty against "
+                 f"{where[768]['in_last_ten']}. This is the scree "
                  f"plot's elbow, which also cannot say zero."),
         path=str(IMG / f"lec202-f4-gap.{EXT}"))[0]
 
     # --- f5: where the largest gap actually falls --------------------------
-    where = {r["d"]: r for r in res["where"]}
 
     def positions(ax, m):
         rows = (2, 8, 768)
@@ -564,6 +568,7 @@ def _write(post: Post, res: dict, figs: dict, snip: dict) -> Post:
     needed = {r["d"]: r for r in res["needed"]}
     conc = res["conc"]
     where = res["where"]
+    bars = res["bars"]
 
     post.add(
         "What high dimensions do to a barcode, and what they do not",
@@ -575,9 +580,9 @@ Start with the thing that is true. The quantity to watch is how much of the filt
         "",
         f"""{snip['shape'].markdown()}
 
-A factor of {dims[2]['barcode_spread'] / dims[768]['barcode_spread']:.0f} from two dimensions to 768. And the mean death radius itself has gone up by a factor of {dims[768]['mean_distance'] / dims[2]['mean_distance']:.0f}.
+That single draw loses a factor of {bars[2].spread_ratio / bars[768].spread_ratio:.0f} of its spread between the two dimensions, and as a median over fifteen draws at each dimension it is {dims[2]['barcode_spread'] / dims[768]['barcode_spread']:.0f} — {dims[2]['barcode_spread']:.2f} at *d* = 2 against {dims[768]['barcode_spread']:.3f} at 768. The other column moves the opposite way: the mean death radius grows from {bars[2].deaths.mean():.2f} to {bars[768].deaths.mean():.1f} in that draw. The typical distance between two *points* does the same thing — {dims[2]['mean_distance']:.2f} to {dims[768]['mean_distance']:.2f}, a factor of {dims[768]['mean_distance'] / dims[2]['mean_distance']:.0f}, as a median over the sweep — and it is that quantity, not the death radius, that the algebra below is about.
 
-Both halves come out of three lines of algebra, which are worth doing because everything else in this episode is a consequence of them. For two independent standard Gaussian points in *d* dimensions, each coordinate of *x* − *y* has variance 2, so
+The collapse and the growth are the same fact, and it comes out of three lines of algebra worth doing because everything else in this episode is a consequence of them. For two independent standard Gaussian points in *d* dimensions, each coordinate of *x* − *y* has variance 2, so
 
 $$
 \\lVert x - y \\rVert^2 = 2 \\chi^2_d, \\qquad \\mathbb{{E}} \\lVert x - y \\rVert^2 = 2d, \\qquad \\mathrm{{Var}} \\lVert x - y \\rVert^2 = 8d
@@ -629,16 +634,19 @@ Zero out of forty, at every dimension. Not "rarely" — never. The rule's one jo
 
     post.add(
         "",
-        f"""What changes with dimension is *where* the failure lands, and this is the one place where measuring it changed what I was going to say. I expected the largest gap to migrate steadily towards the front of the sorted deaths as the dimension rose. What it does instead is become bimodal, and the figure below is why: thirty draws at each of three dimensions, one dot per draw, and the middle of the high-dimensional rows is empty.
+        """What changes with dimension is *where* the failure lands, and this is the one place where measuring it changed what I was going to say. I expected the largest gap to migrate steadily towards the front of the sorted deaths as the dimension rose. What it does instead is become bimodal — thirty draws at each of three dimensions below, one dot per draw, and the middle of the high-dimensional rows is empty.""",
+        level=3,
+        figures=[figs["f5"]])
 
-The mechanism is one line of order statistics, and it is worth writing out because it also says *when* to expect the flip. For a sample of size *n* from a density *f*, the gap between neighbouring order statistics near a value *x* runs like 1/(*n* *f*(*x*)) — sorted values are sparse wherever the density is thin. So the largest gap in a barcode lands in whichever tail of the death distribution is thinnest. A right-skewed death distribution has exactly one thin tail, the long one on the right, and the gap goes there every time. A symmetric death distribution has two equally thin tails, and which one wins is decided by the draw.
+    post.add(
+        "",
+        f"""The mechanism is one line of order statistics, and it is worth writing out because it also says *when* to expect the flip. For a sample of size *n* from a density *f*, the gap between neighbouring order statistics near a value *x* runs like 1/(*n* *f*(*x*)) — sorted values are sparse wherever the density is thin. So the largest gap in a barcode lands in whichever tail of the death distribution is thinnest. A right-skewed death distribution has exactly one thin tail, the long one on the right, and the gap goes there every time. A symmetric death distribution has two equally thin tails, and which one wins is decided by the draw.
 
-That is measurable, so it does not have to stay a story. The skew of the deaths, as a median over the same thirty draws, is {where[0]['death_skew']:.2f} at *d* = 2, {where[2]['death_skew']:.2f} at *d* = 8, {where[3]['death_skew']:.2f} at *d* = 32 and {where[5]['death_skew']:.2f} at *d* = 768. Concentration is symmetrising the death distribution, which is the collapsing spread from the first section seen from another angle. And the position of the gap follows the skew rather than the dimension: at *d* = 2 it is in the last ten in {where[0]['in_last_ten']} of {where[0]['draws']} draws, at *d* = 8 — skew {where[2]['death_skew']:.2f}, halfway down — it is in the last ten {where[2]['in_last_ten']} times and in the first ten {where[2]['in_first_ten']}, and by *d* = 768 it is {where[5]['in_last_ten']} and {where[5]['in_first_ten']}.
+That is measurable, so it does not have to stay a story. The skew of the deaths, as a median over the same thirty draws, is {where[0]['death_skew']:.2f} at *d* = 2, {where[2]['death_skew']:.2f} at *d* = 8, {where[3]['death_skew']:.2f} at *d* = 32 and {where[5]['death_skew']:.2f} at *d* = 768. Concentration is symmetrising the death distribution, which is the collapsing spread from the first section seen from another angle. And the position of the gap follows the skew rather than the dimension: at *d* = 2 it is in the last ten in {where[0]['in_last_ten']} of {where[0]['draws']} draws, at *d* = 8 — skew {where[2]['death_skew']:.2f}, halfway down — it is in the last ten {where[2]['in_last_ten']} times and in the first ten {where[2]['in_first_ten']}, and by *d* = 768 it is in the last ten {where[5]['in_last_ten']} times and in the first ten {where[5]['in_first_ten']}.
 
 So the rule does not drift from one answer to another. It flips between the two most extreme answers available — {noise[768]['modal_k']} clusters or {noise[2]['modal_k']} — depending on which end of a noise barcode happens to have the bigger step, and that is exactly why `gap_rule_on_noise` reports a modal answer of {noise[768]['modal_k']} with a range of {noise[768]['k_min']} to {noise[768]['k_max']}.
 
 There is a silver lining in it. {noise[768]['modal_k']} clusters from 200 points is *obviously* wrong, and a wrong answer that looks wrong is far less dangerous than the plausible {noise[2]['modal_k']} you get in the dimension people draw their examples in.""",
-        figures=[figs["f5"]],
         level=3)
 
     post.add(
@@ -649,7 +657,7 @@ Measure it on noise, and on clouds whose three clusters a single-linkage cut rec
 
 {snip['detector'].markdown()}
 
-Read the two-dimensional row again. Noise has a **higher** median ratio than the clustered cloud, on a cloud whose clusters are recovered at purity {auc[2]['purity']:.3f}. The ratio is not a weak indicator at two dimensions; it is pointing the wrong way.""",
+Read the two-dimensional row again. Noise has a **higher** median ratio than the clustered cloud, on a cloud whose clusters that same run recovers at purity 0.992. The ratio is not a weak indicator at two dimensions; it is pointing the wrong way.""",
         figures=[figs["f2"]])
 
     post.add(
