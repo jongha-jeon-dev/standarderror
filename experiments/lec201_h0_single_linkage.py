@@ -22,7 +22,8 @@ Measured:
   and 3, 4 or 5 in the rest; at eps = 1.5 it runs to 11, while the largest
   bottleneck distance is 1.958 at both levels.
 * Which is a dimension problem too: the barcode's own dynamic range, (max-min)
-  over mean of the deaths, runs 7.16 at d = 2 to 0.083 at d = 768.
+  over mean of the deaths, runs 4.87 at d = 2 to 0.078 at d = 768,
+  as a median over fifteen draws at each dimension.
 
 Run: `standarderror run lec201_h0_single_linkage --publish`
 """

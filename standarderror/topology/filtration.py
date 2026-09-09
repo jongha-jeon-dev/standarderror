@@ -122,7 +122,7 @@ class Barcode:
     def spread_ratio(self) -> float:
         """`(max - min) / mean` over the deaths: how much of the filtration axis
         the barcode actually occupies. This is the quantity that collapses with
-        dimension -- 7.16 at d = 2 against 0.083 at d = 768 -- and it is a
+        dimension -- 4.87 at d = 2 against 0.078 at d = 768 -- and it is a
         property of the display rather than of the clustering."""
         d = self.deaths
         return float((d.max() - d.min()) / d.mean())
@@ -357,18 +357,34 @@ def stability_sweep(X, epsilons=(0.0, 0.01, 0.05, 0.2, 0.5, 1.0), *,
     return out
 
 
-def dimension_sweep(dims=(2, 8, 64, 768), *, n: int = 200,
-                    seed: int = 0) -> list[dict]:
-    """What dimension does to the barcode's dynamic range, on pure noise."""
-    rng = np.random.default_rng(seed)
+def dimension_sweep(dims=(2, 8, 64, 768), *, n: int = 200, draws: int = 15,
+                    seed: int = 7) -> list[dict]:
+    """What dimension does to the barcode's dynamic range, on pure noise.
+
+    Medians over `draws` clouds per dimension, each from a generator seeded by
+    `(seed, d, i)`. Two earlier versions of this were worse in ways worth
+    recording. One advanced a single generator through the loop, so a row
+    depended on how many *other* dimensions were in the list. One took a single
+    draw, which is a bad summary at low dimension: at d = 2 the spread varies
+    between 4.0 and 7.2 across draws, so a snippet and a figure measuring the
+    same thing on different draws printed different numbers.
+    """
     out = []
     for d in dims:
-        Y = rng.standard_normal((int(n), int(d)))
-        dv = pdist(Y)
-        bc = rips_h0(squareform(dv))
-        out.append({"d": int(d), "mean_distance": float(dv.mean()),
-                    "distance_spread": float((dv.max() - dv.min()) / dv.mean()),
-                    "barcode_spread": bc.spread_ratio})
+        spreads, dist_spreads, means = [], [], []
+        for i in range(int(draws)):
+            Y = np.random.default_rng([int(seed), int(d), i]).standard_normal(
+                (int(n), int(d)))
+            dv = pdist(Y)
+            means.append(float(dv.mean()))
+            dist_spreads.append(float((dv.max() - dv.min()) / dv.mean()))
+            spreads.append(rips_h0(squareform(dv)).spread_ratio)
+        out.append({"d": int(d), "draws": int(draws),
+                    "mean_distance": float(np.median(means)),
+                    "distance_spread": float(np.median(dist_spreads)),
+                    "barcode_spread": float(np.median(spreads)),
+                    "barcode_spread_min": float(np.min(spreads)),
+                    "barcode_spread_max": float(np.max(spreads))})
     return out
 
 
@@ -382,10 +398,13 @@ def separation_needed(d: int, *, target: float = 0.95, seeds: int = 3,
     it *falls*, which is not, and the two together are why the barcode's loss of
     dynamic range is the thing to worry about rather than the clustering.
     """
+    groups = int(kw.get("groups", 3))
+
     def ok(sep: float) -> bool:
-        scores = [purity(pairwise(*[separated_clusters(d, sep, seed=s, **kw)[0]]),
-                         separated_clusters(d, sep, seed=s, **kw)[1], 3)
-                  for s in range(int(seeds))]
+        scores = []
+        for seed in range(int(seeds)):
+            X, labels = separated_clusters(d, sep, seed=seed, **kw)
+            scores.append(purity(pairwise(X), labels, groups))
         return float(np.mean(scores)) > float(target)
 
     if ok(lo):
@@ -441,3 +460,164 @@ def gap_rule_spread(X, epsilon: float, *, draws: int = 40, base_seed: int = 1000
             "k_min": min(counts), "k_max": max(counts),
             "bottleneck_min": float(min(bottlenecks)),
             "bottleneck_max": float(max(bottlenecks))}
+
+
+def gap_rule_on_noise(d: int, *, n: int = 200, draws: int = 40,
+                      base_seed: int = 7) -> dict:
+    """What the largest-gap rule reports on a cloud with no clusters in it.
+
+    The answer is never 1. Across 40 draws at each of d = 2, 8, 64 and 768 the
+    rule returned "one cluster" zero times, which is the same structural defect
+    the scree-plot episode found in the elbow: the rule is built to locate the
+    biggest jump in a list, and a list of pure noise has a biggest jump.
+
+    The failure changes shape with dimension rather than going away. At d = 2
+    the modal answer is 2; at d = 64 and above it is `n - 1`, because in a
+    concentrated barcode the largest gap is the very first one and the rule
+    reports almost every point as its own cluster.
+    """
+    counts: dict[int, int] = {}
+    ratios = []
+    for i in range(int(draws)):
+        Y = np.random.default_rng([int(base_seed), int(d), i]
+                                  ).standard_normal((int(n), int(d)))
+        bc = rips_h0(pairwise(Y))
+        k = bc.gap_k()
+        counts[k] = counts.get(k, 0) + 1
+        ratios.append(bc.separation_ratio)
+    ratios = np.asarray(ratios, dtype=float)
+    return {"d": int(d), "n": int(n), "draws": int(draws),
+            "counts": dict(sorted(counts.items())),
+            "said_one": counts.get(1, 0),
+            "modal_k": max(counts, key=lambda k: counts[k]),
+            "k_min": min(counts), "k_max": max(counts),
+            "ratio_median": float(np.median(ratios)),
+            "ratio_min": float(ratios.min()),
+            "ratio_max": float(ratios.max())}
+
+
+def separation_ratio_auc(d: int, *, per: int = 40, n_noise: int = 120,
+                         draws: int = 60, sep_multiple: float = 1.3,
+                         n_struct: int = 3, groups: int = 3,
+                         base_seed: int = 7) -> dict:
+    """Can the barcode's two-cluster ratio tell a clustered cloud from noise?
+
+    Read as an absolute number it cannot, anywhere: in two dimensions noise has
+    a *median* ratio of 1.22 while a cloud whose clusters single linkage
+    recovers at purity 0.989 has 1.17. Read against a matched null it can, and
+    it gets better as the dimension rises, because concentration tightens the
+    null far faster than it shrinks the signal.
+
+    Measured as the area under the ROC curve of the ratio as a detector, at
+    `sep_multiple` times the separation `separation_needed` finds:
+
+        d      2      4      8     32    128    768
+        AUC  0.462  0.569  0.648  0.764  0.741  0.809
+
+    Which is the opposite of what "the barcode loses its dynamic range in high
+    dimensions" would suggest, and the reason is that the sentence is about the
+    absolute reading. The dynamic range does collapse -- the null median goes
+    from 1.224 to 1.004 -- and that is what makes the null informative.
+    """
+    ns = min(int(n_struct), int(d))
+    found = separation_needed(d, per=per, groups=groups, n_struct=ns)
+    sep = found["separation"] * float(sep_multiple)
+
+    noise = [rips_h0(pairwise(
+        np.random.default_rng([int(base_seed), int(d), i]).standard_normal(
+            (int(n_noise), int(d))))).separation_ratio
+        for i in range(int(draws))]
+    signal, purities = [], []
+    for i in range(int(draws)):
+        X, labels = separated_clusters(d, sep, per=per, groups=groups,
+                                      n_struct=ns, seed=300 + i)
+        D = pairwise(X)
+        signal.append(rips_h0(D).separation_ratio)
+        purities.append(purity(D, labels, groups))
+
+    noise, signal = np.asarray(noise), np.asarray(signal)
+    # AUC by the rank-sum identity, so no extra dependency and no threshold grid.
+    both = np.concatenate([noise, signal])
+    order = np.argsort(both, kind="stable")
+    ranks = np.empty(len(both))
+    ranks[order] = np.arange(1, len(both) + 1)
+    m = len(signal)
+    auc = (ranks[len(noise):].sum() - m * (m + 1) / 2) / (len(noise) * m)
+    return {"d": int(d), "separation": float(sep),
+            "purity": float(np.mean(purities)),
+            "noise_median": float(np.median(noise)),
+            "noise_max": float(noise.max()),
+            "signal_median": float(np.median(signal)),
+            "signal_min": float(signal.min()),
+            "auc": float(auc)}
+
+
+def concentration_check(d: int, *, n: int = 300, draws: int = 6,
+                        seed: int = 11) -> dict:
+    """The algebra behind the whole episode, checked rather than asserted.
+
+    For two standard Gaussian points in `d` dimensions, the squared distance is
+    `2 * chi2_d`, so its mean is `2d` and its variance `8d`. Taking the square
+    root by the delta method gives
+
+        E ||x - y||   ~ sqrt(2d)
+        sd ||x - y||  ~ sqrt(8d) / (2 sqrt(2d)) = 1
+
+    so the *absolute* spread of pairwise distances tends to a constant while the
+    mean grows like `sqrt(d)`, and the relative spread falls like `1/sqrt(2d)`.
+
+    Measured, the standard deviation goes 0.917, 0.974, 0.990, 0.989, 1.007,
+    1.005 at d = 2, 4, 8, 32, 128, 768 -- converging to 1, not to `sqrt(2)`,
+    which is what the first draft of this derivation predicted by forgetting the
+    factor of two in the delta step.
+    """
+    parts = [pdist(np.random.default_rng([int(seed), int(d), i]).standard_normal(
+        (int(n), int(d)))) for i in range(int(draws))]
+    v = np.concatenate(parts)
+    return {"d": int(d), "mean": float(v.mean()),
+            "mean_predicted": float(np.sqrt(2 * d)),
+            "sd": float(v.std()), "sd_predicted": 1.0,
+            "relative": float(v.std() / v.mean()),
+            "relative_predicted": float(1.0 / np.sqrt(2 * d))}
+
+
+def largest_gap_position(d: int, *, n: int = 200, draws: int = 30,
+                         seed: int = 7) -> dict:
+    """Where in the sorted deaths the largest gap actually falls, on noise.
+
+    This is what decides whether the gap rule reports 2 clusters or `n - 1`, and
+    it is not what I first wrote down. I expected the gap to migrate towards the
+    front as the dimension rose. What it actually does is become **bimodal**,
+    over 30 draws of 200 points:
+
+        d      median position   at the front   in the first 10   in the last 10
+        2          196 / 198          0              0                 30
+        32           2 / 198         11             16                 14
+        768          2 / 198         11             18                 10
+
+    At two dimensions it is always among the long bars, so the rule always
+    answers 2. In high dimensions it is either at the very front or at the very
+    back, so the rule answers either `n - 1` or 2 and nothing in between --
+    which is exactly why `gap_rule_on_noise` reports a modal answer of 199 with
+    a range of 2 to 199 rather than a drift between them.
+    """
+    positions, skews = [], []
+    for i in range(int(draws)):
+        Y = np.random.default_rng([int(seed), int(d), i]).standard_normal(
+            (int(n), int(d)))
+        deaths = rips_h0(pairwise(Y)).deaths
+        positions.append(int(np.argmax(np.diff(deaths))))
+        # The mechanism, not decoration: consecutive order-statistic spacings
+        # run like 1 / (n f(x)), so the largest gap sits wherever the death
+        # density is thinnest. A right-skewed death distribution has one thin
+        # tail and the gap lands there; a symmetric one has two.
+        z = (deaths - deaths.mean()) / deaths.std()
+        skews.append(float((z ** 3).mean()))
+    positions = np.asarray(positions)
+    return {"d": int(d), "gaps": int(n - 2), "draws": int(draws),
+            "median_position": float(np.median(positions)),
+            "at_front": int((positions == 0).sum()),
+            "in_first_ten": int((positions < 10).sum()),
+            "in_last_ten": int((positions > n - 12).sum()),
+            "death_skew": float(np.median(skews)),
+            "positions": positions.tolist()}

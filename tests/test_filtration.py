@@ -179,15 +179,21 @@ class TestTheDisplayRatherThanTheMethod:
         return {r["d"]: r for r in ft.dimension_sweep()}
 
     def test_the_barcodes_dynamic_range_collapses_with_dimension(self, dims):
-        """7.16 at d = 2 against 0.083 at d = 768: every bar in a 768-dimensional
-        barcode is born and dies within a few percent of one radius."""
-        assert dims[2]["barcode_spread"] > 6.0
-        assert dims[768]["barcode_spread"] < 0.12
+        """Median over 15 draws: 4.87 at d = 2 against 0.078 at d = 768, so
+        every bar in a 768-dimensional barcode is born and dies within a few
+        percent of one radius."""
+        assert dims[2]["barcode_spread"] > 4.0
+        assert dims[768]["barcode_spread"] < 0.10
+        # And the reason it is a median: at d = 2 a single draw lands anywhere
+        # between 3.8 and 6.7, which is why the first version of this function
+        # made a snippet disagree with a figure.
+        assert dims[2]["barcode_spread_max"] / dims[2]["barcode_spread_min"] > 1.5
+        assert dims[768]["barcode_spread_max"] < 0.15
         spreads = [dims[d]["barcode_spread"] for d in (2, 8, 64, 768)]
         assert spreads == sorted(spreads, reverse=True)
 
     def test_the_pairwise_distances_concentrate_too(self, dims):
-        assert dims[2]["distance_spread"] > 3.5
+        assert dims[2]["distance_spread"] > 3.0
         assert dims[768]["distance_spread"] < 0.3
 
     def test_a_barcode_with_one_bar_has_no_separation_ratio(self):
@@ -275,3 +281,140 @@ class TestTheGapRuleAcrossDraws:
             assert full[eps]["hausdorff"] == pytest.approx(part[eps]["hausdorff"])
             assert full[eps]["bottleneck"] == pytest.approx(part[eps]["bottleneck"])
             assert full[eps]["gap_k"] == part[eps]["gap_k"]
+
+
+class TestWhatTheBarcodeSaysAboutNoise:
+    """Episode 2's payoff, and it corrected the episode's own plan."""
+
+    @pytest.fixture(scope="class")
+    def noise(self):
+        return {d: ft.gap_rule_on_noise(d) for d in (2, 64, 768)}
+
+    def test_the_gap_rule_never_says_one_cluster(self, noise):
+        """The structural defect, and the same one the scree-plot episode found
+        in the elbow: the rule locates the biggest jump in a list, and a list of
+        pure noise has a biggest jump."""
+        for d, r in noise.items():
+            assert r["said_one"] == 0, (d, r["counts"])
+
+    def test_its_failure_changes_shape_with_dimension(self, noise):
+        """At d = 2 it claims two clusters; in high dimensions it claims almost
+        as many clusters as there are points, because the largest gap in a
+        concentrated barcode is the first one."""
+        assert noise[2]["modal_k"] == 2
+        assert noise[768]["modal_k"] == noise[768]["n"] - 1
+
+    def test_the_null_tightens_by_two_orders_of_magnitude(self, noise):
+        """Which is the fact the rest of the episode turns on."""
+        spread2 = noise[2]["ratio_max"] - noise[2]["ratio_min"]
+        spread768 = noise[768]["ratio_max"] - noise[768]["ratio_min"]
+        assert spread2 / spread768 > 30
+
+
+class TestTheRatioAsADetector:
+    @pytest.fixture(scope="class")
+    def rows(self):
+        return {d: ft.separation_ratio_auc(d) for d in (2, 64, 768)}
+
+    def test_in_two_dimensions_it_is_worse_than_a_coin(self, rows):
+        """Noise has a *higher* median ratio than a cloud whose clusters single
+        linkage recovers. So the absolute reading is not weak, it is inverted."""
+        r = rows[2]
+        assert r["auc"] < 0.5
+        assert r["noise_median"] > r["signal_median"]
+        assert r["purity"] > 0.95
+
+    def test_in_high_dimensions_it_becomes_usable(self, rows):
+        """The opposite of what "the barcode loses its dynamic range" suggests,
+        because that sentence is about the absolute reading. Concentration
+        tightens the null faster than it shrinks the signal."""
+        assert rows[768]["auc"] > 0.75
+        assert rows[768]["auc"] > rows[64]["auc"] > rows[2]["auc"]
+
+    def test_the_method_itself_works_at_every_dimension(self, rows):
+        """Which is the distinction the episode exists to draw: the clustering
+        is fine and the summary is what fails."""
+        for d, r in rows.items():
+            assert r["purity"] > 0.95, (d, r["purity"])
+
+    def test_no_absolute_threshold_survives_the_dimension_change(self, rows):
+        """A cutoff tuned at d = 2 would have to sit near 1.2; at d = 768 every
+        signal cloud is below 1.06."""
+        assert rows[2]["noise_median"] > 1.15
+        assert rows[768]["signal_median"] < 1.06
+
+
+class TestTheConcentrationAlgebra:
+    """The derivation the episode rests on, checked against a measurement --
+    which is how the first version of it was caught predicting sqrt(2)."""
+
+    @pytest.fixture(scope="class")
+    def rows(self):
+        return {d: ft.concentration_check(d) for d in (2, 32, 768)}
+
+    def test_the_mean_grows_like_the_root_of_twice_the_dimension(self, rows):
+        for d, r in rows.items():
+            assert r["mean"] == pytest.approx(r["mean_predicted"], rel=0.12), d
+        assert rows[768]["mean"] == pytest.approx(rows[768]["mean_predicted"],
+                                                 rel=0.01)
+
+    def test_the_absolute_spread_tends_to_one_and_not_to_root_two(self, rows):
+        assert rows[768]["sd"] == pytest.approx(1.0, rel=0.05)
+        assert abs(rows[768]["sd"] - np.sqrt(2.0)) > 0.3
+
+    def test_so_the_relative_spread_falls_like_one_over_the_root(self, rows):
+        for d, r in rows.items():
+            assert r["relative"] == pytest.approx(r["relative_predicted"],
+                                                 rel=0.5), d
+        assert rows[768]["relative"] == pytest.approx(
+            rows[768]["relative_predicted"], rel=0.05)
+
+
+class TestWhereTheLargestGapFalls:
+    @pytest.fixture(scope="class")
+    def rows(self):
+        return {d: ft.largest_gap_position(d) for d in (2, 32, 768)}
+
+    def test_at_two_dimensions_it_is_among_the_long_bars(self, rows):
+        """Which is why the gap rule reports a small cluster count there."""
+        assert rows[2]["median_position"] > 0.9 * rows[2]["gaps"]
+        assert rows[2]["at_front"] == 0
+
+    def test_in_high_dimensions_it_becomes_bimodal(self, rows):
+        """Not "migrates to the front", which is what I first wrote. Either end
+        or nothing in between, which is why the gap rule answers 199 or 2 with
+        no drift between them."""
+        for d in (32, 768):
+            r = rows[d]
+            assert r["median_position"] < 10
+            assert 0 < r["at_front"] < r["draws"]
+            # 0 of 30 at d = 32 and 2 of 30 at d = 768 land anywhere but the
+            # two ends, which is what "bimodal" has to mean to be worth saying.
+            middle = r["draws"] - r["in_first_ten"] - r["in_last_ten"]
+            assert middle <= 0.1 * r["draws"], (d, middle)
+        assert rows[2]["in_last_ten"] == rows[2]["draws"]
+
+    def test_the_skew_of_the_deaths_is_what_the_position_follows(self):
+        """The mechanism, and it is checkable. Neighbouring order statistics are
+        spaced like 1 / (n f(x)), so the largest gap sits in the thinnest tail.
+        One thin tail while the deaths are right-skewed; two once concentration
+        has symmetrised them, and then the draw decides. Measured skews: 2.18,
+        0.66, 0.14, 0.09 at d = 2, 8, 32, 768."""
+        rows = {d: ft.largest_gap_position(d) for d in (2, 8, 32, 768)}
+        skews = [rows[d]["death_skew"] for d in (2, 8, 32, 768)]
+        assert skews == sorted(skews, reverse=True), skews
+        assert skews[0] > 1.5 and skews[-1] < 0.2
+        # While one tail is thin the gap is always in it; once both are, it is
+        # not. That is the whole claim, and it is the same rows either way.
+        assert rows[2]["in_first_ten"] == 0
+        assert rows[768]["in_first_ten"] > rows[8]["in_first_ten"] > 0
+
+    def test_the_positions_it_reports_are_the_positions_it_summarises(self):
+        """The figure draws `positions` and the prose quotes the counts, so a
+        disagreement between them would be a caption that contradicts its own
+        picture -- which has happened in this series before."""
+        r = ft.largest_gap_position(32)
+        pos = r["positions"]
+        assert len(pos) == r["draws"]
+        assert sum(p == 0 for p in pos) == r["at_front"]
+        assert sum(p < 10 for p in pos) == r["in_first_ten"]

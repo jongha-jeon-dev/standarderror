@@ -135,7 +135,8 @@ space both were settled by normalisation steps upstream rather than decided.
 
 Thesis: **persistent homology computes a property of your metric and your
 scale, and in high dimensions the barcode loses its dynamic range long before
-the method loses its power.**
+the method loses its power** — which turns out to be an argument for the method
+and against reading its numbers absolutely, rather than against both.
 
 Two things recur. The machinery is smaller than its reputation — H₀ of a Rips
 filtration is single-linkage clustering, and for a graph the first Betti number
@@ -153,10 +154,13 @@ geometry.
 | # | Episode | The calculation that breaks |
 |---|---|---|
 | 1 | H₀ Is Single-Linkage Clustering, Bit for Bit | the barcode and the dendrogram return the same floats, so chaining is inherited: three points strung between two blobs take the two-cluster signal from 6.70 to 1.00, and twelve make the k = 2 cut return 71 points and 1. The stability theorem is real; the cluster count read off the barcode is 2 in 22 of 40 noise draws and something else in the rest |
-| 2 | The Barcode Runs Out of Axis Before the Method Runs Out of Power | the barcode's own dynamic range falls from 7.16 at two dimensions to 0.083 at 768, so a flat barcode stops being evidence — while the separation H₀ actually needs *falls* in relative terms over the same range |
+| 2 | A Barcode's Numbers Mean Nothing on Their Own | the barcode's dynamic range falls from 4.87 at two dimensions to 0.078 at 768 — and the summary gets *better*, not worse. The largest-gap rule reports "one cluster" zero times in 40 draws of pure noise at every dimension, and the two-cluster ratio read absolutely is inverted at d = 2 (AUC 0.462, worse than a coin) while against a matched null it reaches 0.809 at 768. This is the episode whose plan the third measurement reversed |
 | 3 | Your Metric Is Three Normalisation Steps You Forgot | a mean offset alone drives every pairwise cosine similarity to 0.995 and collapses their spread from 1.75 to 0.02, leaving 2% of the filtration axis to carry the structure. Centring, L2 and whitening are four different answers, not four spellings of one |
 | 4 | The Betti Number of an Attention Graph Is a Repackaged Entropy | 16 heads, a topological summary with a hundredfold range — and a Spearman correlation of +0.897 with a one-line statistic that ranks them the same way |
 | 5 | A Greedy Decode Closes an Exact Loop | greedy decoding becomes periodic at generated character 116 with period 41, and the hidden state repeats bit for bit, so 443 of 600 steps are exact replays. Sampling never returns closer than 9% of the trajectory's mean spacing |
 
-Episode 1 is published. Every opener above is measured rather than projected,
-and episode 4's measurement contradicted the claim it was written to make.
+Episodes 1 and 2 are published. Every opener above is measured rather than
+projected, and two of those measurements contradicted the claim they were
+written to make: episode 4's, and episode 2's, which was written to say the
+display fails in high dimensions and ended up showing that it becomes the
+reference.
