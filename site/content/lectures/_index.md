@@ -124,3 +124,39 @@ the commitment; if an episode's opening claim does not survive its own
 measurement it gets corrected rather than quietly dropped, and both published
 episodes say where that already happened — episode 1 about the edge of
 stability, episode 2 about what a bfloat16 gradient check can see.
+
+---
+
+## Topology for Language Models, Taught Through What Breaks
+
+One object: **the filtration you imposed**, as against the shape of the data. A
+filtration is a choice of metric and a choice of scale, and in an embedding
+space both were settled by normalisation steps upstream rather than decided.
+
+Thesis: **persistent homology computes a property of your metric and your
+scale, and in high dimensions the barcode loses its dynamic range long before
+the method loses its power.**
+
+Two things recur. The machinery is smaller than its reputation — H₀ of a Rips
+filtration is single-linkage clustering, and for a graph the first Betti number
+is Euler's formula — and the summaries are stable while the numbers people read
+off them are not.
+
+A note on scope, because it decides what these episodes can claim. Episodes 1
+to 3 are about what the method computes and are exact on any point cloud.
+Episodes 4 and 5 need a language model, and the one they use is a
+816,128-parameter character-level transformer trained for this series, with a
+validation loss of 1.573 against a uniform-guess 4.174. That is a real language
+model and a small one. Nothing here is a claim about a frontier model's
+geometry.
+
+| # | Episode | The calculation that breaks |
+|---|---|---|
+| 1 | H₀ Is Single-Linkage Clustering, Bit for Bit | the barcode and the dendrogram return the same floats, so chaining is inherited: three points strung between two blobs take the two-cluster signal from 6.70 to 1.00, and twelve make the k = 2 cut return 71 points and 1. The stability theorem is real; the cluster count read off the barcode is 2 in 22 of 40 noise draws and something else in the rest |
+| 2 | The Barcode Runs Out of Axis Before the Method Runs Out of Power | the barcode's own dynamic range falls from 7.16 at two dimensions to 0.083 at 768, so a flat barcode stops being evidence — while the separation H₀ actually needs *falls* in relative terms over the same range |
+| 3 | Your Metric Is Three Normalisation Steps You Forgot | a mean offset alone drives every pairwise cosine similarity to 0.995 and collapses their spread from 1.75 to 0.02, leaving 2% of the filtration axis to carry the structure. Centring, L2 and whitening are four different answers, not four spellings of one |
+| 4 | The Betti Number of an Attention Graph Is a Repackaged Entropy | 16 heads, a topological summary with a hundredfold range — and a Spearman correlation of +0.897 with a one-line statistic that ranks them the same way |
+| 5 | A Greedy Decode Closes an Exact Loop | greedy decoding becomes periodic at generated character 116 with period 41, and the hidden state repeats bit for bit, so 443 of 600 steps are exact replays. Sampling never returns closer than 9% of the trajectory's mean spacing |
+
+Episode 1 is published. Every opener above is measured rather than projected,
+and episode 4's measurement contradicted the claim it was written to make.
