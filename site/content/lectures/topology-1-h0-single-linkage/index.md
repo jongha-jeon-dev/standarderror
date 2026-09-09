@@ -145,9 +145,9 @@ Three points. Not three percent of the data — three points out of sixty-three,
 
 ![Two scatter plots stacked vertically. The upper one shows two separated clusters. The lower one shows the same two clusters with a thin line of points joining them.](lec201-f1-chaining.png)
 
-*Single linkage merges two components as soon as **any** pair of their points is close, so a chain of points at spacing 0.06 joins two blobs 6.0 apart. The longest bar falls from 4.001 to 0.598 — which is exactly the second bar of the cloud above (0.598), so nothing is left but the spacing inside a blob.*
+*Single linkage merges two components as soon as **any** pair of their points is close, so a chain of points at spacing 0.06 joins two blobs 6.0 apart. Above, the longest bar is 4.001 and the two-cluster ratio 6.70. Below, the longest bar has fallen to 0.598 — which is the value that was the **second** bar above, so nothing is left in the barcode but the spacing inside a blob.*
 
-At twelve bridge points it is worse than gone. The longest bar is 0.5975 — which is *exactly* the second bar of the unbridged cloud, 0.5975, so nothing survives but the spacing inside a blob — and cutting the tree at k = 2, which is what you do when you have decided there are two clusters, returns groups of size **71** and **1**. It shaves off one point.
+At twelve bridge points it is worse than gone. The longest bar is now 0.5975, and that number is not a coincidence — it is bit for bit the *second* bar of the unbridged cloud. The bridge has not merely weakened the two-cluster signal; it has removed the between-blob scale from the barcode altogether, leaving nothing but the spacing inside a blob. And cutting the tree at k = 2, which is what you do when you have decided there are two clusters, returns groups of size **71** and **1**. It shaves off one point.
 
 That is the shape of the failure worth remembering. It does not return two wrong clusters. It returns a right answer to a question nobody asked, in the format of an answer to the question you did ask.
 
@@ -179,7 +179,7 @@ That is worth having, and it is not vacuous. Jitter the cloud by ε = 0.5 and th
 
 ![Measured points against a diagonal bound line, all of them below the diagonal and well below it at the largest perturbations, with the two largest annotated by the cluster count.](lec201-f3-stability.png)
 
-*Every measurement is inside the bound, and not narrowly: at ε = 0.5 the points move 1.392 and the barcode 0.443. That is a real guarantee about the picture. It is not a guarantee about the answer — at ε = 1.0, with the barcode still inside the bound, "clusters at the largest gap" goes from 2 to 2.*
+*Every measurement is inside the bound, and not narrowly: at ε = 0.5 the points move 1.392 and the barcode 0.443. That is a real guarantee about the picture, and the next section is what it does not cover: past ε = 0.5 the bottleneck distance stops growing — the barcode is pinned against the cloud's own diameter — while the integer read off it has not settled at all.*
 
 Now read the theorem's statement again, because it is about the barcode. Nothing in it mentions the number you extract from the barcode, and that number is a different object with different behaviour.
 
@@ -195,25 +195,31 @@ At ε = 1.0 the modal answer is still 2, and it is the answer in only 55% of dra
 And here is the part that settles it. Between those two levels the barcode has stopped moving: the largest bottleneck distance is 1.958 at ε = 1.0 and 1.958 at ε = 1.5 — the same number, because the barcode is pinned against the diameter of the cloud and cannot go further. The picture has converged. The integer read off the picture is running from 2 to 11.
 
 ```python
-# The rule everybody applies to a barcode, and what a small jitter
-# does to it. The barcode itself barely moves; the integer does.
+# The rule everybody applies to a barcode. One draw tells you almost
+# nothing -- it usually returns 2 -- so this is the spread over
+# twenty independent draws at each level.
+from collections import Counter
+
 def gap_k(deaths):
     return len(deaths) - int(np.argmax(np.diff(deaths)))
 
 X = two_blobs(0, per=40)
-rng = np.random.default_rng(1)
-for eps in (0.0, 0.5, 1.0):
-    Y = X + rng.standard_normal(X.shape) * eps
-    d = rips_h0(squareform(pdist(Y)))
-    print(f"eps {eps:.1f}   points moved by at most "
-          f"{np.linalg.norm(X - Y, axis=1).max():.3f}   "
-          f"clusters at the largest gap: {gap_k(d)}")
+for eps in (0.0, 0.5, 1.0, 1.5):
+    ks = []
+    for i in range(20):
+        rng = np.random.default_rng([i, int(eps * 1e6)])
+        Y = X + rng.standard_normal(X.shape) * eps
+        ks.append(gap_k(rips_h0(squareform(pdist(Y)))))
+    counts = "  ".join(f"{k}:{n}" for k, n in
+                       sorted(Counter(ks).items()))
+    print(f"eps {eps:.1f}   k over 20 draws:  {counts}")
 ```
 
 ```text
-eps 0.0   points moved by at most 0.000   clusters at the largest gap: 2
-eps 0.5   points moved by at most 1.978   clusters at the largest gap: 2
-eps 1.0   points moved by at most 2.707   clusters at the largest gap: 2
+eps 0.0   k over 20 draws:  2:20
+eps 0.5   k over 20 draws:  2:20
+eps 1.0   k over 20 draws:  2:13  3:3  4:1  5:1  6:2
+eps 1.5   k over 20 draws:  2:11  3:3  4:2  5:2  6:1  12:1
 ```
 
 The stability theorem is true and the conclusion people draw from it is not. This is episode 7 of the linear-algebra series in a new notation: Eckart and Young settled which rank-*k* matrix is closest to yours and said nothing about *k*; Cohen-Steiner, Edelsbrunner and Harer settled how far a barcode can move and said nothing about how many bars to count.

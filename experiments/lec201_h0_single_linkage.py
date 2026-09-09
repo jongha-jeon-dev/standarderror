@@ -17,8 +17,10 @@ Measured:
   the k = 2 cut return clusters of size 71 and 1.
 * The stability theorem is real and it is not vacuous. Jittering by eps = 0.5
   moves the points a Hausdorff 2.036 and the barcode a bottleneck 0.968.
-* And the integer read off the barcode has no such guarantee: the same jitter at
-  eps = 1.0 moves "clusters at the largest gap" from 2 to 4.
+* And the integer read off the barcode has no such guarantee. Over forty noise
+  draws at eps = 1.0 "clusters at the largest gap" is 2 in twenty-two of them
+  and 3, 4 or 5 in the rest; at eps = 1.5 it runs to 11, while the largest
+  bottleneck distance is 1.958 at both levels.
 * Which is a dimension problem too: the barcode's own dynamic range, (max-min)
   over mean of the deaths, runs 7.16 at d = 2 to 0.083 at d = 768.
 
@@ -95,7 +97,10 @@ def compute() -> dict:
 
 def figures(res: dict) -> dict:
     out: dict = {}
-    bc, chain = res["plain_bc"], res["chaining"]
+    bc = res["plain_bc"]
+    # Keyed by bridge size, as `build` and `_write` do. Positional indexing
+    # here put the twelve-point row into a caption about the three-point one.
+    chain = {r["bridge"]: r for r in res["chaining"]}
 
     # --- f0: the barcode, which is the whole object ------------------------
     def barcode(ax, m):
@@ -139,9 +144,14 @@ def figures(res: dict) -> dict:
     def clouds(ax, m):
         P, B = res["plain"], res["bridged"]
         ax.scatter(P[:, 0], P[:, 1] + 3.2, s=13, color=m.series[0],
-                   label="two blobs: ratio 6.70, cut gives 30 and 30")
+                   label=f"two blobs: ratio "
+                         f"{chain[0]['separation_ratio']:.2f}, cut gives "
+                         f"{chain[0]['cut_sizes'][0]} and "
+                         f"{chain[0]['cut_sizes'][1]}")
         ax.scatter(B[:, 0], B[:, 1] - 3.2, s=13, color=m.series[1],
-                   label="plus 12 bridge points: cut gives 71 and 1")
+                   label=f"plus 12 bridge points: cut gives "
+                         f"{chain[12]['cut_sizes'][0]} and "
+                         f"{chain[12]['cut_sizes'][1]}")
         ax.annotate("one short edge is all single linkage needs",
                     (3.0, -3.2), textcoords="offset points", xytext=(0, -26),
                     ha="center", fontsize=8.5, color=m.ink_secondary)
@@ -162,23 +172,25 @@ def figures(res: dict) -> dict:
              "with a thin line of points joining them."),
         caption=(f"Single linkage merges two components as soon as **any** pair "
                  f"of their points is close, so a chain of points at spacing "
-                 f"0.06 joins two blobs 6.0 apart. The longest bar falls from "
-                 f"{chain[0]['longest']:.3f} to {chain[3]['longest']:.3f} — "
-                 f"which is exactly the second bar of the cloud above "
-                 f"({chain[0]['second']:.3f}), so nothing is left but the "
-                 f"spacing inside a blob."),
+                 f"0.06 joins two blobs 6.0 apart. Above, the longest bar is "
+                 f"{chain[0]['longest']:.3f} and the two-cluster ratio "
+                 f"{chain[0]['separation_ratio']:.2f}. Below, the longest bar "
+                 f"has fallen to {chain[12]['longest']:.3f} — which is the "
+                 f"value that was the **second** bar above, so nothing is left "
+                 f"in the barcode but the spacing inside a blob."),
         path=str(IMG / f"lec201-f1-chaining.{EXT}"))[0]
 
     # --- f2: how fast the signal goes --------------------------------------
     def ratio(ax, m):
-        b = [r["bridge"] for r in chain]
-        y = [r["separation_ratio"] for r in chain]
+        rows = [chain[k] for k in sorted(chain)]
+        b = [r["bridge"] for r in rows]
+        y = [r["separation_ratio"] for r in rows]
         ax.plot(b, y, marker="o", ms=6, lw=1.9, color=m.series[0])
         ax.axhline(1.0, color=m.ink, lw=1.5)
         ax.annotate("1.0 = the two longest bars are the same length",
                     (b[-1], 1.0), textcoords="offset points", xytext=(-4, 9),
                     ha="right", fontsize=8.5, color=m.ink_secondary)
-        for r in chain:
+        for r in rows:
             if r["bridge"] in (0, 3):
                 ax.annotate(f"{r['separation_ratio']:.2f}",
                             (r["bridge"], r["separation_ratio"]),
@@ -197,7 +209,7 @@ def figures(res: dict) -> dict:
         alt=("A curve falling steeply from just under 7 at zero bridge points "
              "to 1 at three, then flat along the horizontal line at 1."),
         caption=(f"From {chain[0]['separation_ratio']:.2f} to "
-                 f"{chain[1]['separation_ratio']:.2f} on the addition of three "
+                 f"{chain[3]['separation_ratio']:.2f} on the addition of three "
                  f"points, and it never recovers. This is not a property of "
                  f"persistence; it is single linkage's chaining, which "
                  f"persistence inherits because — as the next section shows — "
@@ -244,10 +256,11 @@ def figures(res: dict) -> dict:
         caption=(f"Every measurement is inside the bound, and not narrowly: at "
                  f"ε = 0.5 the points move {st[0.5]['hausdorff']:.3f} and the "
                  f"barcode {st[0.5]['bottleneck']:.3f}. That is a real "
-                 f"guarantee about the picture. It is not a guarantee about the "
-                 f"answer — at ε = 1.0, with the barcode still inside the "
-                 f"bound, \"clusters at the largest gap\" goes from "
-                 f"{st[0.5]['gap_k']} to {st[1.0]['gap_k']}."),
+                 f"guarantee about the picture, and the next section is what "
+                 f"it does not cover: past ε = 0.5 the bottleneck distance "
+                 f"stops growing — the barcode is pinned against the cloud's "
+                 f"own diameter — while the integer read off it has not "
+                 f"settled at all."),
         path=str(IMG / f"lec201-f3-stability.{EXT}"))[0]
 
     # --- f4: the axis runs out ---------------------------------------------
@@ -320,7 +333,7 @@ def _hero(res: dict):
         panels=[
             (bars, f"{res['plain_bc'].separation_ratio:.1f}",
              "two clusters, loudly"),
-            (bridge, f"{chain[1]['separation_ratio']:.2f}",
+            (bridge, f"{chain[3]['separation_ratio']:.2f}",
              "after 3 more points"),
             (shrinking, f"{res['dims'][-1]['barcode_spread']:.3f}",
              "axis left at d = 768"),
@@ -414,20 +427,25 @@ def _snippets(res: dict) -> dict:
     """, expect=["bridge 12"])
 
     out["gap"] = s.run("""
-        # The rule everybody applies to a barcode, and what a small jitter
-        # does to it. The barcode itself barely moves; the integer does.
+        # The rule everybody applies to a barcode. One draw tells you almost
+        # nothing -- it usually returns 2 -- so this is the spread over
+        # twenty independent draws at each level.
+        from collections import Counter
+
         def gap_k(deaths):
             return len(deaths) - int(np.argmax(np.diff(deaths)))
 
         X = two_blobs(0, per=40)
-        rng = np.random.default_rng(1)
-        for eps in (0.0, 0.5, 1.0):
-            Y = X + rng.standard_normal(X.shape) * eps
-            d = rips_h0(squareform(pdist(Y)))
-            print(f"eps {eps:.1f}   points moved by at most "
-                  f"{np.linalg.norm(X - Y, axis=1).max():.3f}   "
-                  f"clusters at the largest gap: {gap_k(d)}")
-    """, expect=["eps 1.0"])
+        for eps in (0.0, 0.5, 1.0, 1.5):
+            ks = []
+            for i in range(20):
+                rng = np.random.default_rng([i, int(eps * 1e6)])
+                Y = X + rng.standard_normal(X.shape) * eps
+                ks.append(gap_k(rips_h0(squareform(pdist(Y)))))
+            counts = "  ".join(f"{k}:{n}" for k, n in
+                               sorted(Counter(ks).items()))
+            print(f"eps {eps:.1f}   k over 20 draws:  {counts}")
+    """, expect=["eps 1.5"])
 
     return out
 
@@ -596,7 +614,7 @@ Three points. Not three percent of the data — three points out of sixty-three,
 
     post.add(
         "",
-        f"""At twelve bridge points it is worse than gone. The longest bar is {chain[12]['longest']:.4f} — which is *exactly* the second bar of the unbridged cloud, {chain[0]['second']:.4f}, so nothing survives but the spacing inside a blob — and cutting the tree at k = 2, which is what you do when you have decided there are two clusters, returns groups of size **{chain[12]['cut_sizes'][0]}** and **{chain[12]['cut_sizes'][1]}**. It shaves off one point.
+        f"""At twelve bridge points it is worse than gone. The longest bar is now {chain[12]['longest']:.4f}, and that number is not a coincidence — it is bit for bit the *second* bar of the unbridged cloud. The bridge has not merely weakened the two-cluster signal; it has removed the between-blob scale from the barcode altogether, leaving nothing but the spacing inside a blob. And cutting the tree at k = 2, which is what you do when you have decided there are two clusters, returns groups of size **{chain[12]['cut_sizes'][0]}** and **{chain[12]['cut_sizes'][1]}**. It shaves off one point.
 
 That is the shape of the failure worth remembering. It does not return two wrong clusters. It returns a right answer to a question nobody asked, in the format of an answer to the question you did ask.""",
         level=3,
