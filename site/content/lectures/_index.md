@@ -188,13 +188,20 @@ inside a computation.
 |---|---|---|
 | 1 | Korea's Fertility Rebound Needs Nobody to Have More Children | the period TFR is one calendar year of age-specific rates stacked into a woman who does not exist. Give every cohort the same completed fertility and postpone by *d* per cohort: the period rate is exactly *Q*/(1+*d*), the period mean age rises at *d*/(1+*d*), and dividing by 1 − *r* returns *Q* to five decimals. Postponement *decelerating* from 0.2 to 0.1 then lifts the period rate 9.1% with nobody having more children — 28 years later, and taking 21 more to arrive |
 | 2 | Everyone's Wage Rose and the Median Fell | composition. Hire entrants below the median and it slides *m*/2 ranks at a cost of *m*/(2*n f*(*M*)), so a universal raise of *g* vanishes once the entry share passes 0.798*g*/*sigma* — 4.0% at a 3% raise. The threshold *falls* as inequality rises, and the median breaks before the mean. Reverse the sign and losing the lowest-paid 9.8% prints 10.4% median growth on 2.5% of real growth, which is what the US printed in the quarter it lost 20.5 million jobs |
-| 3 | Two Countries, One Gini, Opposite Policies | the Gini coefficient is many-to-one onto distributions, so a society whose bottom decile collapsed and one whose top percentile ran away can share a coefficient to three decimals and need opposite responses |
+| 3 | Two Countries, One Gini, Opposite Policies | the poorest tenth losing 90% of its income and the richest hundredth multiplying by 2.51 land on the same Gini exactly — and on the same p90/p10, p50/p10, p90/p50 and poverty headcount, because each distortion lives inside a tail. Five headline numbers agree while the poorest tenth holds 9.2× more income in one world. `dG/dx_k = 2k/(n²μ) − c`, so a unit of income is priced by the recipient's rank and nothing else: R² of 1.0000000000 over ranks whose incomes differ sixfold |
 
-Episodes 1 and 2 are published, and each of them was drafted around a claim
-that its own measurement refused. Episode 1 expected the Bongaarts-Feeney
-adjustment to break when the fertility schedule's spread changes, which is the
-assumption the literature attacks hardest; measured, that costs about one
-percent. Episode 2 expected the median to be the robust choice against
-composition; measured, it breaks at about 60% of the entry share the mean needs,
-at every spread tried. Both episodes say so, and move the criticism to where the
-measurement actually put it.
+All three episodes are published, and each was drafted around a claim its own
+measurement refused. Episode 1 expected the Bongaarts-Feeney adjustment to break
+when the fertility schedule's spread changes, which is the assumption the
+literature attacks hardest; measured, that costs about one percent. Episode 2
+expected the median to be the robust choice against composition; measured, it
+breaks at about 60% of the entry share the mean needs, at every spread tried.
+Episode 3's first attempt to measure the Gini's sensitivity moved a sum three
+thousand times larger than the gap between neighbouring incomes, so it measured
+reordering rather than the identity, and came out non-monotone; the corrected
+measurement is exact to ten decimal places. Every episode says so, and moves the
+criticism to where the measurement actually put it.
+
+The track closes on the question the three share, which is not about demography,
+wages or inequality: **for any summary you rely on, what are two states of the
+world it cannot tell apart, and would you act differently in them?**
