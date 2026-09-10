@@ -164,3 +164,34 @@ projected, and two of those measurements contradicted the claim they were
 written to make: episode 4's, and episode 2's, which was written to say the
 display fails in high dimensions and ended up showing that it becomes the
 reference.
+
+---
+
+## Headline Statistics, Taught Through What Breaks
+
+One object: **an aggregate statistic that gets printed as though it described a
+person**. Unlike the other three series this one needs no machine learning and
+almost no code — the failures here are arithmetic, and they are in the numbers
+that reach the front page rather than in a training run.
+
+Thesis: **the three summaries below fail in three structurally different ways,
+and none of the three failures is visible in the number itself.** One describes
+nobody, so timing moves it. One moves because the population changed rather
+than the people in it. One is many-to-one, so opposite worlds share a value.
+
+Every episode is built the same way as the rest of the site: the mechanism is
+constructed in a simulation where the answer is known by design, the algebra is
+derived rather than cited, and published figures appear only in the prose, never
+inside a computation.
+
+| # | Episode | The number that breaks |
+|---|---|---|
+| 1 | Korea's Fertility Rebound Needs Nobody to Have More Children | the period TFR is one calendar year of age-specific rates stacked into a woman who does not exist. Give every cohort the same completed fertility and postpone by *d* per cohort: the period rate is exactly *Q*/(1+*d*), the period mean age rises at *d*/(1+*d*), and dividing by 1 − *r* returns *Q* to five decimals. Postponement *decelerating* from 0.2 to 0.1 then lifts the period rate 9.1% with nobody having more children — 28 years later, and taking 21 more to arrive |
+| 2 | Everyone's Wage Rose and the Median Fell | composition. Add low-wage jobs and the median wage can fall while every individual in the data got a raise, which is half of the real-wage-stagnation argument arriving as a Simpson's paradox |
+| 3 | Two Countries, One Gini, Opposite Policies | the Gini coefficient is many-to-one onto distributions, so a society whose bottom decile collapsed and one whose top percentile ran away can share a coefficient to three decimals and need opposite responses |
+
+Episode 1 is published. It was drafted to say the Bongaarts-Feeney adjustment
+breaks when the fertility schedule's spread changes, which is the assumption the
+literature attacks hardest; measured, that costs about one percent, and the
+correction is fine. The episode says so and moves the criticism to the place the
+measurement actually put it.
