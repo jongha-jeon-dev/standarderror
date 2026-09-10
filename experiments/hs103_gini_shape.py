@@ -129,7 +129,7 @@ def figures(res: dict) -> dict:
                  f"the richest hundredth was multiplied by "
                  f"{1 + pair['b']:.2f} - and sits fractionally below the "
                  f"baseline everywhere else, because raising the top raised "
-                 f"the total and so lowered everyone else's *share*. Twice "
+                 f"the total and so lowered everyone else's **share**. Twice "
                  f"the area between either curve and the diagonal is "
                  f"{pair['gini']:.6f}, for both, exactly. The coefficient is "
                  f"an area, and an area does not record where it was."),
@@ -360,7 +360,7 @@ def build() -> Post:
             "headcount are identical too, because each distortion lives inside "
             "a tail. Five headline numbers agree while the poorest tenth holds "
             "9.2 times more income in one world than the other. The reason is "
-            "exact: dG/dx_k = 2k/(n^2 mu) - c, so a unit of income is priced "
+            "exact: dG/dx_k = 2k/(n² mu) - c, so a unit of income is priced "
             "by the recipient's rank and by nothing else about them - measured "
             "R-squared 1.0000000000 against rank, slope matching to six "
             "figures, over ranks whose incomes differ sixfold. Which bounds "
