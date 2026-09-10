@@ -64,12 +64,33 @@ first** -- so the Notion page must be created *after* the push, not before. A
 page created first sits there with `{{FIG:...}}` placeholders in it, which is
 what the author kept seeing, four times.
 
-The inline-UTF-8 route below is real but I cannot drive it. The files are 37-46
-KB after `scour` and the cap is 200 KiB, so the sizes are fine; what fails is
-getting the exact bytes into a tool call, because the shell truncates any output
-over about 2 KB to a file and hands back a preview. So this module is for
-*preparing and checking* figures -- sizes, and the label-preservation gate below
--- and the upload itself goes through `source_url` after a push.
+The inline-UTF-8 route is the fallback when there is no push pending, and it
+does work -- Notion's `create-attachment` accepts SVG as inline `content` up to
+200 KiB, and the file lands in the page as an image. Two things decide whether
+it is drivable, because the bytes have to pass through a tool call by hand:
+
+* **Export with `SERR_SVG_FONTS=reference`.** Without it `theme.apply` sets
+  `svg.fonttype` to `path` and every glyph is emitted as a `<path>` in `<defs>`
+  with a `<use>` per character: a three-line chart comes out at 58 KB, of which
+  the drawing is a fifth. With it the text stays text and the same chart is
+  **12-14 KB**, which is small enough to pass through by hand.
+* **Not for `xkcd` cards.** The hand-drawn wobble resamples every stroke into
+  hundreds of vertices, so `strip_card` and the heroes come out at 760 KB and
+  no rcParam helps. Either send those through `source_url` after a push, or
+  author a compact SVG by hand -- roughly 7 KB for a three-panel card, which is
+  what the Navier-Stokes commentary's hero was.
+
+The earlier note here said the inline route could not be driven at all, on the
+grounds that the shell truncates output over about 2 KB. That was wrong about
+the mechanism: the shell is not the channel. Reading the file with the file
+reader puts the exact bytes in hand, and 13 KB is a comfortable size to retype
+into a tool call. The blocker was only ever the 37-46 KB figure size, which the
+`SERR_SVG_FONTS` switch removes.
+
+Rule of thumb: if a push is already queued, wait for it and use `source_url`
+for everything, including the hero. If there is no push -- a standalone
+commentary, or a figure that never enters the repo -- export the charts with
+`SERR_SVG_FONTS=reference` and inline them, and hand-author the hero.
 """
 
 from __future__ import annotations
