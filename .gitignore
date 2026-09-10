@@ -25,6 +25,10 @@ data/*
 !data/worldbank/
 # US Bureau of Labor Statistics, public domain
 !data/us_labor/
+# The 816,128-parameter model the Calculus series measures. Our own weights,
+# trained by scripts/train_tiny.py; 3.2 MB, and the alternative is losing it to
+# a container reset again. The corpus it was trained on is not here.
+!data/tiny_gpt/
 
 # Editorial rather than published: which posts are planned, and how their titles
 # were chosen. Not secret, but not part of the record either.

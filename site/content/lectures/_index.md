@@ -205,3 +205,37 @@ criticism to where the measurement actually put it.
 The track closes on the question the three share, which is not about demography,
 wages or inequality: **for any summary you rely on, what are two states of the
 world it cannot tell apart, and would you act differently in them?**
+
+---
+
+## Calculus for Language Models, Taught Through What Breaks
+
+One object: **the derivative you are actually computing**. Backpropagation is
+the chain rule, and the chain rule has hypotheses — differentiability, a
+Jacobian of full rank, a function of the thing you are differentiating with
+respect to. A transformer violates all three, in specific places, and the
+framework returns a number anyway.
+
+Thesis: **each of the five failures below is an exact statement about one
+component, not an approximation or a training artefact.** The Jacobian of
+`LayerNorm` has rank exactly *d* − 2. A softmax's gradient vanishes
+quadratically in its confidence. A sampled token has no derivative at all. None
+of that is a bug and none of it is fixable; it is the shape of the object you
+are optimising.
+
+The measurements are made on a **816,128-parameter character-level
+transformer** trained for this series — four blocks, four heads, width 128,
+validation loss 1.573 against a uniform-guess 4.174 — with the weights and the
+training script committed to the repository. The exact results hold at any
+width; the frequencies are properties of that model and are reported as such.
+
+| # | Episode | The derivative that is not there |
+|---|---|---|
+| 1 | Backprop Is the Chain Rule, and the Chain Rule Has Hypotheses | ReLU and GELU are not differentiable everywhere, `max` has a subgradient rather than a derivative, and autodiff returns a float regardless. What the framework picks at the kink, and how often a real training step lands on one |
+| 2 | A Confident Attention Head Passes Almost No Gradient | the softmax Jacobian is `diag(p) − ppᵀ`, whose spectrum is bounded by `max p (1 − max p)`, so gradient flow through a head dies quadratically as it sharpens — and a head that has learned to point at one token has learned to stop learning |
+| 3 | LayerNorm Deletes Exactly Two Directions of Your Gradient | its Jacobian is `(I − 11ᵀ/d − x̂x̂ᵀ/d)/σ`, of rank exactly *d* − 2, so the mean and the radial component of every gradient are annihilated before they reach the layer below |
+| 4 | You Cannot Differentiate Through a Sampled Token | the straight-through estimator is not an approximation of a gradient that exists, and its bias against REINFORCE and against the exact gradient is measurable on a problem small enough to have one |
+| 5 | The Gradient in Embedding Space Does Not Point at a Token | one descent step lands nowhere near any row of the embedding table, which is why prompt optimisation is search rather than descent, and why the gradient tells you less about which token to pick than its norm suggests |
+
+Nothing is published yet. The weights are committed, which is the part that
+took two attempts.

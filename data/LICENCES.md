@@ -13,6 +13,24 @@ make several posts impossible to reproduce, which is the cost being paid here.
 
 ## Committed
 
+### `tiny_gpt/` — our own model weights
+
+`tiny_gpt.pt` is a checkpoint of a 816,128-parameter character-level
+transformer trained by `scripts/train_tiny.py`. Nobody else's data is inside
+it: it is the output of our own training run, so there is no third-party licence
+to satisfy and it is committed without qualification.
+
+sha256 `4353eb3155360b654072b1b3c46416000de23c9ab29c5bbf78649cfe7d03c2f0`,
+verified by `standarderror.llm.tiny.load`, so a swapped or truncated file fails
+loudly rather than producing quietly different numbers.
+
+The **corpus** is deliberately absent. The model was trained on
+`tinyshakespeare` — Shakespeare, public domain, assembled into a single file by
+Andrej Karpathy for `char-rnn`. Redistributing someone else's assembly of a
+public-domain text is not something the rule above covers, so the training
+script fetches it and checks its sha256
+(`86c4e6aa9db7c042ec79f339dcb96d42b0075e16b8fc2e86bf0ca57e2dc565ed`) instead.
+
 ### `worldbank/` — World Bank Open Data, CC BY 4.0
 
 The World Bank's licence for its Open Data catalogue "allows users to copy, modify
