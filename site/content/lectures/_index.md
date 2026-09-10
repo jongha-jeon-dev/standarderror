@@ -232,15 +232,23 @@ width; the frequencies are properties of that model and are reported as such.
 | # | Episode | The derivative that is not there |
 |---|---|---|
 | 1 | Backprop Is the Chain Rule, and the Chain Rule Has Hypotheses | ReLU and GELU are not differentiable everywhere, `max` has a subgradient rather than a derivative, and autodiff returns a float regardless. What the framework picks at the kink, and how often a real training step lands on one |
-| 2 | A Confident Attention Head Passes Almost No Gradient | the softmax Jacobian is `diag(p) − ppᵀ`, whose spectrum is bounded by `max p (1 − max p)`, so gradient flow through a head dies quadratically as it sharpens — and a head that has learned to point at one token has learned to stop learning |
+| 2 | A Confident Attention Head Passes Almost No Gradient | the softmax Jacobian is `diag(p) − ppᵀ`, its quadratic form is a variance, and so its norm is trapped between *m*(1 − *m*) and 2*m*(1 − *m*) with the width of the row nowhere in it — after which one head of this model turns out to have committed hard enough that the gradient which could change its mind is gone |
 | 3 | LayerNorm Deletes Exactly Two Directions of Your Gradient | its Jacobian is `(I − 11ᵀ/d − x̂x̂ᵀ/d)/σ`, of rank exactly *d* − 2, so the mean and the radial component of every gradient are annihilated before they reach the layer below |
 | 4 | You Cannot Differentiate Through a Sampled Token | the straight-through estimator is not an approximation of a gradient that exists, and its bias against REINFORCE and against the exact gradient is measurable on a problem small enough to have one |
 | 5 | The Gradient in Embedding Space Does Not Point at a Token | one descent step lands nowhere near any row of the embedding table, which is why prompt optimisation is search rather than descent, and why the gradient tells you less about which token to pick than its norm suggests |
 
-Episode 1 is published, and it refuses its own premise: it was drafted to show
-that non-differentiability is a live problem in a real training run, went
-looking, and found that gradient clipping's kink was never reached in 600 steps
-and that not one of 10.6 million attention probabilities is exactly 0 or 1. The
-one place the gradient is identically zero is put there by the causal mask, not
-by training. What throttles gradient flow is confidence, which is smooth — and
-that is episode 2.
+Episodes 1 and 2 are published, and both end somewhere other than where they
+were drafted to end. Episode 1 was written to show that non-differentiability is
+a live problem in a real training run; it went looking, and found that gradient
+clipping's kink was never reached in 600 steps and that not one of 10.6 million
+attention probabilities is exactly 0 or 1. The one place the gradient is
+identically zero is put there by the causal mask, not by training. What
+throttles gradient flow is confidence, which is smooth.
+
+Episode 2 then measures that, and the honest finding is not that saturation is
+a pathology. Layer 0 head 1 sits at *m* = 0.97, is a previous-token head on
+99.8% of rows, and passes 5.9 times less routing gradient than the next-lowest
+head — and it is the head the model cannot lose, since zeroing it costs 1.12
+nats while replacing it with a fixed shift-by-one permutation costs 0.0013.
+Saturation is what commitment looks like from the inside of a Jacobian, and the
+`1/sqrt(d)` scale in front of the attention logits exists to postpone it.
