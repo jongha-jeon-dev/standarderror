@@ -47,6 +47,8 @@ $$
 r = \frac{d}{1 + d}
 $$
 
+One more line of arithmetic, and it is the practically useful one. The fraction by which the period rate sits below completed fertility is 1 − 1/(1 + *d*), which is *d*/(1 + *d*), which is *r*. **The distortion equals the annual rise in the period mean age.** No simulation and no model: if a statistical office reports that the mean age of mothers rose 0.1 years last year, then last year's total fertility rate sits 10% below what the same women would produce with timing held still, and you can do that in your head.
+
 Note what *r* is not. It is not *d*. The period mean age rises **more slowly** than cohorts postpone, because each year's cross-section mixes cohorts at different stages of their own delay. A published mean-age change of 0.1 years per year corresponds to a cohort postponement of about 0.11.
 
 Put the two together. Since 1 − *r* = 1/(1 + *d*),
@@ -90,7 +92,7 @@ There is a third consequence in that table that is easy to miss. The period sche
 
 ![A rising curve with simulation points sitting exactly on it, showing the period TFR falling further below completed fertility as postponement increases.](hs101-f0-shortfall.png)
 
-*The dots are the simulation and the line is 1 - 1/(1 + d), which they sit on to within 3e-05. At the pace Korea has recently published, the period rate sits about 9% below what the same women would produce if timing stopped moving. Nobody in this picture has fewer children than anybody else.*
+*The dots are the simulation and the line is 1 - 1/(1 + d), which they sit on to within 3e-05. The vertical rule is the postponement behind Korea's published mean-age change of 0.1 a year, which is a d of 0.111 rather than of 0.10 - and the shortfall there is exactly 10%, because the shortfall equals r. Nobody in this picture has fewer children than anybody else.*
 
 ## A rebound with nobody behind it
 
@@ -147,8 +149,13 @@ r_long = 5.0 / 24.0                      # OECD: over 5 years since 2000
 
 for name, r in (("recent pace", r_now), ("2000-2024 average", r_long)):
     print(f"{name:>18}  r = {r:.3f}  "
-          f"factor 1/(1-r) = {1/(1-r):.3f}  "
-          f"adjusted 2024 TFR = {tfr[2024]/(1-r):.3f}")
+          f"factor 1/(1-r) = {1/(1-r):.3f}")
+
+# Only the recent pace gets applied to a year, because correcting 2024
+# at a twenty-four-year average pace would not be an estimate of
+# anything.
+print(f"\n2024 reported {tfr[2024]:.3f}  "
+      f"adjusted at the recent pace {tfr[2024]/(1-r_now):.3f}")
 
 print(f"\nreported rise 2023 to 2025: "
       f"{tfr[2025]/tfr[2023] - 1:+.1%}")
@@ -157,14 +164,16 @@ print(f"fall in the correction factor over the same story: "
 ```
 
 ```text
-       recent pace  r = 0.100  factor 1/(1-r) = 1.111  adjusted 2024 TFR = 0.831
- 2000-2024 average  r = 0.208  factor 1/(1-r) = 1.263  adjusted 2024 TFR = 0.945
+       recent pace  r = 0.100  factor 1/(1-r) = 1.111
+ 2000-2024 average  r = 0.208  factor 1/(1-r) = 1.263
+
+2024 reported 0.748  adjusted at the recent pace 0.831
 
 reported rise 2023 to 2025: +11.0%
 fall in the correction factor over the same story: -12.0%
 ```
 
-Read the last two lines together. The reported total fertility rate rose +11.0% between 2023 and 2025. Over the same story, the tempo correction factor shrank by -12.0%, because postponement decelerating means the distortion it was creating gets smaller.
+Read the last two lines together. The reported total fertility rate rose +11.0% between 2023 and 2025. Over the same story, the tempo correction factor shrank by 12.0%, because postponement decelerating means the distortion it was creating gets smaller.
 
 Those are the same order of magnitude, and that is all I am willing to claim from it. It is not a decomposition: doing this properly needs the mean age by birth order for each year, applied order by order, and the deceleration is measured here as a long-run average against a two-year change rather than as a series. What it is enough for is the negative statement in the title. **A rise of this size does not require anybody to have had more children.** It is fully available from postponement slowing down, and postponement slowing down is exactly what a country produces at the end of a long delay of first births.
 
