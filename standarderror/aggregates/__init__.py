@@ -7,12 +7,13 @@ it described a person:
   assembled from age groups that no woman belongs to at once. A pure change in
   the *timing* of births moves it while no cohort's completed family size
   changes at all.
-* composition (episode 2) -- the median wage, which can fall while every
-  individual's wage rises.
+* `composition` -- the median wage, which can fall while every individual's
+  wage rises, and which is *more* fragile to a change in who is counted than
+  the mean is.
 * dispersion (episode 3) -- the Gini coefficient, which is many-to-one onto
   distributions, so two societies needing opposite policies can share one.
 """
 
-from standarderror.aggregates import tempo
+from standarderror.aggregates import composition, tempo
 
-__all__ = ["tempo"]
+__all__ = ["composition", "tempo"]
