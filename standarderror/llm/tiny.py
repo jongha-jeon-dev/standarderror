@@ -36,6 +36,55 @@ VAL_LOSS = 1.573
 UNIFORM_LOSS = math.log(65)
 
 
+CORPUS_URL = ("https://raw.githubusercontent.com/karpathy/char-rnn/master/"
+              "data/tinyshakespeare/input.txt")
+CORPUS_SHA256 = ("86c4e6aa9db7c042ec79f339dcb96d42b0075e16b8fc2e86bf0ca57e2d"
+                 "c565ed")
+
+
+def corpus() -> str:
+    """`tinyshakespeare`, fetched and hash-checked rather than committed.
+
+    Shakespeare is public domain; this particular assembly of it into one file
+    is Karpathy's, and redistributing someone else's assembly is not something
+    this repository's licensing rule covers. So it is cached under the cache
+    directory and verified, which gets reproducibility without redistribution.
+    """
+    import hashlib
+    import urllib.request
+    cache = se.SETTINGS.cache_dir / "tinyshakespeare.txt"
+    if not cache.exists():
+        cache.parent.mkdir(parents=True, exist_ok=True)
+        with urllib.request.urlopen(CORPUS_URL, timeout=60) as r:
+            cache.write_bytes(r.read())
+    raw = cache.read_bytes()
+    got = hashlib.sha256(raw).hexdigest()
+    if got != CORPUS_SHA256:
+        raise ValueError(f"corpus hash is {got}, expected {CORPUS_SHA256}")
+    return raw.decode("utf-8")
+
+
+def batches(split: str = "val", *, count: int = 20, size: int = 16,
+            seed: int = 0):
+    """Yield `count` batches of real text, from the same 90/10 split training
+    used. `val` by default: a measurement of what the model does should not be
+    made on the text it was fitted to."""
+    torch = _torch()
+    import numpy as np
+    text = corpus()
+    chars = sorted(set(text))
+    stoi = {c: i for i, c in enumerate(chars)}
+    data = torch.tensor([stoi[c] for c in text], dtype=torch.long)
+    cut = int(0.9 * len(data))
+    d = data[:cut] if split == "train" else data[cut:]
+    rng = np.random.default_rng(seed)
+    for _ in range(int(count)):
+        i = rng.integers(0, len(d) - BLOCK - 1, int(size))
+        x = torch.stack([d[j:j + BLOCK] for j in i])
+        y = torch.stack([d[j + 1:j + BLOCK + 1] for j in i])
+        yield x, y
+
+
 def checkpoint_path() -> Path:
     return Path(se.SETTINGS.repo_root) / "data" / "tiny_gpt" / "tiny_gpt.pt"
 

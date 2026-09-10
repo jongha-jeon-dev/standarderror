@@ -21,37 +21,18 @@ from __future__ import annotations
 import hashlib
 import math
 import time
-import urllib.request
 
 import numpy as np
 import torch
 
-import standarderror as se
 from standarderror.llm import tiny
 
-CORPUS_URL = ("https://raw.githubusercontent.com/karpathy/char-rnn/master/"
-              "data/tinyshakespeare/input.txt")
-CORPUS_SHA256 = ("86c4e6aa9db7c042ec79f339dcb96d42b0075e16b8fc2e86bf0ca57e2d"
-                 "c565ed")
 STEPS, BATCH, MAX_LR = 3000, 32, 3e-3
-
-
-def corpus() -> str:
-    cache = se.SETTINGS.cache_dir / "tinyshakespeare.txt"
-    if not cache.exists():
-        cache.parent.mkdir(parents=True, exist_ok=True)
-        with urllib.request.urlopen(CORPUS_URL, timeout=60) as r:
-            cache.write_bytes(r.read())
-    raw = cache.read_bytes()
-    got = hashlib.sha256(raw).hexdigest()
-    if got != CORPUS_SHA256:
-        raise ValueError(f"corpus hash is {got}, expected {CORPUS_SHA256}")
-    return raw.decode("utf-8")
 
 
 def main() -> None:
     torch.manual_seed(0)
-    text = corpus()
+    text = tiny.corpus()
     chars = sorted(set(text))
     stoi = {c: i for i, c in enumerate(chars)}
     data = torch.tensor([stoi[c] for c in text], dtype=torch.long)

@@ -237,5 +237,10 @@ width; the frequencies are properties of that model and are reported as such.
 | 4 | You Cannot Differentiate Through a Sampled Token | the straight-through estimator is not an approximation of a gradient that exists, and its bias against REINFORCE and against the exact gradient is measurable on a problem small enough to have one |
 | 5 | The Gradient in Embedding Space Does Not Point at a Token | one descent step lands nowhere near any row of the embedding table, which is why prompt optimisation is search rather than descent, and why the gradient tells you less about which token to pick than its norm suggests |
 
-Nothing is published yet. The weights are committed, which is the part that
-took two attempts.
+Episode 1 is published, and it refuses its own premise: it was drafted to show
+that non-differentiability is a live problem in a real training run, went
+looking, and found that gradient clipping's kink was never reached in 600 steps
+and that not one of 10.6 million attention probabilities is exactly 0 or 1. The
+one place the gradient is identically zero is put there by the causal mask, not
+by training. What throttles gradient flow is confidence, which is smooth — and
+that is episode 2.
