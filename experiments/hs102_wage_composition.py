@@ -273,7 +273,7 @@ def figures(res: dict) -> dict:
         caption=(f"At {HIRING[2]:.1%} of net hiring the print reads "
                  f"{ordinary[0.015]['printed']:.2%} against a raise of "
                  f"{RAISE:.0%} - a wedge of "
-                 f"{ordinary[0.015]['swallowed']:.2f} points, or "
+                 f"{ordinary[0.015]['swallowed'] * 100:.2f} points, or "
                  f"{ordinary[0.015]['swallowed_fraction']:.0%}. That is larger "
                  f"than real wage growth in a good year, and it arrives with "
                  f"no headline attached, because the printed number looks "
@@ -585,9 +585,9 @@ Net employment growth in an ordinary American year is around one to one and a ha
         "",
         f"""{snip['ordinary'].markdown()}
 
-Net hiring of {HIRING[2]:.1%} — a completely unremarkable year — swallows {res['ordinary'][2]['swallowed']:.2f} percentage points of a {RAISE:.0%} raise, which is {res['ordinary'][2]['swallowed_fraction']:.0%} of it. The print reads {res['ordinary'][2]['printed']:.2%}.
+Net hiring of {HIRING[2]:.1%} — a completely unremarkable year — swallows {res['ordinary'][2]['swallowed'] * 100:.2f} percentage points of a {RAISE:.0%} raise, which is {res['ordinary'][2]['swallowed_fraction']:.0%} of it. The print reads {res['ordinary'][2]['printed']:.2%}.
 
-Put that beside the thing it gets compared against. Real wage growth in a good year is under a point, so a composition term of {res['ordinary'][2]['swallowed']:.2f} points is not a correction to the story; it is larger than the story. And unlike 2020 it produces no headline, no Federal Reserve blog post and no correction, because {res['ordinary'][2]['printed']:.2%} looks exactly like what a wage series is supposed to look like.
+Put that beside the thing it gets compared against. Real wage growth in a good year is under a point, so a composition term of {res['ordinary'][2]['swallowed'] * 100:.2f} points is not a correction to the story; it is larger than the story. And unlike 2020 it produces no headline, no Federal Reserve blog post and no correction, because {res['ordinary'][2]['printed']:.2%} looks exactly like what a wage series is supposed to look like.
 
 The sign of this one is worth holding onto too. In an expansion, composition **understates** wage growth, because you are hiring at the bottom. In a downturn it **overstates** it, because you are firing at the bottom. So the composition term is procyclical in employment and countercyclical in the printed wage — which means the measured series is systematically flatter than the truth in both directions, and a reader who compares a boom's wage print with a bust's is comparing two numbers whose errors point opposite ways.""",
         level=3,
@@ -633,7 +633,7 @@ Which leaves the reader with two numbers and no single one that means what they 
 2. Hire entrants below the median and it slides *m*/2 ranks, which costs *m*/(2*n f*(*M*)). A universal raise of *g* disappears once the entry share passes 2*gMf*(*M*), or 0.798*g*/*sigma* on a lognormal — **{cp.median_threshold(RAISE, cp.SIGMA):.1%}** at a {RAISE:.0%} raise and the spread of US wages.
 3. That threshold **falls** as the wage distribution widens. More unequal means more fragile.
 4. The median is the more fragile of the two, at {min(sweep[s]['ratio'] for s in SIGMAS):.2f} to {max(sweep[s]['ratio'] for s in SIGMAS):.2f} of the mean's threshold. Robust to outliers is not robust to composition.
-5. In an ordinary year, net hiring of {HIRING[2]:.1%} below the median swallows {res['ordinary'][2]['swallowed']:.2f} points of a {RAISE:.0%} raise — {res['ordinary'][2]['swallowed_fraction']:.0%} of it, and more than a good year's real wage growth. The sign flips with the cycle, so booms understate and busts overstate.
+5. In an ordinary year, net hiring of {HIRING[2]:.1%} below the median swallows {res['ordinary'][2]['swallowed'] * 100:.2f} points of a {RAISE:.0%} raise — {res['ordinary'][2]['swallowed_fraction']:.0%} of it, and more than a good year's real wage growth. The sign flips with the cycle, so booms understate and busts overstate.
 6. Reverse the sign and losing the lowest-paid {implied['share']:.1%} prints {implied['published_median_growth']:.1%} on {UNDERLYING:.1%} of real growth. The Dallas Fed measured the real thing at {P['cps_composition_pp']} of {P['cps_spike_pp']} points.
 7. The fix is to match individuals, and it costs you the people who lost their jobs. Choose the question first.""")
 
