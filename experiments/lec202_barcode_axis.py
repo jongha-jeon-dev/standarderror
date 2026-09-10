@@ -687,7 +687,7 @@ And the thing not to do: conclude from a flat barcode that there is no structure
         f"""1. The barcode's dynamic range collapses with dimension: {dims[2]['barcode_spread']:.2f} at d = 2 to {dims[768]['barcode_spread']:.3f} at d = 768, medians over fifteen draws.
 2. The clustering does not. The separation H0 needs falls from {needed[2]['relative']:.2f} to {needed[768]['relative']:.2f} of the typical pairwise distance, and purity stays above {min(auc[d]['purity'] for d in DIMS):.3f}.
 3. "Count the bars above the biggest gap" returns "one cluster" zero times in forty draws of pure noise, at every dimension. It cannot say none.
-4. Its modal answer on noise flips from {noise[2]['modal_k']} at d = 2 to {noise[768]['modal_k']} at d ≥ 32, because in a concentrated barcode the biggest gap is the first one.
+4. Its modal answer on noise flips from {noise[2]['modal_k']} at d = 2 to {noise[768]['modal_k']} at d ≥ 32, because a concentrated barcode's death distribution is symmetric, so the biggest gap lands at either end — {where[5]['in_first_ten']} draws of thirty at the front against {where[5]['in_last_ten']} at the back — and never in the middle.
 5. The two-cluster ratio read absolutely is inverted at low dimension — AUC {auc[2]['auc']:.3f} — and improves with dimension against a matched null, to {auc[768]['auc']:.3f} at 768.
 6. So build the null from your own data. The collapse of the dynamic range is what makes the null tight enough to be worth comparing against.""")
 
