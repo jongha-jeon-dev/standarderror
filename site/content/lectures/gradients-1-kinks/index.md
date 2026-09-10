@@ -13,13 +13,13 @@ images: ["gr101-hero.png"]
 
 Disclosure: this post was written with the assistance of an AI system (Claude), which wrote the analysis code, ran the experiments and drafted the text. The topic, the constraints, the data choices and the final review are the author's.
 
-*relu, abs, clamp, hardtanh and a vector norm all return 0 at their kinks; maximum, minimum and max split the tie and return 0.5; and sqrt(x*x), which is abs(x), returns nan where abs returns 0. Three answers from one library for one slope. The consequence is sharper than the inconsistency: the identity map written three ways that agree at every real number gives f'(0) = 1.0, 0.0 and 0.5, and two of those are not subgradients of the identity, whose subdifferential is the single point 1. Then the episode goes looking for this in the transformer and does not find it. GELU and LayerNorm are smooth, gradient clipping's min never activates in a 600-step run, and not one of 10.6 million unmasked attention probabilities is exactly 0 or exactly 1 in float32. One structural exception: position 0's attention row is a softmax over a single element, so it is the constant 1 and its gradient is identically zero - 5,120 of 5,120 first rows. What does throttle gradient flow is saturation, which is smooth: 12.9% of rows already have a maximum probability above 0.9, where the softmax passes under a tenth of the gradient.*
+*relu, abs, clamp, hardtanh and a vector norm all return 0 at their kinks; maximum, minimum and max split the tie and return 0.5; and sqrt(x·x), which is abs(x), returns nan where abs returns 0. Three answers from one library for one slope. The consequence is sharper than the inconsistency: the identity map written three ways that agree at every real number gives f'(0) = 1.0, 0.0 and 0.5, and two of those are not subgradients of the identity, whose subdifferential is the single point 1. Then the episode goes looking for this in the transformer and does not find it. GELU and LayerNorm are smooth, gradient clipping's min never activates in a 600-step run, and not one of 10.6 million unmasked attention probabilities is exactly 0 or exactly 1 in float32. One structural exception: position 0's attention row is a softmax over a single element, so it is the constant 1 and its gradient is identically zero - 5,120 of 5,120 first rows. What does throttle gradient flow is saturation, which is smooth: 12.9% of rows already have a maximum probability above 0.9, where the softmax passes under a tenth of the gradient.*
 
 Episode 1 of *Calculus for Language Models, Taught Through What Breaks*. The syllabus and the other episodes: https://jongha-jeon-dev.github.io/standarderror/lectures/
 
 ## A slope where there is no slope
 
-`relu` has no derivative at zero. The left slope is 0, the right slope is 1, and there is no number that is the derivative — the subdifferential is the whole interval [0, 1].
+`relu` has no derivative at zero. The left slope is 0, the right slope is 1, and there is no number that is the derivative — the subdifferential is the whole interval from 0 to 1.
 
 Ask a framework anyway and it will tell you 0.0, without a warning, in about a microsecond.
 
@@ -58,13 +58,13 @@ max(stack(x, 0)) at 0   ->  0.5
 sqrt(x * x)      at 0   ->  nan
 ```
 
-6 of the ten pick a one-sided slope and return 0. 3 of them split the tie and return 0.5. And `sqrt(x * x)` returns **nan** — which is the same function as `abs(x)`, differing only in how it was typed.
+6 of the ten operations pick a one-sided slope and return 0. 3 of them split the tie and return 0.5. And `sqrt(x * x)` returns **nan** — which is the same function as `abs(x)`, differing only in how it was typed.
 
 None of those is a mistake. At a kink there is no derivative to be right about, so somebody writing the kernel decided, and the decisions are local to each kernel. The trouble is what happens when you compose them.
 
 ![A table of ten non-differentiable points. Six rows return zero, three return one half, and one returns nan.](gr101-f0-catalogue.png)
 
-*Six operations pick the left slope, three split the tie, and `sqrt(x*x)` - which is `abs(x)` - returns nan where `abs(x)` returns 0. None of these is wrong: at a kink there is no derivative to be right about, so the kernel author chose. The trouble is that they chose differently.*
+*Six operations pick the left slope, three split the tie, and the square root of x squared - which is `abs(x)` - returns nan where `abs(x)` returns 0. None of these is wrong: at a kink there is no derivative to be right about, so the kernel author chose. The trouble is that they chose differently.*
 
 ## Differentiation of the expression, not of the function
 
@@ -122,13 +122,15 @@ Start with the model. The transformer this series measures has no `relu` anywher
 
 That leaves the training procedure, where there is exactly one non-smooth operation and everybody uses it: gradient clipping multiplies the gradient by `min(1, c / ||g||)`, which has a kink at `||g|| = c`. So I trained a fresh model and counted.
 
-0 of 600 steps clipped — 0.0%. The median gradient norm sits at 0.39 against a threshold of 1, and the largest norm anywhere in the run was 0.98, which is 1.0 times under the kink.
+0 of 600 steps clipped — 0.0%. The median gradient norm sits at 0.39, comfortably under the threshold of 1.
 
-So the kink is in the code, and the run does not go near it. That is worth saying plainly because the premise of this episode, as drafted, was that non-differentiability is a live problem in practice. On this model it is not.
+But look at the maximum before concluding anything comfortable: the largest norm anywhere in the run was 0.98, which is 2% short of the kink rather than nowhere near it. The count is 0, and it is 0 by a margin of 0.02. A different seed, a slightly larger learning rate or a longer warmup and the answer would not be zero.
+
+So the honest version is not "the kink is unreachable" but "this run did not reach it, narrowly". Which still refuses the premise this episode was drafted on — that non-differentiability is a live problem in practice — while being a weaker statement than I would have written from the median alone.
 
 ![Bars of the clipped fraction, near zero everywhere except the first window, against a median gradient norm well below the dashed threshold.](gr101-f2-clipping.png)
 
-*0 of 600 steps clipped, 0.0%. The median gradient norm sits at 0.39 against a threshold of 1, and the largest norm in the run was 0.98. This is the non-smoothness I expected to matter and the run does not go near it.*
+*0 of 600 steps clipped, 0.0%, on a median gradient norm of 0.39. The bars are the answer and the maximum is the caveat: the largest norm in the run was 0.98, only 2% short of the dashed line. Zero, but not by much.*
 
 One more place to look. A softmax probability of exactly 0 or exactly 1 in float32 would be a point where the gradient is not merely small but identically zero, and where no choice of subgradient could restore it, because the function really is locally constant there.
 
@@ -190,7 +192,7 @@ That is not a kink, a subgradient choice, or a numerical edge case. It is a smoo
 1. Autodiff returns a float at every non-differentiable point, and the float is a kernel author's choice. Within one library: 6 of ten operations return 0, 3 split the tie at 0.5, and `sqrt(x*x)` returns nan where `abs(x)` returns 0.
 2. So differentiation is a function of the **expression**. The identity written three ways gives f'(0) = 1.0, 0.0 and 0.5, and two of those are not subgradients of the identity at all.
 3. What a framework gives you is best described as a conservative field: it agrees with the gradient off a measure-zero set, which is almost always enough and is not the same claim as "it is the gradient".
-4. None of it appears in this transformer. GELU and LayerNorm are smooth, and clipping's `min` was active on 0 of 600 steps, with the largest gradient norm 1.0 times under the threshold.
+4. None of it appears in this transformer. GELU and LayerNorm are smooth, and clipping's `min` was active on 0 of 600 steps — though the largest gradient norm reached 0.98 against a threshold of 1, so that zero has a margin of 0.02 and not more.
 5. Except structurally: position 0's attention row is a softmax over one element, so its gradient is identically zero — 5,120 of 5,120 first rows, put there by the mask.
 6. A fully masked row is `nan` in the **forward** pass. Look upstream of the gradient.
 7. What does throttle the gradient is confidence, not kinks: 12.9% of rows are past *p* = 0.9, where a softmax passes under a tenth of the gradient, perfectly smoothly.

@@ -91,7 +91,8 @@ def figures(res: dict) -> dict:
         alt=("A table of ten non-differentiable points. Six rows return zero, "
              "three return one half, and one returns nan."),
         caption=("Six operations pick the left slope, three split the tie, "
-                 "and `sqrt(x*x)` - which is `abs(x)` - returns nan where "
+                 "and the square root of x squared - which is `abs(x)` - "
+                 "returns nan where "
                  "`abs(x)` returns 0. None of these is wrong: at a kink there "
                  "is no derivative to be right about, so the kernel author "
                  "chose. The trouble is that they chose differently."),
@@ -149,7 +150,7 @@ def figures(res: dict) -> dict:
 
     out["f2"] = charts.diagram(
         clipping,
-        title="The one non-smooth step in training, and this run never reached it",
+        title="The one non-smooth step in training, reached by nothing but nearly",
         subtitle=(f"A fresh {CLIP_STEPS}-step run of the same architecture. "
                   f"Gradient clipping multiplies by min(1, c/||g||), which has "
                   f"a kink at ||g|| = c."),
@@ -159,11 +160,12 @@ def figures(res: dict) -> dict:
              "first window, against a median gradient norm well below the "
              "dashed threshold."),
         caption=(f"{clip['clipped']} of {clip['steps']} steps clipped, "
-                 f"{clip['clipped_share']:.1%}. The median gradient norm sits "
-                 f"at {clip['median_norm']:.2f} against a threshold of "
-                 f"{clip['threshold']:.0f}, and the largest norm in the run "
-                 f"was {clip['max_norm']:.2f}. This is the non-smoothness I "
-                 f"expected to matter and the run does not go near it."),
+                 f"{clip['clipped_share']:.1%}, on a median gradient norm of "
+                 f"{clip['median_norm']:.2f}. The bars are the answer and the "
+                 f"maximum is the caveat: the largest norm in the run was "
+                 f"{clip['max_norm']:.2f}, only "
+                 f"{100 * (1 - clip['max_norm'] / clip['threshold']):.0f}% "
+                 f"short of the dashed line. Zero, but not by much."),
         path=str(IMG / f"gr101-f2-clipping.{EXT}"))[0]
 
     def confidence(ax, m):
@@ -361,7 +363,7 @@ def build() -> Post:
         summary=(
             "relu, abs, clamp, hardtanh and a vector norm all return 0 at "
             "their kinks; maximum, minimum and max split the tie and return "
-            "0.5; and sqrt(x*x), which is abs(x), returns nan where abs "
+            "0.5; and sqrt(x\u00b7x), which is abs(x), returns nan where abs "
             "returns 0. Three answers from one library for one slope. The "
             "consequence is sharper than the inconsistency: the identity map "
             "written three ways that agree at every real number gives f'(0) = "
@@ -434,7 +436,7 @@ def _write(post: Post, res: dict, figs: dict, snip: dict) -> Post:
 
     post.add(
         "A slope where there is no slope",
-        f"""`relu` has no derivative at zero. The left slope is 0, the right slope is 1, and there is no number that is the derivative — the subdifferential is the whole interval [0, 1].
+        f"""`relu` has no derivative at zero. The left slope is 0, the right slope is 1, and there is no number that is the derivative — the subdifferential is the whole interval from 0 to 1.
 
 Ask a framework anyway and it will tell you {res['catalogue'][0].returned:.1f}, without a warning, in about a microsecond.
 
@@ -448,7 +450,7 @@ That is not a scandal. Optimisation on non-smooth functions is a well-developed 
         "",
         f"""{snip['catalogue'].markdown()}
 
-{zeros} of the ten pick a one-sided slope and return 0. {halves} of them split the tie and return 0.5. And `sqrt(x * x)` returns **nan** — which is the same function as `abs(x)`, differing only in how it was typed.
+{zeros} of the ten operations pick a one-sided slope and return 0. {halves} of them split the tie and return 0.5. And `sqrt(x * x)` returns **nan** — which is the same function as `abs(x)`, differing only in how it was typed.
 
 None of those is a mistake. At a kink there is no derivative to be right about, so somebody writing the kernel decided, and the decisions are local to each kernel. The trouble is what happens when you compose them.""",
         level=3,
@@ -492,9 +494,11 @@ That leaves the training procedure, where there is exactly one non-smooth operat
 
     post.add(
         "",
-        f"""{clip['clipped']} of {clip['steps']} steps clipped — {clip['clipped_share']:.1%}. The median gradient norm sits at {clip['median_norm']:.2f} against a threshold of {clip['threshold']:.0f}, and the largest norm anywhere in the run was {clip['max_norm']:.2f}, which is {clip['threshold'] / clip['max_norm']:.1f} times under the kink.
+        f"""{clip['clipped']} of {clip['steps']} steps clipped — {clip['clipped_share']:.1%}. The median gradient norm sits at {clip['median_norm']:.2f}, comfortably under the threshold of {clip['threshold']:.0f}.
 
-So the kink is in the code, and the run does not go near it. That is worth saying plainly because the premise of this episode, as drafted, was that non-differentiability is a live problem in practice. On this model it is not.""",
+But look at the maximum before concluding anything comfortable: the largest norm anywhere in the run was {clip['max_norm']:.2f}, which is {100 * (1 - clip['max_norm'] / clip['threshold']):.0f}% short of the kink rather than nowhere near it. The count is {clip['clipped']}, and it is {clip['clipped']} by a margin of {clip['threshold'] - clip['max_norm']:.2f}. A different seed, a slightly larger learning rate or a longer warmup and the answer would not be zero.
+
+So the honest version is not "the kink is unreachable" but "this run did not reach it, narrowly". Which still refuses the premise this episode was drafted on — that non-differentiability is a live problem in practice — while being a weaker statement than I would have written from the median alone.""",
         level=3,
         figures=[figs["f2"]])
 
@@ -536,7 +540,7 @@ That is not a kink, a subgradient choice, or a numerical edge case. It is a smoo
         f"""1. Autodiff returns a float at every non-differentiable point, and the float is a kernel author's choice. Within one library: {zeros} of ten operations return 0, {halves} split the tie at 0.5, and `sqrt(x*x)` returns nan where `abs(x)` returns 0.
 2. So differentiation is a function of the **expression**. The identity written three ways gives f'(0) = 1.0, 0.0 and 0.5, and two of those are not subgradients of the identity at all.
 3. What a framework gives you is best described as a conservative field: it agrees with the gradient off a measure-zero set, which is almost always enough and is not the same claim as "it is the gradient".
-4. None of it appears in this transformer. GELU and LayerNorm are smooth, and clipping's `min` was active on {clip['clipped']} of {clip['steps']} steps, with the largest gradient norm {clip['threshold'] / clip['max_norm']:.1f} times under the threshold.
+4. None of it appears in this transformer. GELU and LayerNorm are smooth, and clipping's `min` was active on {clip['clipped']} of {clip['steps']} steps — though the largest gradient norm reached {clip['max_norm']:.2f} against a threshold of {clip['threshold']:.0f}, so that zero has a margin of {clip['threshold'] - clip['max_norm']:.2f} and not more.
 5. Except structurally: position 0's attention row is a softmax over one element, so its gradient is identically zero — {attn['first_rows_onehot']:,} of {attn['first_rows']:,} first rows, put there by the mask.
 6. A fully masked row is `nan` in the **forward** pass. Look upstream of the gradient.
 7. What does throttle the gradient is confidence, not kinks: {attn['share_above'][0.9]:.1%} of rows are past *p* = 0.9, where a softmax passes under a tenth of the gradient, perfectly smoothly.""")
