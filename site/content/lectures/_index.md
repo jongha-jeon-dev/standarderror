@@ -290,3 +290,43 @@ gradient-shaped shortlist, and that is the only job this geometry leaves.
 statements about the chain rule's hypotheses, all true, all largely inert, and
 in every case the finding that mattered was one question further in and
 smoother than the headline.
+
+## Uncertainty for Language Models, Taught Through What Breaks
+
+One object: **the guarantee you are actually getting**. Every claim about
+uncertainty in machine learning is a guarantee with a quantifier in it, and
+the quantifier is where the trouble lives. Conformal prediction promises
+coverage *on average over the test distribution*. Calibration error is an
+*estimator*, with a bias that depends on choices you made about bins rather
+than on your model. Temperature scaling fixes *numbers*, and provably cannot
+fix predictions.
+
+Thesis: **each of the five gaps below is a theorem or a measurement, not a
+matter of practice.** Split conformal's coverage is exact, finite-sample and
+distribution-free, and it delivers 82% where the model is least sure against
+95% where it is most sure. A model calibrated by construction scores an ECE of
+0.037 at a thousand points and fifteen bins, which is the size of the
+improvement recalibration papers report. Dividing every logit by the same
+positive number cannot reorder anything within a row — accuracy is bit
+identical from *T* = 0.5 to *T* = 3 — and it reorders 7.2% of confidence
+comparisons *between* rows, which is what abstention uses.
+
+The measurements are made on the same **816,128-parameter character-level
+transformer** as the calculus series, with the weights and the training script
+committed, plus models calibrated by construction where a known-zero answer is
+needed. Every guarantee is a theorem and holds at any scale; every frequency
+is a property of that model and is reported as such.
+
+| # | Episode | The guarantee and the gap |
+|---|---|---|
+| 1 | 90% Coverage Is a Promise About Averages, Not About You | split conformal delivers 0.896 against a finite-sample guarantee of 0.9001 — and 0.823 in the least-confident fifth against 0.948 in the most-confident, with set sizes of 11.6 and 1.3 labels. The shortfall lands exactly on the cases you would escalate |
+| 2 | Your Calibration Error Is Mostly Your Bin Count | ECE is a biased estimator of a quantity that is zero for a calibrated model. Measured on models calibrated by construction: 0.120 at n = 200, 0.037 at n = 1,000, 0.005 at n = 20,000, scaling as the square root of bins over n — and equal-mass bins do not remove it |
+| 3 | Temperature Scaling Cannot Change What You Predict | a strictly increasing map on every logit leaves every within-row ordering intact, so accuracy is identical to the bit across *T* — while ECE moves from 0.026 to 0.375. But the *between*-row confidence ordering is not invariant: at *T* = 2, 7.2% of pairs swap and a fifth of the most-confident percentile leaves it |
+| 4 | Overconfidence Arrives When the Model Stops Improving | calibration tracked across a training run rather than at its end, to ask whether overconfidence is a property of the architecture or a symptom of overfitting — and why a model at validation loss 1.573 needs no temperature scaling at all |
+| 5 | The Split You Chose Is Hiding How Variable Your Coverage Is | the realised coverage over 200 calibration splits has a standard deviation 1.5 times what an exchangeable argument predicts — and splitting by sequence rather than by row, which is the *correct* thing to do, makes it 2.0 times, because row-wise splitting was leaking between calibration and test |
+
+Episodes 1, 2, 3 and 5 already have every number above measured and pinned in
+`tests/test_uncertainty.py`; episode 4 needs a training run with checkpoints.
+The series exists because the previous two ended the same way — an exact
+statement that was true and inert — and a guarantee with a quantifier in it is
+the cleanest place left to look for that pattern.
