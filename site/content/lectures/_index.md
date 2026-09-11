@@ -235,7 +235,7 @@ width; the frequencies are properties of that model and are reported as such.
 | 2 | A Confident Attention Head Passes Almost No Gradient | the softmax Jacobian is `diag(p) − ppᵀ`, its quadratic form is a variance, and so its norm is trapped between *m*(1 − *m*) and 2*m*(1 − *m*) with the width of the row nowhere in it — after which one head of this model turns out to have committed hard enough that the gradient which could change its mind is gone |
 | 3 | LayerNorm Deletes Exactly Two Directions of Your Gradient | its Jacobian is `(I − 11ᵀ/d − x̂x̂ᵀ/d)/σ`, which is 1/σ times an orthogonal projector of rank exactly *d* − 2 — and the two dead directions are the invariances the layer was built to have, so the deficiency is correctness rather than loss. Then the residual restores the rank in every block, and the final norm, which has none, turns them into exact invariances of the whole network |
 | 4 | You Cannot Differentiate Through a Sampled Token | the straight-through estimator is not an approximation of a gradient that exists, and on a decision small enough to enumerate its bias comes out 42 times its own noise — while the loss model it rests on is so **compressed** that it explains the missing magnitude exactly, a constant being the softmax Jacobian's null direction |
-| 5 | The Gradient in Embedding Space Does Not Point at a Token | one descent step lands nowhere near any row of the embedding table, which is why prompt optimisation is search rather than descent, and why the gradient tells you less about which token to pick than its norm suggests |
+| 5 | The Gradient in Embedding Space Does Not Point at a Token | the table is 65 near-orthogonal points on a sphere, so a descent step leaves you nearest to the token you started from and the one you eventually reach is never the best — while the **same** gradient, used to rank five candidates rather than to point, recovers almost all of the available gain |
 
 Episodes 1 and 2 are published, and both end somewhere other than where they
 were drafted to end. Episode 1 was written to show that non-differentiability is
@@ -272,3 +272,21 @@ is that its implicit loss model is compressed to a seventh of the truth's
 range: a constant loss model gives exactly zero gradient, because constants
 are the softmax Jacobian's null direction. The crossover at which the unbiased
 estimator wins is 2 to 8 samples.
+
+Episode 5 closes the series where the derivative is exact and useless. The
+embedding table's median pairwise distance is 11.214 and √2 × its median norm
+is 11.210 — 65 near-orthogonal points on a sphere, further apart than they are
+long, which is dimension rather than training. So there is no neighbourhood: a
+descent step leaves you nearest to the token you started from for 1.9 to 31.6
+embedding norms, and the token you eventually reach is never the best
+substitution and is sometimes worse than not moving. But ranking is
+scale-invariant, so the compression that ruined the magnitude in episode 4
+costs the *ordering* nothing — the gradient's top five of 65 recovers 96% to
+100% of the available gain in five of six contexts, against 8% to 17% of
+random shortlists matching it. Discrete-token optimisation is search with a
+gradient-shaped shortlist, and that is the only job this geometry leaves.
+
+**The series is complete.** Its own summary is in episode 5: five exact
+statements about the chain rule's hypotheses, all true, all largely inert, and
+in every case the finding that mattered was one question further in and
+smoother than the headline.

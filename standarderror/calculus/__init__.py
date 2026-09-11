@@ -18,8 +18,17 @@ module here is one hypothesis and the place a transformer violates it:
   constant function of its logits, so the gradient people use is the gradient
   of a different function, and on a problem small enough to enumerate you can
   see exactly how different.
+* `embeddings` -- a local neighbourhood. The table is 65 near-orthogonal
+  points on a sphere, so a descent step leaves you nearest to where you
+  started and the token you eventually reach is not the best one.
 """
 
-from standarderror.calculus import kinks, normalisation, sampling, saturation
+from standarderror.calculus import (
+    embeddings,
+    kinks,
+    normalisation,
+    sampling,
+    saturation,
+)
 
-__all__ = ["kinks", "normalisation", "sampling", "saturation"]
+__all__ = ["embeddings", "kinks", "normalisation", "sampling", "saturation"]
