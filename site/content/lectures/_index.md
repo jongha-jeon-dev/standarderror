@@ -325,8 +325,15 @@ is a property of that model and is reported as such.
 | 4 | Overconfidence Arrives When the Model Stops Improving | calibration tracked across a training run rather than at its end, to ask whether overconfidence is a property of the architecture or a symptom of overfitting — and why a model at validation loss 1.573 needs no temperature scaling at all |
 | 5 | The Split You Chose Is Hiding How Variable Your Coverage Is | the realised coverage over 200 calibration splits has a standard deviation 1.5 times what an exchangeable argument predicts — and splitting by sequence rather than by row, which is the *correct* thing to do, makes it 2.0 times, because row-wise splitting was leaking between calibration and test |
 
-Episodes 1, 2, 3 and 5 already have every number above measured and pinned in
-`tests/test_uncertainty.py`; episode 4 needs a training run with checkpoints.
+Episode 1 is published, and it reverses itself: the uneven conditional
+coverage above belongs to the **score**, not to conformal prediction.
+Randomised adaptive sets hit the same marginal level and cut the spread from
+0.125 to 0.017 — seven-fold — for 20% more labels per set and a 0.9% chance of
+returning an empty set, which the simple score never does. So the marginal
+guarantee is not hiding a defect; it is declining to make a choice on your
+behalf. Episodes 2, 3 and 5 already have every number above measured and
+pinned in `tests/test_uncertainty.py`; episode 4 needs a training run with
+checkpoints.
 The series exists because the previous two ended the same way — an exact
 statement that was true and inert — and a guarantee with a quantifier in it is
 the cleanest place left to look for that pattern.

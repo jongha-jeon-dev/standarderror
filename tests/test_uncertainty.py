@@ -68,6 +68,47 @@ class TestItSaysNothingAboutSubgroups:
         assert bands[0]["mean_size"] > 3 * bands[-1]["mean_size"]
 
 
+class TestItIsTheScoreNotConformal:
+    """The half of episode 1 that reverses it: the unevenness above is a
+    property of the score, and a better score buys most of it back."""
+
+    @pytest.fixture(scope="class")
+    def pair(self, pred):
+        lac = cv.split_conformal(pred, alpha=0.1)
+        aps = cv.aps_conformal(pred, alpha=0.1)
+        return lac, aps
+
+    def test_both_hit_the_same_marginal_guarantee(self, pair):
+        """Without this the comparison below is between coverage levels."""
+        lac, aps = pair
+        assert lac["coverage"] == pytest.approx(0.9, abs=0.03)
+        assert aps["coverage"] == pytest.approx(0.9, abs=0.03)
+        assert abs(lac["coverage"] - aps["coverage"]) < 0.02
+
+    def test_aps_evens_out_conditional_coverage(self, pred, pair):
+        lac, aps = pair
+        r_lac = cv.conditional_range(cv.conditional(pred, lac, bands=5))
+        r_aps = cv.conditional_range(cv.conditional(pred, aps, bands=5))
+        assert r_aps < r_lac / 3
+
+    def test_and_charges_for_it_in_set_size(self, pair):
+        lac, aps = pair
+        assert aps["mean_size"] > lac["mean_size"]
+        assert aps["mean_size"] < 2 * lac["mean_size"]
+
+    def test_and_in_occasionally_empty_sets(self, pair):
+        """The price nobody mentions: a randomised score can return nothing."""
+        lac, aps = pair
+        assert lac["empty"] == 0.0
+        assert aps["empty"] > 0.0
+
+    def test_the_escalation_queue_is_the_failing_part(self, pred, pair):
+        lac, _ = pair
+        for row in cv.escalation(pred, lac):
+            assert row["escalated_coverage"] < row["kept_coverage"]
+            assert row["escalated_coverage"] < 0.9
+
+
 class TestTheExchangeabilityAssumption:
 
     def test_the_realised_coverage_is_more_variable_than_predicted(self, pred):
