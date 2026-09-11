@@ -234,7 +234,7 @@ width; the frequencies are properties of that model and are reported as such.
 | 1 | Backprop Is the Chain Rule, and the Chain Rule Has Hypotheses | ReLU and GELU are not differentiable everywhere, `max` has a subgradient rather than a derivative, and autodiff returns a float regardless. What the framework picks at the kink, and how often a real training step lands on one |
 | 2 | A Confident Attention Head Passes Almost No Gradient | the softmax Jacobian is `diag(p) − ppᵀ`, its quadratic form is a variance, and so its norm is trapped between *m*(1 − *m*) and 2*m*(1 − *m*) with the width of the row nowhere in it — after which one head of this model turns out to have committed hard enough that the gradient which could change its mind is gone |
 | 3 | LayerNorm Deletes Exactly Two Directions of Your Gradient | its Jacobian is `(I − 11ᵀ/d − x̂x̂ᵀ/d)/σ`, which is 1/σ times an orthogonal projector of rank exactly *d* − 2 — and the two dead directions are the invariances the layer was built to have, so the deficiency is correctness rather than loss. Then the residual restores the rank in every block, and the final norm, which has none, turns them into exact invariances of the whole network |
-| 4 | You Cannot Differentiate Through a Sampled Token | the straight-through estimator is not an approximation of a gradient that exists, and its bias against REINFORCE and against the exact gradient is measurable on a problem small enough to have one |
+| 4 | You Cannot Differentiate Through a Sampled Token | the straight-through estimator is not an approximation of a gradient that exists, and on a decision small enough to enumerate its bias comes out 42 times its own noise — while the loss model it rests on is so **compressed** that it explains the missing magnitude exactly, a constant being the softmax Jacobian's null direction |
 | 5 | The Gradient in Embedding Space Does Not Point at a Token | one descent step lands nowhere near any row of the embedding table, which is why prompt optimisation is search rather than descent, and why the gradient tells you less about which token to pick than its norm suggests |
 
 Episodes 1 and 2 are published, and both end somewhere other than where they
@@ -261,3 +261,14 @@ structurally invisible. The exception is the final norm, which has no residual
 after it: two directions of the final hidden state have **no effect at all**
 on this model's output. What actually moves gradient magnitudes is the scalar,
 1/σ, which falls 3.4-fold across depth because the residual stream grows.
+
+Episode 4 leaves the hypotheses behind for a place with no derivative at all.
+A sampled token is piecewise constant in its logits, so what everyone
+differentiates is the expectation — and over a 65-token vocabulary that is
+enumerable, which turns "which estimator is better" into a question with an
+answer. REINFORCE is unbiased and measurably so. Straight-through is biased by
+42 times its own noise and returns 36% of the right magnitude, and the reason
+is that its implicit loss model is compressed to a seventh of the truth's
+range: a constant loss model gives exactly zero gradient, because constants
+are the softmax Jacobian's null direction. The crossover at which the unbiased
+estimator wins is 2 to 8 samples.
