@@ -117,6 +117,8 @@ realised gain scales as 2m(1-m) to the power 1.03, constant 0.128
 
 Layer 0, head 1 — median confidence 0.971, 94.6% of its rows past 0.9, and a routing gradient of 0.0050 against 0.0293 for the next-lowest head and 0.0519 for the softest. A factor of 5.9 even against its nearest rival, and 10.4 against the far end.
 
+The second row of that ranking is worth a pause, because it is low for the opposite reason. Head (0,3) sits at *m* = 0.046 — the most **diffuse** head in the model, not the most confident — and 2*m*(1 − *m*) is 0.088 there. The hump falls away on both sides, and this model has heads on both of them: near-uniform attention has almost nothing to differentiate either. So the comparison that carries weight is not against the whole ranking but against the heads on the saturated side, and on that side head (0,1) is alone.
+
 And the last column says what it committed to: on 99.8% of rows its argmax is exactly one position back. It is a previous-token head, which is the most-documented circuit component there is and exactly the thing a first layer is expected to build. This is not a head that got stuck on noise.
 
 ![A table of sixteen heads. One row, layer 0 head 1, has median confidence 0.97 and a gradient several times below every other row.](gr102-f2-heads.png)

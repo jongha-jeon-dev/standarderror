@@ -485,6 +485,8 @@ def _write(post: Post, res: dict, figs: dict, snip: dict) -> Post:
     heads = {(h["layer"], h["head"]): h for h in gain["heads"]}
     target = heads[(LAYER, HEAD)]
     soft = max(gain["heads"], key=lambda h: h["median_gain"])
+    # The runner-up in the gain ranking, which is low for the opposite reason.
+    diffuse = sorted(gain["heads"], key=lambda h: h["median_gain"])[1]
     ratio = soft["median_gain"] / target["median_gain"]
     # Against the *nearest* head, which is the conservative comparison and
     # the only one that supports a claim about every other head.
@@ -552,6 +554,8 @@ Which lets the whole thing be restated as a rate. If routing changes at a speed 
         f"""{snip['heads'].markdown()}
 
 Layer {LAYER}, head {HEAD} — median confidence {target['median_max_p']:.3f}, {target['share_above_09']:.1%} of its rows past 0.9, and a routing gradient of {target['median_gain']:.4f} against {nearest:.4f} for the next-lowest head and {soft['median_gain']:.4f} for the softest. A factor of {margin:.1f} even against its nearest rival, and {ratio:.1f} against the far end.
+
+The second row of that ranking is worth a pause, because it is low for the opposite reason. Head (0,{diffuse['head']}) sits at *m* = {diffuse['median_max_p']:.3f} — the most **diffuse** head in the model, not the most confident — and 2*m*(1 − *m*) is {2 * diffuse['median_max_p'] * (1 - diffuse['median_max_p']):.3f} there. The hump falls away on both sides, and this model has heads on both of them: near-uniform attention has almost nothing to differentiate either. So the comparison that carries weight is not against the whole ranking but against the heads on the saturated side, and on that side head ({LAYER},{HEAD}) is alone.
 
 And the last column says what it committed to: on {100 * target['previous_token_share']:.1f}% of rows its argmax is exactly one position back. It is a previous-token head, which is the most-documented circuit component there is and exactly the thing a first layer is expected to build. This is not a head that got stuck on noise.""",
         level=3,
