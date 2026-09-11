@@ -10,8 +10,12 @@ module here is one hypothesis and the place a transformer violates it:
   `diag(p) - p p^T`, its norm is pinned within a factor of two by the largest
   probability alone, and one head of this model has committed hard enough that
   its routing gradient is gone.
+* `normalisation` -- a Jacobian of full rank. LayerNorm's has rank exactly
+  d - 2, the two missing directions are the invariances it was built to have,
+  and the residual stream hides the whole thing everywhere except the last
+  norm, where it becomes an exact invariance of the network.
 """
 
-from standarderror.calculus import kinks, saturation
+from standarderror.calculus import kinks, normalisation, saturation
 
-__all__ = ["kinks", "saturation"]
+__all__ = ["kinks", "normalisation", "saturation"]
