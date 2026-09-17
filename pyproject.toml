@@ -41,7 +41,10 @@ include = ["standarderror*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q --strict-markers"
-markers = ["network: hits a live public API; skipped unless SERR_NETWORK_TESTS=1"]
+markers = [
+    "network: hits a live public API; skipped unless SERR_NETWORK_TESTS=1",
+    "slow: decodes from a committed checkpoint; skipped unless SERR_SLOW_TESTS=1",
+]
 
 [tool.ruff]
 line-length = 88

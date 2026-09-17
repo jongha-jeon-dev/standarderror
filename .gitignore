@@ -29,6 +29,11 @@ data/*
 # trained by scripts/train_tiny.py; 3.2 MB, and the alternative is losing it to
 # a container reset again. The corpus it was trained on is not here.
 !data/tiny_gpt/
+# The 804,096-parameter model the School Maths series measures. Our own
+# weights, trained by scripts/train_schoolmath.py; 3.2 MB. Its corpus is not
+# here either, for the opposite reason: it is generated arithmetic, so the
+# source rebuilds it exactly and there is nothing to store.
+!data/schoolmath/
 
 # Editorial rather than published: which posts are planned, and how their titles
 # were chosen. Not secret, but not part of the record either.
