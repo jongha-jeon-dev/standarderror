@@ -109,7 +109,7 @@ Those two rates together are the finding, not the first one alone. The other 55%
 
 ![Four pairs of bars. The first pair is high for both models; in the other three the generation-order bars collapse to near zero while the shuffled ones stay high.](sm101-f0-contexts.png)
 
-*With the matching forward sum directly above it, the generation-order model scores 1.000. Take that line away and it scores 0.008. The shuffled model is between 1.000 and 1.000 throughout, because it is doing the arithmetic.*
+*With the matching forward sum directly above it, the generation-order model scores 1.000. Take that line away and it scores 0.008. The shuffled model stays at 1.000 in all four, because it is doing the arithmetic.*
 
 ![A five-row table. The generation-order column is high on the first row and near zero below it; the shuffled column is high throughout.](sm101-f3-table.png)
 

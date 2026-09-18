@@ -122,9 +122,8 @@ def figures(res: dict) -> dict:
                  f"generation-order model scores "
                  f"{ab['generation order'][ARMS[0]]:.3f}. Take that line away "
                  f"and it scores {ab['generation order'][ARMS[3]]:.3f}. The "
-                 f"shuffled model is between "
-                 f"{min(ab['shuffled'][a] for a in ARMS):.3f} and "
-                 f"{max(ab['shuffled'][a] for a in ARMS):.3f} throughout, "
+                 f"shuffled model stays at "
+                 f"{min(ab['shuffled'][a] for a in ARMS):.3f} in all four, "
                  f"because it is doing the arithmetic."),
         path=str(IMG / f"sm101-f0-contexts.{EXT}"))[0]
 
