@@ -337,3 +337,50 @@ checkpoints.
 The series exists because the previous two ended the same way — an exact
 statement that was true and inert — and a guarantee with a quantifier in it is
 the cleanest place left to look for that pattern.
+
+## School Maths, Taught Through What a Model Gets Wrong
+
+One object: **arithmetic a ten-year-old can do**. Not because it is hard, but
+because it is the only domain where the correct answer, the correct *method*,
+and the point at which a curriculum introduces each new idea are all written
+down in advance. Carrying, place value, the order of operations, inverting an
+operation — a school syllabus is a list of the places arithmetic stops being
+digit-local, and that turns out to be a very good list of the places a small
+transformer stops working.
+
+Thesis: **the model's failures land on the curriculum's boundaries, and almost
+none of them are the failure you would predict.** Order of operations scores
+0.40 — and not one failure is the left-to-right mistake a person makes; every
+single one is a wrong two-digit product inside a correctly applied rule.
+Linear equations score 0.988, better than multiplication, until the answer is
+asked to leave the forty-one integers training drew from, at which point it is
+0.030. Carrying is learned at a width rather than as a rule: 0.99 on the carry
+chains shown at three digits, 0.14 on the ones that were not. And writing the
+answer least-significant-digit-first — the order the algorithm actually runs
+in — recovers a large part of that with nothing else changed.
+
+The measurements are made on an **804,096-parameter character-level
+transformer**, the same architecture as the calculus and uncertainty series on
+an eighteen-character vocabulary, trained on generated arithmetic. There is no
+corpus to fetch: `standarderror/schoolmath/curriculum.py` is deterministic in
+its seed, so a reader rebuilds the exact training stream from the source. Both
+checkpoints and their verified hashes are committed.
+
+| # | Episode | The idea and the break |
+|---|---|---|
+| 1 | The Only Difference Between These Two Models Is the Order of the Lines | two models identical in architecture, seed, steps and problems; one adds and the other reverses the line above it, including when that line is deliberately wrong. Their held-out losses differ by 0.03 nats and never diverge, because a shortcut built from *ordering* survives any random split of the rows |
+| 2 | Carrying Is the First Thing a Curriculum Teaches and the First Thing to Go | 0.996 and 0.992 at carry chains of 0 and 1, 0.564 at 2, 0.136 at 3 — chains held out at three digits and shown constantly at two. Writing the answer in computation order recovers it to 0.740 and 0.324, same weights, same sums |
+| 3 | A Fourth Digit Is Not a Harder Problem, It Is a Different One | accuracy goes to exactly zero at four digits, and the answers are not even the right *length* — 0.7% of them. The failure is place value, not addition, and it is the clearest case in the series of a rule that was never learned as a rule |
+| 4 | It Knows Times Tables and Cannot Multiply | 0.93 at one digit by one, 0.95 at three digits by one, and 0.497 at two by two. Difficulty tracks the *narrow* operand, so "three-digit multiplication" scores above "two-digit" — and the 0.40 on order of operations is entirely this, not precedence |
+| 5 | It Solves Equations It Cannot Solve | linear equations at 0.988, above multiplication, on a task that requires undoing an operation rather than performing one. Ask for an answer outside the forty-one integers training drew from and it is 0.030 just outside and 0.000 far outside. It was classifying, not solving |
+
+Episode 1 is published, and it is the methodological one: the shortcut it
+describes was mine, found in my own generated corpus, and the transferable
+part is not "shuffle your data" — everybody shuffles, and the standard kind
+operates on the wrong thing — but that varying the context is a cheap
+diagnostic no loss curve can replace. Episodes 2 to 5 have every number above
+measured and pinned in `tests/test_schoolmath.py`.
+
+The series exists because the three before it all needed a domain where
+"correct" is not a matter of degree. Here it is not: 579 is the answer or it
+is not, and the model either carried or it did not.

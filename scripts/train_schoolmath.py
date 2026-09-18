@@ -37,8 +37,8 @@ PROBE = 120
 PER_WIDTH = 20_000
 
 
-def _pack(split: str, stoi: dict) -> torch.Tensor:
-    text = cur.text(split, per_width=PER_WIDTH, seed=0)
+def _pack(split: str, stoi: dict, shuffle: bool = True) -> torch.Tensor:
+    text = cur.text(split, per_width=PER_WIDTH, seed=0, shuffle=shuffle)
     return torch.tensor([stoi[c] for c in text], dtype=torch.long)
 
 
@@ -68,13 +68,19 @@ def _accuracy(model, chars, seed=11):
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--steps", type=int, default=STEPS)
+    ap.add_argument("--adjacent", action="store_true",
+                    help="pack the stream in generation order, which puts "
+                         "every reversed line directly beneath its own "
+                         "forward twin. Trains the leaky model episode 1 "
+                         "compares against; everything else is identical.")
     args = ap.parse_args()
 
     torch.manual_seed(0)
     chars = list(cur.ALPHABET)
     stoi = {c: i for i, c in enumerate(chars)}
-    train = _pack("train", stoi)
-    val = _pack("test", stoi)
+    train = _pack("train", stoi, shuffle=not args.adjacent)
+    val = _pack("test", stoi, shuffle=not args.adjacent)
+    print(f"stream order: {'generation (leaky)' if args.adjacent else 'shuffled'}")
     print(f"vocab {len(chars)}   train {len(train):,} chars   "
           f"test {len(val):,} chars")
 
@@ -117,7 +123,7 @@ def main() -> None:
                   f"          {shown}", flush=True)
 
     model.eval()
-    out = sm.checkpoint_path()
+    out = sm.adjacent_path() if args.adjacent else sm.checkpoint_path()
     out.parent.mkdir(parents=True, exist_ok=True)
     torch.save({"model": model.state_dict(), "chars": chars,
                 "val_loss": round(vl, 4), "steps": args.steps,

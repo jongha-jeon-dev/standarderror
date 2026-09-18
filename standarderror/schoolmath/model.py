@@ -37,6 +37,19 @@ def checkpoint_path() -> Path:
     return Path(se.SETTINGS.repo_root) / "data" / "schoolmath" / "schoolmath.pt"
 
 
+#: The same model trained on the unshuffled stream, where every reversed line
+#: sits under its own forward twin. Episode 1's control; nothing else about the
+#: two runs differs, down to the seed.
+ADJACENT_SHA256 = ("c3e68c9714ebccd5496275f08c4dfde084ed54884ecc66e108ab4a"
+                   "750f3db958")
+ADJACENT_VAL_LOSS = 1.2210
+
+
+def adjacent_path() -> Path:
+    return (Path(se.SETTINGS.repo_root) / "data" / "schoolmath"
+            / "schoolmath_adjacent.pt")
+
+
 def encode(text: str, stoi: dict) -> list[int]:
     return [stoi[c] for c in text]
 
@@ -45,21 +58,28 @@ def stream(split: str = "train", **kw) -> str:
     return cur.text(split, **kw)
 
 
-def load(*, verify: bool = True, eval_mode: bool = True):
-    """The committed checkpoint, its vocabulary, and the model."""
+def load(*, verify: bool = True, eval_mode: bool = True,
+         adjacent: bool = False):
+    """The committed checkpoint, its vocabulary, and the model.
+
+    `adjacent=True` loads the leaky twin instead: same architecture, same seed,
+    same number of steps, same problems -- only the order of the lines in the
+    training file differs.
+    """
     import torch
-    path = checkpoint_path()
+    path = adjacent_path() if adjacent else checkpoint_path()
+    want = ADJACENT_SHA256 if adjacent else CHECKPOINT_SHA256
     if not path.exists():
         raise FileNotFoundError(
             f"{path} is missing. It is committed to this repository; run "
             f"`python scripts/train_schoolmath.py` to rebuild it, but note "
             f"that a rebuild is a *similar* model, not the same one.")
-    if verify and CHECKPOINT_SHA256 != "unset":
+    if verify and want != "unset":
         got = hashlib.sha256(path.read_bytes()).hexdigest()
-        if got != CHECKPOINT_SHA256:
-            raise ValueError(f"checkpoint hash is {got}, expected "
-                             f"{CHECKPOINT_SHA256}; the file is not the one "
-                             f"the published numbers were measured on")
+        if got != want:
+            raise ValueError(f"checkpoint hash is {got}, expected {want}; "
+                             f"the file is not the one the published numbers "
+                             f"were measured on")
     blob = torch.load(path, map_location="cpu", weights_only=False)
     chars = blob["chars"]
     model = tiny.build(len(chars))
@@ -70,6 +90,8 @@ def load(*, verify: bool = True, eval_mode: bool = True):
             "stoi": {c: i for i, c in enumerate(chars)},
             "vocab": len(chars),
             "val_loss": blob.get("val_loss"),
+            "history": blob.get("history", []),
+            "path": str(path),
             "parameters": sum(p.numel() for p in model.parameters())}
 
 

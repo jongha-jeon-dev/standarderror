@@ -392,3 +392,137 @@ def padding_sensitivity(bundle, *, limit: int = 400, per_width: int = 4_000,
                                   - got["a different fresh context"])
         out[task] = got
     return out
+
+
+# ---------------------------------------------------------------- episode 1
+
+def twin_adjacency(*, per_width: int = 4_000, seed: int = 0) -> dict:
+    """How often a reversed line sits directly beneath its own forward twin.
+
+    In generation order this is every one of them, which is what made the
+    shortcut available. It is a property of the training file, measurable
+    without running the model at all, and it is the thing that should have
+    been checked first.
+    """
+    out = {}
+    for name, shuffle in (("generation order", False), ("shuffled", True)):
+        lines = cur.text("train", per_width=per_width, seed=seed,
+                         shuffle=shuffle).split("\n")
+        reversed_lines = sum(1 for ln in lines if cur.REVERSED in ln)
+        adjacent = sum(
+            1 for a, b in zip(lines, lines[1:])
+            if cur.REVERSED in b
+            and a.split("=")[0] == b.split(cur.REVERSED)[0])
+        out[name] = {"reversed_lines": reversed_lines, "adjacent": adjacent,
+                     "share": adjacent / reversed_lines}
+    return out
+
+
+def _twin_context(p, *, corrupt: bool = False, other: bool = False,
+                  rng=None) -> str:
+    """Context whose last line is the forward form of `p`'s own sum.
+
+    `corrupt` writes a *wrong* forward answer, which is the control that
+    separates copying from adding: a model that reverses whatever is above it
+    will reverse the wrong number too.
+    """
+    left = p.prompt.split(cur.REVERSED)[0]
+    a, b = (int(v) for v in left.split("+"))
+    if other:
+        a, b = a + 1, b + 2
+    total = a + b
+    if corrupt:
+        total = total + 111 if len(str(total + 111)) == len(str(total)) \
+            else total + 1
+    filler = "".join(_lines()[j] for j in rng.integers(0, len(_lines()), 6))
+    return f"{filler}{a}+{b}={total}\n"
+
+
+def shortcut(clean, leaky, *, limit: int = 250, per_width: int = 4_000,
+             seed: int = 0) -> dict:
+    """The A/B. Two models, one manipulated variable: the order of the lines.
+
+    Four contexts for the same reversed sums. If a model is adding, all four
+    agree. If it is reversing the line above, only the first works -- and the
+    corrupted arm proves which, because there the line above is wrong and the
+    right answer is still available by adding.
+    """
+    import numpy as np
+    pool = [p for p in cur.corpus("test", per_width=per_width, seed=seed)
+            if p.task == "add_rev" and p.digits >= 2][:limit]
+    rng = np.random.default_rng(99)
+    arms = {
+        "its own sum on the line above":
+            [_twin_context(p, rng=rng) for p in pool],
+        "a wrong sum on the line above":
+            [_twin_context(p, corrupt=True, rng=rng) for p in pool],
+        "a different sum on the line above":
+            [_twin_context(p, other=True, rng=rng) for p in pool],
+        "ordinary context": fillers(len(pool), seed=1),
+    }
+    out = {"n": len(pool)}
+    for name, bundle in (("shuffled", clean), ("generation order", leaky)):
+        out[name] = {k: _rate(graded(bundle, pool, filler=v))
+                     for k, v in arms.items()}
+    # Shown a wrong premise, what does the leaky model do? The decisive
+    # number is not how often it copies but how that compares with how often
+    # it gets the answer right -- the right answer was always available by
+    # adding, and the two rates are what separate the readings.
+    got = graded(leaky, pool, filler=arms["a wrong sum on the line above"])
+    copied = correct = 0
+    for p, r in zip(pool, got):
+        left = p.prompt.split(cur.REVERSED)[0]
+        a, b = (int(v) for v in left.split("+"))
+        shown = a + b + 111 if len(str(a + b + 111)) == len(str(a + b)) \
+            else a + b + 1
+        copied += r["got"] == str(shown)[::-1]
+        correct += r["got"] == p.answer
+    out["generation order"]["reproduced the wrong sum, reversed"] = \
+        copied / len(pool)
+    out["generation order"]["answered correctly anyway"] = correct / len(pool)
+    return out
+
+
+def held_out_loss(bundle, *, shuffle: bool = True, per_width: int = 4_000,
+                  seed: int = 0, batches: int = 40, size: int = 32) -> float:
+    """Cross-entropy on the held-out stream, packed one way or the other.
+
+    `shuffle` matters more than it looks. A validation set is conventionally
+    packed the same way as the training set, so each model's *own* reported
+    loss is the one where `shuffle` matches how it was trained -- and that is
+    the number a practitioner sees. Scoring both models on the same stream is
+    the diagnostic, not the default, and it is the whole finding: repacking
+    the validation data in a different order is what exposes the shortcut,
+    and nothing in an ordinary pipeline ever does it.
+    """
+    import numpy as np
+    import torch
+    text = cur.text("test", per_width=per_width, seed=seed, shuffle=shuffle)
+    stoi = bundle["stoi"]
+    data = torch.tensor([stoi[c] for c in text], dtype=torch.long)
+    rng = np.random.default_rng(0)
+    block, losses = sm.BLOCK, []
+    with torch.no_grad():
+        for _ in range(batches):
+            i = rng.integers(0, len(data) - block - 1, size)
+            x = torch.stack([data[j:j + block] for j in i])
+            y = torch.stack([data[j + 1:j + block + 1] for j in i])
+            losses.append(float(bundle["model"](x, y)[1]))
+    return float(np.mean(losses))
+
+
+def loss_table(clean, leaky, **kw) -> dict:
+    """Each model on each packing of the held-out stream.
+
+    The diagonal is what each pipeline reports about itself. The off-diagonal
+    is what you only see if you thought to repack.
+    """
+    out = {}
+    for name, bundle in (("shuffled", clean), ("generation order", leaky)):
+        out[name] = {
+            "own packing": held_out_loss(
+                bundle, shuffle=(name == "shuffled"), **kw),
+            "repacked": held_out_loss(
+                bundle, shuffle=(name != "shuffled"), **kw),
+        }
+    return out
