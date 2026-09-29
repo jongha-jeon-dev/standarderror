@@ -34,6 +34,11 @@ data/*
 # here either, for the opposite reason: it is generated arithmetic, so the
 # source rebuilds it exactly and there is nothing to store.
 !data/schoolmath/
+# The 3,006,144-parameter time-series model the compression series measures.
+# Our own weights, trained by scripts/train_tsfm.py on synthetic data only;
+# 12 MB in fp32, kept in fp32 because every published number was measured on
+# fp32 weights and a half-precision copy would be a different model.
+!data/tsfm/
 
 # Editorial rather than published: which posts are planned, and how their titles
 # were chosen. Not secret, but not part of the record either.
