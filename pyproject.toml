@@ -29,6 +29,9 @@ extras = ["yfinance", "shap", "statsmodels", "xgboost", "openpyxl"]
 # is a ~800 MB install, so it is an opt-in extra rather than a dependency. The
 # tests that use it skip without it; `pip install -e ".[dev,nn]"` runs them.
 nn = ["torch>=2.0"]
+# The time-series compression series: ETS baselines, and the published
+# Chronos models behind the same interface as our own.
+tsfm = ["torch>=2.0", "statsmodels>=0.14", "chronos-forecasting>=2.0"]
 
 [project.scripts]
 standarderror = "standarderror.cli:main"
