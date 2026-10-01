@@ -7,6 +7,7 @@ properties of one model and are pinned as inequalities.
 """
 import math
 
+import numpy as np
 import pytest
 
 torch = pytest.importorskip("torch")
@@ -155,6 +156,78 @@ class TestCalibrationErrorIsBiased:
         p, y = cb.calibrated_draw(1000, 10, seed=3)
         c, a = cb._conf_correct(p, y)
         assert cb.ece(c, a, bins=15, adaptive=True) > 0.01
+
+
+class TestTheFloorIsTheModelsOwn:
+    """Episode 2. The null is a calibrated model with *these* confidences."""
+
+    @pytest.fixture(scope="class")
+    def model(self):
+        pred = cv.predictions(count=8, size=16, seed=1)
+        return pred["p"], pred["y"]
+
+    def test_averaged_bias_matches_the_published_table(self):
+        s = cb.bias_sweep(sizes=(200, 1000, 20000), bin_counts=(15,))
+        assert s["grid"][(200, 15)] == pytest.approx(0.085, abs=0.008)
+        assert s["grid"][(1000, 15)] == pytest.approx(0.035, abs=0.004)
+        assert s["grid"][(20000, 15)] == pytest.approx(0.008, abs=0.002)
+
+    def test_a_single_draw_is_not_the_average(self):
+        """The syllabus once quoted 0.120 at n = 200; that was seed 0 alone."""
+        one = cb.ece(*cb._conf_correct(*cb.calibrated_draw(200, 10, seed=0)),
+                     bins=15)
+        assert one == pytest.approx(0.120, abs=0.002)
+        assert one > 1.3 * cb.bias_sweep(sizes=(200,), bin_counts=(15,))[
+            "grid"][(200, 15)]
+
+    def test_the_floor_depends_on_the_confidence_profile(self):
+        def floor(classes):
+            return np.mean([cb.ece(*cb._conf_correct(*cb.calibrated_draw(
+                1000, classes, seed=s)), bins=15) for s in range(10)])
+        assert floor(65) < 0.6 * floor(10)
+
+    def test_resampled_labels_make_the_model_calibrated(self, model):
+        p, _ = model
+        rng = np.random.default_rng(0)
+        y = np.concatenate([cb.resample_labels(p, rng) for _ in range(4)])
+        pp = np.concatenate([p] * 4)
+        conf, correct = cb._conf_correct(pp, y)
+        assert abs(conf.mean() - correct.mean()) < 0.01
+
+    def test_debiasing_removes_the_floor_on_a_calibrated_model(self):
+        plug, deb = [], []
+        for s in range(20):
+            c, a = cb._conf_correct(*cb.calibrated_draw(1000, 10, seed=s))
+            plug.append(cb.l2_error(c, a, bins=50, debiased=False))
+            deb.append(cb.l2_error(c, a, bins=50))
+        assert np.mean(plug) > 0.06
+        assert abs(np.mean(deb)) < 0.01
+
+    def test_on_enough_data_the_debiased_estimate_ignores_bins(self):
+        """On the full 24,576 rows the plug-in still moves with the bin count
+        (0.032 to 0.037) and the debiased estimate does not (0.031 to 0.032).
+        At 8,192 rows it is not yet settled at 50 bins, which is the same
+        variance the next test pins."""
+        pred = cv.predictions(count=24, size=16, seed=1)
+        c, a = cb._conf_correct(pred["p"], pred["y"])
+        plug = [cb.l2_error(c, a, bins=b, debiased=False) for b in (5, 15, 50)]
+        deb = [cb.l2_error(c, a, bins=b) for b in (5, 15, 50)]
+        assert max(plug) / min(plug) > 1.1
+        assert max(deb) / min(deb) < 1.06
+
+    def test_unbiased_is_not_precise(self, model):
+        """The trade the episode ends on: on 1,000 points the plug-in is
+        precise and wrong, the debiased estimate right on average and about
+        as noisy as the quantity it estimates."""
+        p, y = model
+        st = cb.stability(p, y, n=1000, subsets=20)
+        for b in (15, 50):
+            assert st[b]["debiased_sd"] > 2 * st[b]["l2_sd"]
+            assert st[b]["l2"] > st[b]["debiased"] + 0.01
+
+    def test_temperature_leaves_accuracy_alone(self, model):
+        p, y = model
+        assert np.array_equal(p.argmax(1), cb.temperature(p, 1.15).argmax(1))
 
 
 class TestTemperatureScaling:

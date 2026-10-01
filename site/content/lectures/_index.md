@@ -305,8 +305,8 @@ Thesis: **each of the five gaps below is a theorem or a measurement, not a
 matter of practice.** Split conformal's coverage is exact, finite-sample and
 distribution-free, and it delivers 82% where the model is least sure against
 95% where it is most sure. A model calibrated by construction scores an ECE of
-0.037 at a thousand points and fifteen bins, which is the size of the
-improvement recalibration papers report. Dividing every logit by the same
+0.035 at a thousand points and fifteen bins, and on the committed model at that
+size 80% of the measured ECE is that floor. Dividing every logit by the same
 positive number cannot reorder anything within a row — accuracy is bit
 identical from *T* = 0.5 to *T* = 3 — and it reorders 7.2% of confidence
 comparisons *between* rows, which is what abstention uses.
@@ -320,19 +320,25 @@ is a property of that model and is reported as such.
 | # | Episode | The guarantee and the gap |
 |---|---|---|
 | 1 | 90% Coverage Is a Promise About Averages, Not About You | split conformal delivers 0.896 against a finite-sample guarantee of 0.9001 — and 0.823 in the least-confident fifth against 0.948 in the most-confident, with set sizes of 11.6 and 1.3 labels. The shortfall lands exactly on the cases you would escalate |
-| 2 | Your Calibration Error Is Mostly Your Bin Count | ECE is a biased estimator of a quantity that is zero for a calibrated model. Measured on models calibrated by construction: 0.120 at n = 200, 0.037 at n = 1,000, 0.005 at n = 20,000, scaling as the square root of bins over n — and equal-mass bins do not remove it |
+| 2 | Your Calibration Error Is Mostly Your Bin Count | ECE is a biased estimator of a quantity that is zero for a calibrated model: 0.085 at n = 200, 0.035 at n = 1,000, 0.008 at n = 20,000 on models calibrated by construction, scaling as the square root of bins over n with a slope of 0.503. On the committed model at n = 1,000, 80% of the measured ECE is that floor, and a real miscalibration is detected in 23% of subsets. Subtracting each bin's binomial variance removes the floor on average and leaves single estimates so noisy that a third come out below zero |
 | 3 | Temperature Scaling Cannot Change What You Predict | a strictly increasing map on every logit leaves every within-row ordering intact, so accuracy is identical to the bit across *T* — while ECE moves from 0.026 to 0.375. But the *between*-row confidence ordering is not invariant: at *T* = 2, 7.2% of pairs swap and a fifth of the most-confident percentile leaves it |
 | 4 | Overconfidence Arrives When the Model Stops Improving | calibration tracked across a training run rather than at its end, to ask whether overconfidence is a property of the architecture or a symptom of overfitting — and why a model at validation loss 1.573 needs no temperature scaling at all |
 | 5 | The Split You Chose Is Hiding How Variable Your Coverage Is | the realised coverage over 200 calibration splits has a standard deviation 1.5 times what an exchangeable argument predicts — and splitting by sequence rather than by row, which is the *correct* thing to do, makes it 2.0 times, because row-wise splitting was leaking between calibration and test |
 
-Episode 1 is published, and it reverses itself: the uneven conditional
+Episodes 1 and 2 are published. Episode 2 ends on a trade rather than a fix:
+debiasing ECE removes its floor and its dependence on bin count, and on a
+thousand predictions makes it about as noisy as the quantity it estimates —
+so for choosing between two models, NLL picked the better-calibrated one 87%
+of the time against 68% for fifteen-bin ECE.
+
+Episode 1 reverses itself: the uneven conditional
 coverage above belongs to the **score**, not to conformal prediction.
 Randomised adaptive sets hit the same marginal level and cut the spread from
 0.125 to 0.017 — seven-fold — for 20% more labels per set and a 0.9% chance of
 returning an empty set, which the simple score never does. So the marginal
 guarantee is not hiding a defect; it is declining to make a choice on your
-behalf. Episodes 2, 3 and 5 already have every number above measured and
-pinned in `tests/test_uncertainty.py`; episode 4 needs a training run with
+behalf. Episodes 3 and 5 already have every number above measured and pinned
+in `tests/test_uncertainty.py`; episode 4 needs a training run with
 checkpoints.
 The series exists because the previous two ended the same way — an exact
 statement that was true and inert — and a guarantee with a quantifier in it is

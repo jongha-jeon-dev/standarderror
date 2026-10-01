@@ -9,18 +9,22 @@ the gap it reports is dominated by sampling noise, and noise has no sign once
 you take an absolute value.
 
 Measured on models that are calibrated **by construction** -- draw `p` from a
-Dirichlet, then draw the label from `p` -- the bias is large enough to matter:
+Dirichlet over ten classes, then draw the label from `p` -- averaged over
+twenty draws, the bias is large enough to matter:
 
-    n = 1,000 predictions, 15 bins   ->  ECE = 0.037
-    n = 200,   15 bins               ->  ECE = 0.120
-    n = 20,000, 15 bins              ->  ECE = 0.005
+    n = 200,    15 bins   ->  ECE = 0.085
+    n = 1,000,  15 bins   ->  ECE = 0.035
+    n = 20,000, 15 bins   ->  ECE = 0.008
 
-0.037 is the size of the improvement recalibration papers report. It scales
-roughly as `sqrt(bins / n)`, so the same model gets three times "better" by
-using five bins instead of fifty, and the comparison people actually make --
-this model's ECE against that model's -- is only meaningful when both are
-computed at the same bin count on the same number of points, which is not the
-convention.
+An earlier version of this docstring, and the syllabus, quoted 0.120, 0.037
+and 0.005: those were *single draws*, and 0.120 at n = 200 is what seed 0
+alone produces. The estimator's bias is itself noisy, which is part of the
+point. It scales as `sqrt(bins / n)` -- the fitted log-log slope is 0.503
+against a binomial prediction of one half -- and it depends on the confidence
+profile as well, not only on bins and n: the same n and bins over 65 classes
+give a third of the ten-class bias. So no table of floors is portable, and
+the comparison a measured ECE needs is against a calibrated model with *its
+own* confidences: `null_test`.
 
 **Temperature scaling cannot change any prediction.** Dividing every logit by
 the same positive `T` is a strictly increasing map applied to each logit, so
@@ -216,4 +220,194 @@ def reordering(table: dict, *, reference: float = 1.0,
                     "pairs_reordered": (1.0 - tau) / 2.0,
                     "top_overlap": len(top_ref & top) / k,
                     "top_k": int(k)})
+    return out
+
+
+# ------------------------------------------------- episode 2: the floor
+
+def l2_error(confidence, correct, *, bins: int = 15,
+             debiased: bool = True) -> float:
+    """Root binned squared calibration error, optionally with the bias removed.
+
+    The plug-in estimate squares each bin's gap between accuracy and
+    confidence, and a bin's observed accuracy carries binomial variance
+    `a(1 - a) / (k - 1)` around its true value -- which the square turns into
+    a positive bias. `debiased=True` subtracts that variance bin by bin, after
+    Kumar, Liang and Ma (2019). What is left is an estimate of the *true*
+    squared error, and it can come out negative when the true error is near
+    zero and the noise overshoots; the return value is a signed square root so
+    that "below the noise" is visible rather than clipped to an
+    indistinguishable zero.
+
+    Unbiased is not low-variance: on 1,000 points a debiased estimate still
+    moves from subset to subset, and `stability` reports by how much.
+    """
+    np = _np()
+    c = np.asarray(confidence, float)
+    a = np.asarray(correct, float)
+    edges = np.linspace(0.0, 1.0, int(bins) + 1)
+    edges[0] = -np.inf
+    total, n = 0.0, len(c)
+    for lo, hi in zip(edges[:-1], edges[1:]):
+        m = (c > lo) & (c <= hi)
+        k = int(m.sum())
+        if k < 2:
+            continue
+        acc, conf = a[m].mean(), c[m].mean()
+        gap = (acc - conf) ** 2
+        if debiased:
+            gap -= acc * (1.0 - acc) / (k - 1)
+        total += k / n * gap
+    return float(np.sign(total) * math.sqrt(abs(total)))
+
+
+def resample_labels(p, rng):
+    """Labels drawn from the model's own probabilities.
+
+    Under these labels the model is perfectly calibrated *by construction*,
+    with exactly its own confidence profile -- which is the null a measured
+    calibration error should be compared against. Consistency resampling,
+    after Bröcker and Smith (2007).
+    """
+    np = _np()
+    u = rng.random((len(p), 1))
+    return (np.asarray(p).cumsum(1) < u).sum(1).clip(0, p.shape[1] - 1)
+
+
+def null_test(p, y, *, bins: int = 15, draws: int = 200, seed: int = 0,
+              adaptive: bool = False) -> dict:
+    """ECE beside the ECE a calibrated model with the same confidences gets.
+
+    `floor_share` is the null mean over the measured value: the share of the
+    reported number that a perfectly calibrated model would also have
+    reported. `p_value` is the share of null draws at least as large.
+    """
+    np = _np()
+    rng = np.random.default_rng(seed)
+    conf, correct = _conf_correct(p, y)
+    measured = ece(conf, correct, bins=bins, adaptive=adaptive)
+    null = np.array([ece(conf, (p.argmax(1) == resample_labels(p, rng))
+                         .astype(float), bins=bins, adaptive=adaptive)
+                     for _ in range(int(draws))])
+    return {"ece": measured, "null_mean": float(null.mean()),
+            "null_p95": float(np.percentile(null, 95)),
+            "floor_share": float(null.mean() / measured) if measured else
+            float("nan"),
+            "p_value": float((null >= measured).mean()), "n": len(y),
+            "bins": int(bins)}
+
+
+def detection_rate(p, y, *, n: int, bins: int = 15, subsets: int = 60,
+                   draws: int = 100, alpha: float = 0.05,
+                   seed: int = 0) -> float:
+    """Share of random size-`n` subsets in which the null test rejects.
+
+    Only meaningful for a model known to be miscalibrated on the full data --
+    then it is the test's power at `n`, which is the number that says whether
+    a calibration claim made on a benchmark of that size could have been
+    anything other than noise.
+    """
+    np = _np()
+    rng = np.random.default_rng(seed)
+    hits = 0
+    for s in range(int(subsets)):
+        idx = rng.permutation(len(y))[:int(n)]
+        t = null_test(p[idx], y[idx], bins=bins, draws=draws,
+                      seed=seed + 7919 * (s + 1))
+        hits += t["p_value"] < alpha
+    return hits / int(subsets)
+
+
+def temperature(p, t: float):
+    """Probabilities at temperature `t`, from probabilities at temperature 1.
+
+    `log p` differs from the logits by a per-row constant, which a softmax
+    ignores, so the original logits are not needed.
+    """
+    np = _np()
+    lg = np.log(np.clip(np.asarray(p, float), 1e-12, None)) / float(t)
+    lg -= lg.max(1, keepdims=True)
+    e = np.exp(lg)
+    return e / e.sum(1, keepdims=True)
+
+
+def nll(p, y) -> float:
+    np = _np()
+    p = np.asarray(p)
+    return float(-np.log(np.clip(p[np.arange(len(y)), np.asarray(y)],
+                                 1e-12, None)).mean())
+
+
+def brier(p, y) -> float:
+    np = _np()
+    p = np.asarray(p, float)
+    onehot = np.zeros_like(p)
+    onehot[np.arange(len(y)), np.asarray(y)] = 1.0
+    return float(((p - onehot) ** 2).sum(1).mean())
+
+
+def ranking(p_a, p_b, y, *, n: int = 1000, bins=(5, 15, 50),
+            subsets: int = 200, seed: int = 0) -> dict:
+    """How often each metric, on a size-`n` subset, prefers model `a`.
+
+    Pair it with the full-data answer: when the two models have identical
+    accuracy -- as two temperatures of one model always do -- the full-data
+    NLL difference is purely a calibration difference, so it settles which is
+    better calibrated, and each metric's subset rate is its chance of
+    agreeing with that.
+    """
+    np = _np()
+    rng = np.random.default_rng(seed)
+    counts = {f"ECE, {b} bins": 0 for b in bins}
+    counts.update({f"debiased L2, {b} bins": 0 for b in bins})
+    counts.update({"NLL": 0, "Brier": 0})
+    for _ in range(int(subsets)):
+        i = rng.permutation(len(y))[:int(n)]
+        ca, cb_ = _conf_correct(p_a[i], y[i]), _conf_correct(p_b[i], y[i])
+        for b in bins:
+            counts[f"ECE, {b} bins"] += ece(*ca, bins=b) < ece(*cb_, bins=b)
+            counts[f"debiased L2, {b} bins"] += (
+                abs(l2_error(*ca, bins=b)) < abs(l2_error(*cb_, bins=b)))
+        counts["NLL"] += nll(p_a[i], y[i]) < nll(p_b[i], y[i])
+        counts["Brier"] += brier(p_a[i], y[i]) < brier(p_b[i], y[i])
+    full = {"nll_a": nll(p_a, y), "nll_b": nll(p_b, y),
+            "accuracy_a": float((p_a.argmax(1) == y).mean()),
+            "accuracy_b": float((p_b.argmax(1) == y).mean())}
+    return {"prefers_a": {k: v / int(subsets) for k, v in counts.items()},
+            "full": full, "n": int(n), "subsets": int(subsets)}
+
+
+def stability(p, y, *, n: int = 1000, bins=(5, 15, 50), subsets: int = 30,
+              seed: int = 0) -> dict:
+    """Plug-in ECE, plug-in L2 and debiased L2 over size-`n` subsets.
+
+    The L2 aggregates are taken in *squared* units and rooted afterwards.
+    Averaging the per-subset roots instead -- which the first version of this
+    function did -- is biased low by Jensen's inequality, because a square
+    root is concave, and the debiased estimate then appears to shrink with
+    the bin count when it is the variance that grows. `negative` is the share
+    of subsets whose debiased estimate came out below zero: the noise made
+    visible, on a model that is in fact miscalibrated.
+    """
+    np = _np()
+    rng = np.random.default_rng(seed)
+    idx = [rng.permutation(len(y))[:int(n)] for _ in range(int(subsets))]
+
+    def root(v):
+        return float(np.sign(v) * math.sqrt(abs(v)))
+
+    out = {}
+    for b in bins:
+        e = [ece(*_conf_correct(p[i], y[i]), bins=b) for i in idx]
+        pl = [l2_error(*_conf_correct(p[i], y[i]), bins=b, debiased=False)
+              for i in idx]
+        d = [l2_error(*_conf_correct(p[i], y[i]), bins=b) for i in idx]
+        sq = [np.sign(v) * v * v for v in d]
+        out[b] = {"ece": float(np.mean(e)), "ece_sd": float(np.std(e)),
+                  "l2": root(np.mean(np.square(pl))),
+                  "l2_sd": float(np.std(pl)),
+                  "debiased": root(np.mean(sq)),
+                  "debiased_mean_of_roots": float(np.mean(d)),
+                  "debiased_sd": float(np.std(d)),
+                  "negative": float(np.mean(np.array(sq) < 0))}
     return out

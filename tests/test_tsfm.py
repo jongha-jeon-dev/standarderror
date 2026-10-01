@@ -417,3 +417,13 @@ class TestPublishedModelAdapter:
             assert "huggingface" in str(e).lower()
         else:
             pytest.skip("weights reachable here; nothing to check")
+
+
+def test_nothing_earlier_in_the_suite_left_torch_in_float64():
+    """The regression that made two checkpoint tests fail only in the full
+    run: `numerics.steps.edge_of_stability` set the global default dtype and
+    did not restore it."""
+    from standarderror.numerics import steps
+    before = torch.get_default_dtype()
+    steps.edge_of_stability(0.05, steps=5, sharpness_iters=3)
+    assert torch.get_default_dtype() == before

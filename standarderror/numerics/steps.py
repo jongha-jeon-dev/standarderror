@@ -344,6 +344,28 @@ def edge_of_stability(lr: float, *, steps: int = 4000, width: int = 40,
                       depth: int = 2, n: int = 200, d: int = 8,
                       seed: int = 0, probes: int = 13,
                       sharpness_iters: int = 200) -> dict:
+    """See `_edge_of_stability`. Runs in float64 and puts the global default
+    back afterwards.
+
+    The first version set `torch.set_default_dtype(torch.float64)` and left it
+    set, so every model built later in the same process -- including, in the
+    test suite, the time-series forecaster -- silently got float64 parameters.
+    Two of that model's tests failed only when run after this one.
+    """
+    import torch
+
+    previous = torch.get_default_dtype()
+    torch.set_default_dtype(torch.float64)
+    try:
+        return _edge_of_stability(lr, steps=steps, width=width, depth=depth, n=n, d=d, seed=seed, probes=probes, sharpness_iters=sharpness_iters)
+    finally:
+        torch.set_default_dtype(previous)
+
+
+def _edge_of_stability(lr: float, *, steps: int = 4000, width: int = 40,
+                      depth: int = 2, n: int = 200, d: int = 8,
+                      seed: int = 0, probes: int = 13,
+                      sharpness_iters: int = 200) -> dict:
     """Full-batch gradient descent on a small tanh MLP, tracking `lam_max`.
 
     Full-batch on purpose: the edge-of-stability behaviour is a property of the
@@ -361,7 +383,6 @@ def edge_of_stability(lr: float, *, steps: int = 4000, width: int = 40,
     """
     import torch
 
-    torch.set_default_dtype(torch.float64)
     g = torch.Generator().manual_seed(seed)
     widths = [d] + [width] * depth + [1]
     layers: list = []
