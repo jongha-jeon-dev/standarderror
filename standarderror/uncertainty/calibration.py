@@ -318,6 +318,9 @@ def detection_rate(p, y, *, n: int, bins: int = 15, subsets: int = 60,
     return hits / int(subsets)
 
 
+_TINY = 1e-300
+
+
 def temperature(p, t: float):
     """Probabilities at temperature `t`, from probabilities at temperature 1.
 
@@ -325,7 +328,10 @@ def temperature(p, t: float):
     ignores, so the original logits are not needed.
     """
     np = _np()
-    lg = np.log(np.clip(np.asarray(p, float), 1e-12, None)) / float(t)
+    # The floor only guards log(0). A 1e-12 floor was not harmless: at T = 0.2
+    # the runner-up of most rows falls below it, ties at the floor, and the
+    # margin -- exactly invariant in theory -- moved the AURC by 5e-5.
+    lg = np.log(np.clip(np.asarray(p, float), _TINY, None)) / float(t)
     lg -= lg.max(1, keepdims=True)
     e = np.exp(lg)
     return e / e.sum(1, keepdims=True)
@@ -411,3 +417,143 @@ def stability(p, y, *, n: int = 1000, bins=(5, 15, 50), subsets: int = 30,
                   "debiased_sd": float(np.std(d)),
                   "negative": float(np.mean(np.array(sq) < 0))}
     return out
+
+
+# ------------------------------------------- episode 3: what you decline
+
+def entropy(p):
+    np = _np()
+    p = np.asarray(p, float)
+    return -(p * np.log(np.clip(p, 1e-12, None))).sum(1)
+
+
+def margin(p):
+    """Gap between the top two log-probabilities -- the top two *logits*.
+
+    `log p` differs from the logits by one constant per row, which cancels in
+    a difference, and dividing every logit by `T` divides every margin by the
+    same `T`. So ranking examples by margin is invariant to temperature by
+    construction, which max-probability and entropy are not.
+    """
+    np = _np()
+    s = np.sort(np.log(np.clip(np.asarray(p, float), _TINY, None)), 1)
+    return s[:, -1] - s[:, -2]
+
+
+def selective(score, correct, *, coverages=(0.1, 0.2, 0.5)) -> dict:
+    """Keep the highest-scoring predictions, decline the rest.
+
+    `aurc` is the area under the risk-coverage curve: the error rate of the
+    kept set, averaged over every coverage from one prediction to all of
+    them. Lower is better, and an oracle that keeps every right answer before
+    any wrong one sets the floor.
+    """
+    np = _np()
+    order = np.argsort(-np.asarray(score, float), kind="stable")
+    c = np.asarray(correct, float)[order]
+    risk = 1.0 - np.cumsum(c) / np.arange(1, len(c) + 1)
+    return {"aurc": float(risk.mean()),
+            "accuracy_at": {q: float(1.0 - risk[max(0, int(q * len(c)) - 1)])
+                            for q in coverages}}
+
+
+def oracle_aurc(correct) -> float:
+    np = _np()
+    c = np.sort(np.asarray(correct, float))[::-1]
+    return float((1.0 - np.cumsum(c) / np.arange(1, len(c) + 1)).mean())
+
+
+SCORES = {"max probability": lambda q: q.max(1),
+          "entropy": lambda q: -entropy(q),
+          "margin": margin}
+
+
+def abstention(p, y, sequence, *, temperatures=(0.5, 1.0, 1.25, 1.5, 2.0,
+                                                3.0),
+               draws: int = 300, seed: int = 0) -> dict:
+    """AURC of each confidence score at each temperature, against T = 1.
+
+    The interval on each difference resamples *sequences*, not rows: the
+    predictions inside one 64-character window share a context, and treating
+    them as independent would make every difference look significant.
+    """
+    np = _np()
+    p, y, sequence = np.asarray(p), np.asarray(y), np.asarray(sequence)
+    correct = p.argmax(1) == y
+    scores = {(k, float(t)): f(temperature(p, t)) for k, f in SCORES.items()
+              for t in temperatures}
+    full = {k: selective(v, correct) for k, v in scores.items()}
+    uniq = np.unique(sequence)
+    rows = {s: np.where(sequence == s)[0] for s in uniq}
+    rng = np.random.default_rng(seed)
+    diffs = {k: [] for k in scores}
+    for _ in range(int(draws)):
+        idx = np.concatenate([rows[s] for s in rng.choice(uniq, len(uniq))])
+        base = {k: selective(v[idx], correct[idx])["aurc"]
+                for k, v in scores.items()}
+        for (kind, t) in scores:
+            diffs[(kind, t)].append(base[(kind, t)] - base[(kind, 1.0)])
+    out = {}
+    for (kind, t), sel in full.items():
+        d = np.array(diffs[(kind, t)])
+        out[(kind, t)] = {
+            **sel,
+            "difference": sel["aurc"] - full[(kind, 1.0)]["aurc"],
+            "low": float(np.percentile(d, 2.5)),
+            "high": float(np.percentile(d, 97.5))}
+    return {"table": out, "oracle": oracle_aurc(correct),
+            "accuracy": float(correct.mean()),
+            "sequences": int(len(uniq)), "rows": int(len(y))}
+
+
+def best_temperature(p, y, score: str, *, grid=None) -> dict:
+    """The temperature at which one score abstains best, by AURC."""
+    np = _np()
+    grid = np.round(np.arange(0.2, 3.01, 0.1), 2) if grid is None else grid
+    correct = np.asarray(p).argmax(1) == np.asarray(y)
+    a = [selective(SCORES[score](temperature(p, t)), correct)["aurc"]
+         for t in grid]
+    i = int(np.argmin(a))
+    return {"temperature": float(grid[i]), "aurc": float(a[i]),
+            "curve": dict(zip(map(float, grid), map(float, a)))}
+
+
+def fitted_temperature(p, y, sequence, *, halves: int = 40,
+                       seed: int = 0) -> dict:
+    """What temperature scaling would choose: the NLL minimiser on a random
+    half of the sequences, repeated, so its spread is visible."""
+    np = _np()
+    from scipy.optimize import minimize_scalar
+
+    p, y, sequence = np.asarray(p), np.asarray(y), np.asarray(sequence)
+    uniq = np.unique(sequence)
+    rng = np.random.default_rng(seed)
+    fits = []
+    for _ in range(int(halves)):
+        m = np.isin(sequence, rng.permutation(uniq)[:len(uniq) // 2])
+        fits.append(float(minimize_scalar(
+            lambda t, m=m: nll(temperature(p[m], t), y[m]),
+            bounds=(0.3, 5.0), method="bounded").x))
+    return {"mean": float(np.mean(fits)), "low": float(min(fits)),
+            "high": float(max(fits)), "fits": fits}
+
+
+def swap_pair():
+    """Two predictions whose confidence order flips with temperature.
+
+    One has a single close rival; the other beats a crowd of four distant
+    ones. Cold, the crowd barely registers and the second is more confident;
+    hot, its probability spreads over four rivals while the first shares with
+    one, and the order flips. Logits over five labels, chosen by hand and
+    checked by `test_uncertainty.py` rather than trusted.
+    """
+    np = _np()
+    one_rival = np.array([2.0, 1.5, -8.0, -8.0, -8.0])
+    crowd = np.array([3.0, 0.0, 0.0, 0.0, 0.0])
+
+    def top(z, t):
+        e = np.exp((z - z.max()) / t)
+        return float((e / e.sum()).max())
+    return {"one_rival": one_rival, "crowd": crowd,
+            "confidence": {t: (top(one_rival, t), top(crowd, t))
+                           for t in (0.5, 1.0, 2.0, 3.0)}}

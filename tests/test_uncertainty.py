@@ -259,3 +259,55 @@ class TestTemperatureScaling:
         far = max(rows, key=lambda t: abs(math.log(t)))
         assert rows[far]["tau"] < 0.95
         assert rows[far]["top_overlap"] < 0.95
+
+
+class TestWhatTemperatureCanAndCannotChange:
+    """Episode 3. Within a row nothing moves; across rows the ranking does,
+    and how much that matters depends on the score you abstain on."""
+
+    @pytest.fixture(scope="class")
+    def model(self):
+        pred = cv.predictions(count=24, size=16, seed=1)
+        return pred["p"], pred["y"], pred["sequence"]
+
+    def test_the_swap_pair_swaps(self):
+        c = cb.swap_pair()["confidence"]
+        assert c[1.0][1] > c[1.0][0]      # cold: the crowd row leads
+        assert c[2.0][0] > c[2.0][1]      # hot: the one-rival row leads
+
+    def test_margin_ranking_is_exactly_invariant(self, model):
+        from scipy.stats import rankdata
+        p, _, _ = model
+        base = rankdata(cb.margin(p))
+        # 0.2 is where a 1e-12 log floor used to tie runner-ups and break it.
+        for t in (0.2, 0.5, 2.0, 3.0):
+            assert np.allclose(rankdata(cb.margin(cb.temperature(p, t))), base)
+
+    def test_max_probability_ranking_is_not(self, model):
+        from scipy.stats import kendalltau
+        p, _, _ = model
+        tau = kendalltau(p.max(1), cb.temperature(p, 2.0).max(1)).statistic
+        assert tau < 0.95
+
+    def test_the_fitted_temperature_is_near_one(self, model):
+        f = cb.fitted_temperature(*model, halves=10)
+        assert 1.03 < f["mean"] < 1.2
+
+    def test_entropy_abstains_worse_when_heated_and_max_probability_barely(
+            self, model):
+        a = cb.abstention(*model, temperatures=(1.0, 1.25, 3.0), draws=60)
+        t = a["table"]
+        assert t[("entropy", 3.0)]["low"] > 0.05
+        assert t[("max probability", 1.25)]["low"] < 0 < t[(
+            "max probability", 1.25)]["high"]
+        assert t[("max probability", 3.0)]["difference"] < \
+            0.25 * t[("entropy", 3.0)]["difference"]
+        assert t[("margin", 3.0)]["difference"] == 0.0
+        assert all(v["aurc"] > a["oracle"] for v in t.values())
+
+    def test_the_best_temperature_depends_on_the_score(self, model):
+        p, y, _ = model
+        mp = cb.best_temperature(p, y, "max probability")
+        en = cb.best_temperature(p, y, "entropy")
+        assert 0.9 <= mp["temperature"] <= 1.3
+        assert en["temperature"] <= 0.8
