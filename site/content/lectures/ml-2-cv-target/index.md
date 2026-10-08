@@ -149,7 +149,7 @@ Then, if you have a model where two cross-validated scores differ by less than t
 
 ## Next
 
-Episode 3 takes the rule everyone learns right after cross-validation — fit every preprocessing step inside the folds — and measures six ways of breaking it. Some leak a third of the accuracy scale. Some leak nothing at all.
+Episode 3 takes the rule everyone learns right after cross-validation — fit every preprocessing step inside the folds — and measures seven ways of breaking it. Some leak a third of the accuracy scale. Some leak nothing at all.
 
 ---
 
