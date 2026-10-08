@@ -429,11 +429,11 @@ and not before; the last series was a reminder of why.
 
 | # | Episode | The sentence under test |
 |---|---|---|
-| 6 | — | *logistic regression finds the maximum-likelihood coefficients*. On separable data there are none: the coefficient norm and the direction gradient descent heads in, measured |
-| 7 | — | *regularisation strength is a property of the model*. The same penalty on features in different units, and which features lasso keeps |
-| 8 | — | *lasso selects the relevant features*. Selection frequency across bootstraps when relevant features are correlated |
-| 9 | — | *test error is bias squared plus variance, and the trade-off is a U*. Both terms computed exactly on simulated data, across model complexity |
-| 10 | — | *more parameters than data points means overfitting*. Minimum-norm least squares on random features, swept through p = n |
+| 6 | On Separable Data, Your Logistic Coefficients Are Your Stopping Rule | *logistic regression finds the maximum-likelihood coefficients*. On separable data there are none. All 50 half-splits of the breast-cancer data were separable; tightening the solver's tolerance from 1e-2 to 1e-10 grew the coefficient norm from 2.35 to 1,289, raised test log loss from 0.079 to 1.575 and lowered accuracy from 0.982 to 0.954. Gradient descent heads towards the max-margin direction, its norm growing like log t |
+| 7 | Change a Feature's Units and the Lasso Changes Its Mind | *regularisation strength is a property of the model*. Re-expressing one diabetes feature at a time in other units flipped the lasso's decision on 7 of 10 features while cross-validated error moved by at most 5.3%. Standardising is a choice too: a rare binary feature with a fixed effect was kept in 60% of fits standardised and 17.5% raw |
+| 8 | Cross-Validated Lasso Is Tuned to Predict, Not to Select | *lasso selects the relevant features*. At the CV minimum it kept 2.7 of 7 pure-noise features and an irrelevant feature about a third of the time at any correlation. The 1-SE rule dropped the noise, not the confusion: at correlation 0.99 it kept the stand-in 38% of the time and the real feature 70%. On diabetes bootstraps, age was kept in 82% of fits, 37% positive and 45% negative |
+| 9 | The Bias–Variance U Belongs to a Knob, Not to Complexity | *test error is bias squared plus variance, and the trade-off is a U*. Computed exactly, the three terms matched measured error to 0.003. k in k-NN draws the U, bottom at k = 8. Adding trees to a forest does not: bias stays near zero and variance falls monotonically to a floor of ρσ², ρ = 0.46 |
+| 10 | The Second Descent Is Real, and a Ridge Penalty Makes It Unnecessary | *more parameters than data points means overfitting*. Minimum-norm least squares on random features peaked at p = n for 50, 100 and 200 rows — about 80 times the best small model's error at n = 100 — and fell again beyond it, but never below the best model under the threshold, even without label noise. A ridge penalty removed the peak and was best around p = n |
 
 ### Arc III — Trees and ensembles
 
@@ -475,8 +475,11 @@ and not before; the last series was a reminder of why.
 | 29 | — | *covariate shift costs accuracy*. Accuracy and calibration under controlled shifts, and importance weighting |
 | 30 | — | *scaling laws predict performance*. Power laws fitted on small character models, checked on larger ones |
 
-Arc I is published. Two of its episodes changed shape while being measured:
+Arcs I and II are published. Several episodes changed shape while being measured:
 episode 1's repeated splits turned out to measure the pool rather than the
 training sets, and episode 3's feature-selection leak, enormous on noise,
 vanished on real data where the true features win the selection anyway — which
-is what turned a list of leaks into a rule for sizing them.
+is what turned a list of leaks into a rule for sizing them. In Arc II, double
+descent survived as a curve and lost as advice: the second descent was real
+in every setting and won in none, and the ridge penalty that removed the peak
+was best around p = n rather than exactly at it.

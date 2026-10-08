@@ -13,6 +13,7 @@ pytest.importorskip("scipy")
 
 from standarderror.ml import evaluation as ev  # noqa: E402
 from standarderror.ml import leakage as lk  # noqa: E402
+from standarderror.ml import linear as ln  # noqa: E402
 
 
 class TestATestScoreHasAnErrorBar:
@@ -182,3 +183,49 @@ class TestImbalance:
         assert s["class weights"]["mean_p"] > 5 * r["prevalence"]
         assert m["plain_precision"] >= m["method_precision"] - 0.005
         assert abs(r["corrected"]["mean_p"] - r["prevalence"]) < 0.005
+
+
+class TestLinearModelsPushed:
+
+    def test_a_separable_split_has_a_unit_max_margin_direction(self):
+        Xa, _, ya, _ = ln.breast_cancer_split(0)
+        w, sep = ln.max_margin(Xa, ya)
+        assert sep and np.linalg.norm(w) == pytest.approx(1.0)
+
+    def test_a_tighter_tolerance_only_grows_the_coefficients(self):
+        rows = ln.tolerance_sweep(tols=(1e-2, 1e-6))
+        assert rows[1]["norm"] > 10 * rows[0]["norm"]
+
+    def test_rescaling_a_feature_changes_what_the_lasso_keeps(self):
+        X, y, _ = ln.diabetes()
+        assert (ln._lasso_cv(X, y)[0] != 0)[0]
+        Z = X.copy()
+        Z[:, 0] *= 0.01           # age, in much larger units
+        assert not (ln._lasso_cv(Z, y)[0] != 0)[0]
+
+    def test_the_one_se_rule_keeps_no_more_than_the_minimum(self):
+        X, y, _ = ln.diabetes()
+        assert (np.count_nonzero(ln._lasso_cv(X, y, rule="1se")[0])
+                <= np.count_nonzero(ln._lasso_cv(X, y)[0]))
+
+    def test_the_bias_variance_terms_add_up_to_the_measured_error(self):
+        from sklearn.neighbors import KNeighborsRegressor
+        r = ln.bias_variance(lambda: KNeighborsRegressor(4), reps=80)
+        assert r["total"] == pytest.approx(r["mse"], abs=0.01)
+
+    def test_breimans_formula_recovers_a_planted_correlation(self):
+        s2, rho = 0.2, 0.4
+        sweep = [{"trees": 1, "variance": s2},
+                 {"trees": 50, "variance": rho * s2 + (1 - rho) * s2 / 50}]
+        assert ln.forest_rho(sweep) == pytest.approx(rho)
+
+    def test_min_norm_interpolates_past_the_threshold_and_peaks_at_it(self):
+        c = ln.random_features(n=40, ps=[10, 30, 40, 50, 400], reps=8)
+        assert ln.peak(c) == 40
+        assert c["train"][50] < 1e-8 and c["train"][10] > 0.01
+        assert ln.best_under(c)[0] in (10, 30)
+
+    def test_ridge_flattens_the_peak(self):
+        kw = dict(n=40, ps=[30, 40, 50], reps=8)
+        assert (max(ln.random_features(ridge=1.0, **kw)["test"].values())
+                < max(ln.random_features(**kw)["test"].values()) / 5)
