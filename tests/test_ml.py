@@ -115,3 +115,38 @@ class TestNotEveryLeakLeaks:
         got = enc.transform(X)[:, 0]
         assert list(got) == [0.5, 0.5, 0.5, 0.5]
         assert math.isclose(enc.prior_, 0.5)
+
+
+class TestLearningCurves:
+
+    def test_an_exact_power_law_is_recovered(self):
+        from standarderror.ml import curves as cu
+        sizes = [50, 100, 200, 400, 800]
+        curve = {"sizes": sizes,
+                 "error": {"m": {n: 2.0 * n ** -0.4 for n in sizes}}}
+        f = cu.fit(curve, "m", until=800, floor=False)
+        assert f["b"] == pytest.approx(0.4, abs=1e-4)
+        assert all(s == pytest.approx(-0.4) for s in cu.log_slope(curve, "m"))
+
+    def test_a_floor_bends_the_log_slope_towards_zero(self):
+        from standarderror.ml import curves as cu
+        sizes = [50, 100, 200, 400, 800, 1600]
+        curve = {"sizes": sizes,
+                 "error": {"m": {n: 2.0 * n ** -0.5 + 0.1 for n in sizes}}}
+        sl = cu.log_slope(curve, "m")
+        assert all(a < b < 0 for a, b in zip(sl, sl[1:]))
+        f = cu.fit(curve, "m", until=1600, floor=True)
+        assert f["c"] == pytest.approx(0.1, abs=1e-3)
+        two = cu.fit(curve, "m", until=400, floor=False)
+        assert two["predict"](1600) < curve["error"]["m"][1600]
+
+    def test_the_task_has_the_bayes_error_the_episode_quotes(self):
+        from standarderror.ml import curves as cu
+        assert cu.GaussianTask().bayes == pytest.approx(0.268, abs=0.002)
+
+    def test_on_digits_the_pilot_winner_is_the_full_size_loser(self):
+        from standarderror.ml import curves as cu
+        d = cu.digits_curve(sizes=(50, 1200), reps=10)
+        best = cu.best_at(d)
+        assert best[50] == "logistic"
+        assert max(d["error"], key=lambda k: d["error"][k][1200]) == "logistic"

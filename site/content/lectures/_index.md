@@ -422,7 +422,7 @@ and not before; the last series was a reminder of why.
 | 1 | Your Test Score Has an Error Bar, and It Is Wider Than Your Gain | *the model with the higher test score is better*. On 360 test digits one score's 95% interval is about ±1.4 points, wider than the gap between the top two of three classifiers. Repeated splits of one pool re-measure the test-set noise with a finite-population correction, not training variation. Paired on all 1,797 images, 3-NN beats an RBF SVM by 0.6 points at McNemar p = 0.06; settling it needs about 3,400 images |
 | 2 | Cross-Validation Estimates the Error of a Model You Did Not Train | *CV estimates how well your model will do*. On simulated least squares, where each fitted model's error is exact, the correlation between the CV estimate and it is −0.01; on digits against a fixed test set, −0.21. CV estimates the procedure's average error, and its naive 90% interval covers the fitted model's error 80% of the time |
 | 3 | Not Every Leak Leaks, and the Ones That Do Can Be Measured | *fit every preprocessing step inside the folds*. Right, and violations range from nothing to a third of the scale: standardising and imputing on all rows leak under 0.1 points; selecting 20 of 5,000 noise features turns coin flips into 0.88; on real data with strong features the same selection leaks nothing; duplicates leak 0.9 points for logistic regression and 3.7 for 1-NN |
-| 4 | — | *a learning curve tells you whether more data will help*. Power-law fits on small training sets, checked against the error larger ones actually deliver |
+| 4 | A Learning Curve Fitted Early Promises More Than More Data Delivers | *a learning curve tells you whether more data will help*. On a simulated task grown to 25,600 rows with a Bayes error of 0.268, the power law a n^-b fitted to a pilot study was optimistic in all 9 fits and predicted errors below the Bayes error in 4; on digits, optimistic in all 9 again. Adding a floor fixes curves that have bent and not those still falling: the boosted trees' fitted floor went from above what they reach to below Bayes. Logistic regression is best at 50 digits and worst at 1,200 |
 | 5 | — | *resampling fixes class imbalance*. Over- and under-sampling against class weights and a moved threshold, on ranking, calibration and the decision they produce |
 
 ### Arc II — Linear models, pushed
@@ -475,7 +475,7 @@ and not before; the last series was a reminder of why.
 | 29 | — | *covariate shift costs accuracy*. Accuracy and calibration under controlled shifts, and importance weighting |
 | 30 | — | *scaling laws predict performance*. Power laws fitted on small character models, checked on larger ones |
 
-Episodes 1 to 3 are published. Two of them changed shape while being measured:
+Episodes 1 to 4 are published. Two of them changed shape while being measured:
 episode 1's repeated splits turned out to measure the pool rather than the
 training sets, and episode 3's feature-selection leak, enormous on noise,
 vanished on real data where the true features win the selection anyway — which
