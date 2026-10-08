@@ -395,3 +395,88 @@ measured and pinned in `tests/test_schoolmath.py`.
 The series exists because the three before it all needed a domain where
 "correct" is not a matter of degree. Here it is not: 579 is the answer or it
 is not, and the model either carried or it did not.
+
+## Machine Learning, Taught Through What Breaks
+
+The longest course here, thirty episodes, and the broadest: the standard
+machine-learning curriculum from how a model is scored, through linear models,
+trees and ensembles, reading what a model learned, training a network, and what
+generalisation looks like in one. Each episode takes **one sentence** that the
+curriculum states as fact and measures where it stops being true. Some of those
+sentences will survive measurement; when one does, the episode says so.
+
+The data is either bundled with scikit-learn — the UCI handwritten digits and
+the Wisconsin diagnostic breast cancer set, both CC BY 4.0 — or simulated with a
+known answer, so a reader rebuilds every number offline. The network episodes
+run on a CPU, on models small enough to train many times, because most of their
+claims are about what happens *across* training runs.
+
+For episodes not yet published the table gives the sentence under test and how
+it will be measured, not a result. Their results go in when they are measured,
+and not before; the last series was a reminder of why.
+
+### Arc I — What a score means
+
+| # | Episode | The sentence, and what measurement did to it |
+|---|---|---|
+| 1 | Your Test Score Has an Error Bar, and It Is Wider Than Your Gain | *the model with the higher test score is better*. On 360 test digits one score's 95% interval is about ±1.4 points, wider than the gap between the top two of three classifiers. Repeated splits of one pool re-measure the test-set noise with a finite-population correction, not training variation. Paired on all 1,797 images, 3-NN beats an RBF SVM by 0.6 points at McNemar p = 0.06; settling it needs about 3,400 images |
+| 2 | Cross-Validation Estimates the Error of a Model You Did Not Train | *CV estimates how well your model will do*. On simulated least squares, where each fitted model's error is exact, the correlation between the CV estimate and it is −0.01; on digits against a fixed test set, −0.21. CV estimates the procedure's average error, and its naive 90% interval covers the fitted model's error 80% of the time |
+| 3 | Not Every Leak Leaks, and the Ones That Do Can Be Measured | *fit every preprocessing step inside the folds*. Right, and violations range from nothing to a third of the scale: standardising and imputing on all rows leak under 0.1 points; selecting 20 of 5,000 noise features turns coin flips into 0.88; on real data with strong features the same selection leaks nothing; duplicates leak 0.9 points for logistic regression and 3.7 for 1-NN |
+| 4 | — | *a learning curve tells you whether more data will help*. Power-law fits on small training sets, checked against the error larger ones actually deliver |
+| 5 | — | *resampling fixes class imbalance*. Over- and under-sampling against class weights and a moved threshold, on ranking, calibration and the decision they produce |
+
+### Arc II — Linear models, pushed
+
+| # | Episode | The sentence under test |
+|---|---|---|
+| 6 | — | *logistic regression finds the maximum-likelihood coefficients*. On separable data there are none: the coefficient norm and the direction gradient descent heads in, measured |
+| 7 | — | *regularisation strength is a property of the model*. The same penalty on features in different units, and which features lasso keeps |
+| 8 | — | *lasso selects the relevant features*. Selection frequency across bootstraps when relevant features are correlated |
+| 9 | — | *test error is bias squared plus variance, and the trade-off is a U*. Both terms computed exactly on simulated data, across model complexity |
+| 10 | — | *more parameters than data points means overfitting*. Minimum-norm least squares on random features, swept through p = n |
+
+### Arc III — Trees and ensembles
+
+| # | Episode | The sentence under test |
+|---|---|---|
+| 11 | — | *a decision tree is interpretable*. How often the root split and the tree's shape survive a bootstrap of the rows |
+| 12 | — | *impurity importance ranks what the forest relies on*. A pure-noise column with many distinct values, ranked |
+| 13 | — | *out-of-bag error is free cross-validation*. OOB, CV and test error across forest sizes |
+| 14 | — | *boosting overfits if you run it long enough*. Test error against rounds, with and without shrinkage |
+| 15 | — | *tree ensembles can approximate any function*. Predictions outside the training range on data with a trend |
+
+### Arc IV — Reading what a model learned
+
+| # | Episode | The sentence under test |
+|---|---|---|
+| 16 | — | *permutation importance measures how much a model needs a feature*. Two correlated copies of one feature, and the rows permutation invents |
+| 17 | — | *a partial dependence plot shows a feature's effect*. PDP against accumulated local effects when features are correlated |
+| 18 | — | *SHAP values attribute a prediction to its features*. Exact Shapley values on a small model, under different background distributions |
+| 19 | — | *the model with the better test score learned the task better*. A planted shortcut in the digits, and what happens when it is removed |
+| 20 | — | *two models with the same accuracy make the same predictions*. Disagreement among equally accurate models |
+
+### Arc V — Training a network
+
+| # | Episode | The sentence under test |
+|---|---|---|
+| 21 | — | *initialisation only needs to break symmetry*. Activation and gradient scale through depth for different initial scales |
+| 22 | — | *learning rate and batch size are separate knobs*. The linear scaling rule, and where it stops holding |
+| 23 | — | *Adam converges faster and generalises as well as SGD*. Both, measured on the same small problems over many seeds |
+| 24 | — | *batch normalisation normalises each example*. One example's prediction as the rest of its batch changes |
+| 25 | — | *dropout at test time is approximated by scaling the weights*. Weight scaling against averaging many dropout masks |
+
+### Arc VI — What generalisation looks like in a network
+
+| # | Episode | The sentence under test |
+|---|---|---|
+| 26 | — | *a network that generalises could not have fit noise*. The same network on true and on random labels |
+| 27 | — | *once training accuracy reaches 100%, learning is over*. Modular addition, trained long past that point, with and without weight decay |
+| 28 | — | *data augmentation adds data*. Label-preserving against label-breaking augmentations on the digits |
+| 29 | — | *covariate shift costs accuracy*. Accuracy and calibration under controlled shifts, and importance weighting |
+| 30 | — | *scaling laws predict performance*. Power laws fitted on small character models, checked on larger ones |
+
+Episodes 1 to 3 are published. Two of them changed shape while being measured:
+episode 1's repeated splits turned out to measure the pool rather than the
+training sets, and episode 3's feature-selection leak, enormous on noise,
+vanished on real data where the true features win the selection anyway — which
+is what turned a list of leaks into a rule for sizing them.
