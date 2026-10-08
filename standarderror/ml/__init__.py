@@ -12,6 +12,6 @@ Wisconsin diagnostic breast cancer sets, both CC BY 4.0) or simulated with a
 known answer, so every number can be rebuilt offline.
 """
 
-from . import curves, evaluation, leakage  # noqa: F401
+from . import curves, evaluation, imbalance, leakage  # noqa: F401
 
-__all__ = ["curves", "evaluation", "leakage"]
+__all__ = ["curves", "evaluation", "imbalance", "leakage"]

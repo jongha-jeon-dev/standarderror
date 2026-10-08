@@ -150,3 +150,35 @@ class TestLearningCurves:
         best = cu.best_at(d)
         assert best[50] == "logistic"
         assert max(d["error"], key=lambda k: d["error"][k][1200]) == "logistic"
+
+
+class TestImbalance:
+
+    def test_smote_rows_lie_between_minority_neighbours(self):
+        from standarderror.ml import imbalance as im
+        rng = np.random.default_rng(0)
+        X = np.r_[rng.standard_normal((200, 2)), [[10, 10], [11, 10],
+                                                  [10, 11], [11, 11],
+                                                  [10.5, 10.5], [10.2, 10.8]]]
+        y = np.r_[np.zeros(200, int), np.ones(6, int)]
+        Xs, ys = im.smote(X, y, rng, k=3)
+        new = Xs[len(X):]
+        assert ys.mean() == 0.5
+        assert new.min() >= 10 - 1e-9 and new.max() <= 11 + 1e-9
+
+    def test_the_prior_correction_inverts_a_known_shift(self):
+        from standarderror.ml import imbalance as im
+        p = np.array([0.01, 0.02, 0.2, 0.6])
+        odds = p / (1 - p) * (0.5 / 0.5) / (0.02 / 0.98)
+        balanced = odds / (1 + odds)
+        back = im.prior_correct(balanced, 0.5, 0.02)
+        assert np.allclose(back, p)
+
+    def test_reweighting_logistic_regression_is_mostly_a_threshold(self):
+        from standarderror.ml import imbalance as im
+        r = im.compare(model="logistic", reps=4, test=50_000)
+        s, m = r["summary"], r["matched"]["class weights"]
+        assert abs(s["class weights"]["auc"] - s["plain"]["auc"]) < 0.005
+        assert s["class weights"]["mean_p"] > 5 * r["prevalence"]
+        assert m["plain_precision"] >= m["method_precision"] - 0.005
+        assert abs(r["corrected"]["mean_p"] - r["prevalence"]) < 0.005
