@@ -111,21 +111,43 @@ class TestItIsTheScoreNotConformal:
 
 
 class TestTheExchangeabilityAssumption:
+    """Episode 5. An earlier version of this class asserted that the row-wise
+    spread exceeded the Beta spread by more than 1.2x and read that as a
+    violation. The Beta spread covers the calibration half only; with the test
+    half's binomial term added, the row-wise split has no excess, and the
+    excess lives in the sequence-wise split."""
 
-    def test_the_realised_coverage_is_more_variable_than_predicted(self, pred):
-        """Rows drawn from overlapping contexts are not exchangeable at the
-        row level, so the Beta spread understates the real one."""
+    def test_the_beta_term_alone_is_short_by_root_two(self):
+        full = cv.exchangeable_sd(12288, 12288, 0.1)
+        beta = math.sqrt(0.1 * 0.9 / (12288 + 2))
+        assert full / beta == pytest.approx(math.sqrt(2), rel=1e-3)
+
+    def test_the_row_split_has_no_excess(self, pred):
+        """A random row split of a fixed pool is exchangeable by
+        construction, whatever dependence the rows carry."""
         v = cv.split_variability(pred, draws=60)
         assert v["mean"] == pytest.approx(0.9, abs=0.01)
-        assert v["sd_ratio"] > 1.2
+        assert v["sd_ratio"] > 1.2          # the old, wrong comparison
+        assert 0.8 < v["excess"] < 1.2      # the right one
 
-    def test_splitting_by_sequence_makes_it_worse_not_better(self, pred):
-        """The control. Row-wise splitting leaks between calibration and test,
-        which flatters the spread; doing it properly reveals more."""
+    def test_an_iid_pool_gives_the_same_answer(self, pred):
+        c = cv.iid_control(pred, pools=6, draws=60)
+        assert 0.7 < c["low"] and c["high"] < 1.2
+
+    def test_splitting_by_sequence_is_where_the_excess_is(self, pred):
         row = cv.split_variability(pred, draws=60)
         seq = cv.grouped_split(pred, draws=60)
-        assert seq["sd_ratio"] > row["sd_ratio"]
+        assert row["excess"] < 1.2 and seq["excess"] > 1.3
         assert seq["mean"] == pytest.approx(0.9, abs=0.015)
+
+    def test_the_correlations_predict_the_sequence_excess(self, pred):
+        rho = cv.lag_correlation(pred)
+        predicted = math.sqrt(cv.design_effect(rho, 64))
+        seq = cv.grouped_split(pred, draws=60)
+        assert predicted == pytest.approx(seq["excess"], rel=0.15)
+
+    def test_a_block_of_one_is_the_row_split(self):
+        assert cv.design_effect([0.5, 0.3], 1) == 1.0
 
 
 class TestCalibrationErrorIsBiased:

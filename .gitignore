@@ -39,6 +39,10 @@ data/*
 # 12 MB in fp32, kept in fp32 because every published number was measured on
 # fp32 weights and a half-precision copy would be a different model.
 !data/tsfm/
+# Coverage episode 4's training runs: our own weights, trained by
+# scripts/train_coverage4.py on the same text as tiny_gpt; five 3.3 MB
+# checkpoints and the per-checkpoint metrics the episode quotes.
+!data/coverage4/
 
 # Editorial rather than published: which posts are planned, and how their titles
 # were chosen. Not secret, but not part of the record either.

@@ -34,12 +34,16 @@ singleton. But the range across confidence bands is nine-fold: 1.28 labels
 where the model is already sure and 11.63 where it is not. A prediction set is
 informative exactly where you did not need it.
 
-**One measurable violation of the assumption.** Over 200 random calibration
-splits the realised coverage has a standard deviation of 0.0040 against the
-0.0027 a Beta argument predicts for this calibration size -- 1.5 times too
-variable. Character-level predictions drawn from overlapping contexts are not
-exchangeable at the level the split pretends they are, and the guarantee
-notices.
+**The spread of the realised coverage, and a correction.** Over 200 random
+calibration splits the realised coverage has a standard deviation of 0.0040.
+An earlier version of this docstring compared that with 0.0027, the spread of
+the *calibration* draw alone, and called the 1.5x ratio a violation of
+exchangeability. It is not: the test half is a finite sample too, and adding
+its binomial term gives 0.0038, so the row-wise excess is 1.06 -- inside the
+range an i.i.d. pool of the same size produces. It has to be, because a random
+row split of a fixed pool is exchangeable by construction. The real excess
+appears only when whole sequences are split, 1.42x, and the within-sequence
+correlation of the coverage indicator predicts it: `design_effect` gives 1.43.
 
 References: Vovk, Gammerman and Shafer, *Algorithmic Learning in a Random
 World* (2005), for conformal prediction; Angelopoulos and Bates, "A gentle
@@ -160,9 +164,11 @@ def split_variability(pred: dict, *, alpha: float = 0.1, draws: int = 200,
                       cal_share: float = 0.5) -> dict:
     """How much the realised coverage moves as the calibration split changes.
 
-    `beta_sd` is `sqrt(alpha (1 - alpha) / (n_cal + 2))`, the spread the
-    exchangeable theory predicts. The ratio of measured to predicted is the
-    cheapest test of the assumption there is, and it needs no shifted data.
+    `excess` is the measured spread over `exchangeable_sd`, the spread the
+    exchangeable theory predicts for a calibration half *and* a test half.
+    `beta_sd` and `sd_ratio` keep the calibration term alone, which is the
+    comparison an earlier version made and is kept so the mistake stays
+    checkable: it is short by `sqrt(2)`.
     """
     np = _np()
     cov = np.empty(int(draws))
@@ -170,11 +176,62 @@ def split_variability(pred: dict, *, alpha: float = 0.1, draws: int = 200,
         fit = split_conformal(pred, alpha=alpha, seed=t, cal_share=cal_share)
         cov[t] = fit["coverage"]
     n_cal = int(len(pred["y"]) * float(cal_share))
+    n_test = len(pred["y"]) - n_cal
     beta_sd = math.sqrt(alpha * (1 - alpha) / (n_cal + 2))
+    full = exchangeable_sd(n_cal, n_test, alpha)
+    sd = float(cov.std(ddof=1))
     return {"draws": int(draws), "mean": float(cov.mean()),
-            "sd": float(cov.std(ddof=1)), "min": float(cov.min()),
+            "sd": sd, "min": float(cov.min()),
             "max": float(cov.max()), "beta_sd": beta_sd,
-            "sd_ratio": float(cov.std(ddof=1) / beta_sd)}
+            "sd_ratio": sd / beta_sd, "exchangeable_sd": full,
+            "excess": sd / full, "coverages": cov}
+
+
+def exchangeable_sd(n_cal: int, n_test: int, alpha: float = 0.1) -> float:
+    """The spread of realised test coverage that exchangeability predicts.
+
+    Two finite samples, two terms. Given the calibration set, the coverage
+    the threshold delivers is Beta-distributed with variance
+    `alpha (1 - alpha) / (n_cal + 2)`; the test set then estimates that
+    coverage with binomial variance `alpha (1 - alpha) / n_test`. Leaving out
+    the second term -- which is what `beta_sd` alone does -- understates the
+    spread by `sqrt(2)` when the halves are equal.
+    """
+    a = float(alpha)
+    return math.sqrt(a * (1 - a) / (n_cal + 2) + a * (1 - a) / n_test)
+
+
+def block_split(pred: dict, block, *, alpha: float = 0.1, draws: int = 200,
+                seed: int = 10_000) -> dict:
+    """Split conformal with whole blocks of rows sent to one side or the other.
+
+    `block` is an array giving each row's block, or an integer `m` meaning
+    consecutive runs of `m` rows. Rows inside a block never straddle the
+    calibration/test boundary, so dependence inside a block can no longer be
+    averaged away by the split.
+    """
+    np = _np()
+    p, y = pred["p"], pred["y"]
+    n = len(y)
+    s = 1.0 - p[np.arange(n), y]
+    blocks = (np.arange(n) // int(block) if np.isscalar(block)
+              else np.asarray(block))
+    ids = np.unique(blocks)
+    cov = np.empty(int(draws))
+    for t in range(int(draws)):
+        rng = np.random.default_rng(int(seed) + t)
+        cal = np.isin(blocks, rng.permutation(ids)[: len(ids) // 2])
+        k = math.ceil((cal.sum() + 1) * (1.0 - float(alpha)))
+        qhat = float(np.sort(s[cal])[min(k, int(cal.sum())) - 1])
+        cov[t] = (s[~cal] <= qhat).mean()
+    n_cal = n // 2
+    beta_sd = math.sqrt(alpha * (1 - alpha) / (n_cal + 2))
+    full = exchangeable_sd(n_cal, n - n_cal, alpha)
+    sd = float(cov.std(ddof=1))
+    return {"draws": int(draws), "blocks": int(len(ids)),
+            "mean": float(cov.mean()), "sd": sd, "beta_sd": beta_sd,
+            "sd_ratio": sd / beta_sd, "exchangeable_sd": full,
+            "excess": sd / full, "coverages": cov}
 
 
 def grouped_split(pred: dict, *, alpha: float = 0.1, draws: int = 200
@@ -183,29 +240,73 @@ def grouped_split(pred: dict, *, alpha: float = 0.1, draws: int = 200
 
     If the extra variability comes from rows inside one sequence being
     dependent, then splitting whole sequences into calibration and test should
-    change it. This is the control that decides whether the 1.5x is about
-    exchangeability or about something else.
+    change it. It does: the row-wise split is exchangeable by construction and
+    matches the exchangeable spread, and the sequence-wise split exceeds it.
+    """
+    out = block_split(pred, pred["sequence"], alpha=alpha, draws=draws)
+    out["sequences"] = out["blocks"]
+    return out
+
+
+def iid_control(pred: dict, *, alpha: float = 0.1, pools: int = 20,
+                draws: int = 200, seed: int = 0) -> dict:
+    """What `excess` looks like when the rows really are i.i.d.
+
+    Each pool resamples the model's own scores with replacement, so it has the
+    same size and the same score distribution and no dependence at all, then
+    runs the identical row-wise split. The spread of `excess` across pools is
+    the noise any single measurement of it carries.
+    """
+    np = _np()
+    p, y = pred["p"], pred["y"]
+    n = len(y)
+    s = 1.0 - p[np.arange(n), y]
+    n_cal = n // 2
+    full = exchangeable_sd(n_cal, n - n_cal, alpha)
+    k = math.ceil((n_cal + 1) * (1.0 - float(alpha)))
+    rng = np.random.default_rng(int(seed))
+    out = []
+    for _ in range(int(pools)):
+        pool = rng.choice(s, size=n, replace=True)
+        cov = np.empty(int(draws))
+        for t in range(int(draws)):
+            perm = np.random.default_rng(t).permutation(n)
+            qhat = np.sort(pool[perm[:n_cal]])[k - 1]
+            cov[t] = (pool[perm[n_cal:]] <= qhat).mean()
+        out.append(float(cov.std(ddof=1) / full))
+    return {"excess": out, "low": float(min(out)), "high": float(max(out)),
+            "mean": float(np.mean(out))}
+
+
+def lag_correlation(pred: dict, *, alpha: float = 0.1) -> list[float]:
+    """Correlation of the coverage indicator between rows `lag` apart inside
+    one sequence, for every lag the sequence length allows.
+
+    The indicator is `score <= q`, with `q` the pooled `1 - alpha` quantile:
+    the event "this row would be covered". Rows are assumed grouped
+    contiguously by sequence, which is how `predictions` returns them.
     """
     np = _np()
     p, y, seq = pred["p"], pred["y"], pred["sequence"]
-    ids = np.unique(seq)
-    cov = np.empty(int(draws))
-    for t in range(int(draws)):
-        rng = np.random.default_rng(10_000 + t)
-        order = rng.permutation(ids)
-        cal_ids = set(order[: len(ids) // 2].tolist())
-        cal = np.isin(seq, list(cal_ids))
-        scores = 1.0 - p[cal, y[cal]]
-        k = math.ceil((cal.sum() + 1) * (1.0 - float(alpha)))
-        qhat = float(np.sort(scores)[min(k, int(cal.sum())) - 1])
-        sets = p[~cal] >= 1.0 - qhat
-        cov[t] = sets[np.arange((~cal).sum()), y[~cal]].mean()
-    n_cal = int(len(y) // 2)
-    beta_sd = math.sqrt(alpha * (1 - alpha) / (n_cal + 2))
-    return {"draws": int(draws), "sequences": int(len(ids)),
-            "mean": float(cov.mean()), "sd": float(cov.std(ddof=1)),
-            "beta_sd": beta_sd,
-            "sd_ratio": float(cov.std(ddof=1) / beta_sd)}
+    s = 1.0 - p[np.arange(len(y)), y]
+    z = (s <= np.quantile(s, 1.0 - float(alpha))).astype(float)
+    length = int(np.bincount(seq).max())
+    Z = z.reshape(-1, length) - z.mean()
+    var = Z.var()
+    return [float(np.mean(Z[:, :length - lag] * Z[:, lag:]) / var)
+            for lag in range(1, length)]
+
+
+def design_effect(rho: list[float], m: int) -> float:
+    """Variance inflation for blocks of `m` consecutive rows.
+
+    `1 + 2 sum_{l<m} (1 - l/m) rho(l)`: the variance of a block mean over the
+    variance it would have with independent rows. Its square root is the
+    predicted `excess` of a block split -- predicted from the correlations,
+    not fitted to the spread.
+    """
+    return 1.0 + 2.0 * sum((1.0 - lag / m) * rho[lag - 1]
+                           for lag in range(1, int(m)))
 
 
 def aps_conformal(pred: dict, *, alpha: float = 0.1, seed: int = 0,

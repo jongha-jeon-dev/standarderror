@@ -65,6 +65,21 @@ strikes), each chosen because its own COPYRIGHT field says public domain.
 Datasets that statsmodels distributes "with express permission of the
 original author" are excluded, because that permission was not given to us.
 
+### `coverage4/` — our own model weights, from three training runs
+
+Checkpoints of the `tiny_gpt` architecture written by
+`scripts/train_coverage4.py` for Coverage episode 4, trained on the same
+fetched-and-verified `tinyshakespeare` text as `tiny_gpt/` (Shakespeare, public
+domain; the corpus file itself is not committed). `trajectory.json` holds the
+metrics measured at every checkpoint. Each checkpoint is verified on load by
+`standarderror.uncertainty.trajectory.load_checkpoint`:
+
+- `recipe_final.pt` (step 3,000): sha256 `4be24c57cb31dec7693f666e8298209aee4495e314ea405ac00cb461c0601ba4`
+- `long_final.pt` (step 15,000): sha256 `1aa5b197d1ab33de44effa87865f90d22941148aaee9b50f89aff9aa182ff309`
+- `long_best.pt` (step 12,500): sha256 `bb41af0cd1962dd4069e24619b4b7519cc594fd6006f10c2a3e8c428589448f6`
+- `small_final.pt` (step 6,000): sha256 `1f1e6c5e5a101e1d1d56246a465a425ef256d14550866d51f4a0402d5aa0b191`
+- `small_best.pt` (step 1,250): sha256 `210792ded6dee89739dae0797cc25902519b719e71384207e4db2efdb4139e7f`
+
 ### `worldbank/` — World Bank Open Data, CC BY 4.0
 
 The World Bank's licence for its Open Data catalogue "allows users to copy, modify

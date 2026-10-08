@@ -322,12 +322,17 @@ is a property of that model and is reported as such.
 | 1 | 90% Coverage Is a Promise About Averages, Not About You | split conformal delivers 0.896 against a finite-sample guarantee of 0.9001 — and 0.823 in the least-confident fifth against 0.948 in the most-confident, with set sizes of 11.6 and 1.3 labels. The shortfall lands exactly on the cases you would escalate |
 | 2 | Your Calibration Error Is Mostly Your Bin Count | ECE is a biased estimator of a quantity that is zero for a calibrated model: 0.085 at n = 200, 0.035 at n = 1,000, 0.008 at n = 20,000 on models calibrated by construction, scaling as the square root of bins over n with a slope of 0.503. On the committed model at n = 1,000, 80% of the measured ECE is that floor, and a real miscalibration is detected in 23% of subsets. Subtracting each bin's binomial variance removes the floor on average and leaves single estimates so noisy that a third come out below zero |
 | 3 | Temperature Scaling Cannot Change What You Predict | a strictly increasing map on every logit leaves every within-row ordering intact, so accuracy is identical to the bit across *T* — while ECE moves from 0.026 to 0.375. But the *between*-row confidence ordering is not invariant: at *T* = 2, 7.2% of pairs swap and 22.5% of the most-confident percentile leaves it. For abstention that matters by score: max probability barely notices, entropy's AURC is 44% worse at *T* = 3, and logit margin cannot move |
-| 4 | Overconfidence Arrives When the Model Stops Improving | calibration tracked across a training run rather than at its end, to ask whether overconfidence is a property of the architecture or a symptom of overfitting — and why a model at validation loss 1.573 needs a fitted temperature of only 1.10 |
-| 5 | The Split You Chose Is Hiding How Variable Your Coverage Is | the realised coverage over 200 calibration splits has a standard deviation 1.5 times what an exchangeable argument predicts — and splitting by sequence rather than by row, which is the *correct* thing to do, makes it 2.0 times, because row-wise splitting was leaking between calibration and test |
+| 4 | Overconfidence Arrives Before the Model Stops Improving | three training runs of the same model, a temperature fitted at every checkpoint. Every run starts slightly underconfident and is overconfident long before validation loss bottoms out — fitted *T* 1.20 at the long run's best checkpoint, 1.38 on a tenth of the data and on a second seed — while on its own training text the fitted temperature never exceeds 1.02. Past the minimum, validation NLL passes the uniform-guess loss with accuracy unchanged, and one temperature takes it from 4.68 to 2.43 |
+| 5 | The Split You Chose Is Hiding How Variable Your Coverage Is | episode 1's 1.5x excess spread was mostly a missing term: realised coverage is measured on a finite test set, and with that binomial variance added a row split shows 1.06x, inside the range i.i.d. pools give. Splitting whole sequences, as a deployment does, gives 1.42x — predicted at 1.43x from the within-sequence correlation — and a two-SD alarm meant to fire 2.3% of the time fires 9.5% |
 
-Episodes 1 to 3 are published. Episode 3 finds the fitted temperature, 1.10,
-is also max probability's best temperature for abstention — and the wrong
-direction for entropy, whose best is 0.6. Episode 2 ends on a trade rather than a fix:
+All five episodes are published, and the last two each overturned the
+syllabus. Episode 4 was planned as "overconfidence arrives when the model stops
+improving"; measured, it arrives well before, and episode 3's 1.10 was a
+property of stopping at six passes, not of the architecture. Episode 5 corrects
+episode 1: the excess it promised was mostly a variance term I left out, and
+the real one appears only when whole sequences are split. Episode 3 finds the
+fitted temperature, 1.10, is also max probability's best temperature for
+abstention — and the wrong direction for entropy, whose best is 0.6. Episode 2 ends on a trade rather than a fix:
 debiasing ECE removes its floor and its dependence on bin count, and on a
 thousand predictions makes it about as noisy as the quantity it estimates —
 so for choosing between two models, NLL picked the better-calibrated one 87%
@@ -339,9 +344,7 @@ Randomised adaptive sets hit the same marginal level and cut the spread from
 0.125 to 0.017 — seven-fold — for 20% more labels per set and a 0.9% chance of
 returning an empty set, which the simple score never does. So the marginal
 guarantee is not hiding a defect; it is declining to make a choice on your
-behalf. Episode 5 already has every number above measured and pinned
-in `tests/test_uncertainty.py`; episode 4 needs a training run with
-checkpoints.
+behalf.
 The series exists because the previous two ended the same way — an exact
 statement that was true and inert — and a guarantee with a quantifier in it is
 the cleanest place left to look for that pattern.
