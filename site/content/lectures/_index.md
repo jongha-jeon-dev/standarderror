@@ -439,21 +439,21 @@ and not before; the last series was a reminder of why.
 
 | # | Episode | The sentence under test |
 |---|---|---|
-| 11 | — | *a decision tree is interpretable*. How often the root split and the tree's shape survive a bootstrap of the rows |
-| 12 | — | *impurity importance ranks what the forest relies on*. A pure-noise column with many distinct values, ranked |
-| 13 | — | *out-of-bag error is free cross-validation*. OOB, CV and test error across forest sizes |
-| 14 | — | *boosting overfits if you run it long enough*. Test error against rounds, with and without shrinkage |
-| 15 | — | *tree ensembles can approximate any function*. Predictions outside the training range on data with a trend |
+| 11 | Resample the Rows and the Tree Tells a Different Story | *a decision tree is interpretable*. Over 200 bootstrap refits of a depth-3 tree on breast cancer, accuracy held at 0.914 ± 0.015 while the full-data root was the root in only half, the top three levels used a different feature set in 194, and 36% of test tumours got a different diagnosis from some tree. What survived was coarser: every root measured the size or concavity of the worst nuclei |
+| 12 | Impurity Importance Rewards Features With Many Places to Split | *impurity importance ranks what the forest relies on*. With five features and no signal, MDI gave the continuous one 42% and the binary one 5%; with a real effect on the binary feature alone, MDI ranked it last in all 20 datasets and permutation importance ranked it first in 19. On breast cancer, where real signals are strong, both put added noise columns at the bottom — the bias hides when it matters least |
+| 13 | Out-of-Bag Error Is Free, Pessimistic When Small and Blind to Copies | *out-of-bag error is free cross-validation*. With 500 trees, within half a point of a held-out set on breast cancer and digits, about as close as five-fold CV. With 5 trees, 2.7 times the held-out error, because each row is judged by the third of the forest that did not see it. With every training row duplicated, exactly 0 against a held-out 2.7% |
+| 14 | Boosting Overfits Its Probabilities Long Before Its Accuracy | *boosting overfits if you run it long enough*. On breast cancer, test error never turned up in 2,000 rounds; test log loss was lowest after about 46 and 2.6 times worse at 2,000. Each tenfold cut in the learning rate moved the best round about tenfold later without lowering the best log loss. With 10% flipped labels, error rose under two points and log loss more than tripled |
+| 15 | A Forest Cannot Predict Beyond the Largest Value It Has Seen | *tree ensembles can approximate any function*. Trained on x in [0, 1], forest and boosting were the best models inside the range and 22 times worse at x in [1.5, 2]; a linear trend plus a forest on the residuals was best everywhere. On diabetes a forest won a random split and lost by 40% on the highest-bmi patients |
 
 ### Arc IV — Reading what a model learned
 
 | # | Episode | The sentence under test |
 |---|---|---|
-| 16 | — | *permutation importance measures how much a model needs a feature*. Two correlated copies of one feature, and the rows permutation invents |
-| 17 | — | *a partial dependence plot shows a feature's effect*. PDP against accumulated local effects when features are correlated |
-| 18 | — | *SHAP values attribute a prediction to its features*. Exact Shapley values on a small model, under different background distributions |
-| 19 | — | *the model with the better test score learned the task better*. A planted shortcut in the digits, and what happens when it is removed |
-| 20 | — | *two models with the same accuracy make the same predictions*. Disagreement among equally accurate models |
+| 16 | Permutation Importance Measures the Model, Not What the Data Need | *permutation importance measures how much a model needs a feature*. Shuffling bmi cost 0.168 of R²; refitting without it cost 0.043. With an exact copy the two columns' importances summed to a quarter of bmi's alone. Shuffling s1 put 29% of rows outside the region holding 99% of real (s1, s2) pairs |
+| 17 | Partial Dependence Asks the Model About Rows That Do Not Exist | *a partial dependence plot shows a feature's effect*. With y = x1 + 2x2² and x2 a noisy copy of x1, a forest's PDP slope for x1 fell from 0.98 with independent inputs to 0.30 at correlation 0.985 (truth 1); ALE stayed between 0.92 and 1.03 for both forest and boosting |
+| 18 | A SHAP Value Is an Answer to "Compared With What?" | *SHAP values attribute a prediction to its features*. Exact Shapley values for a boosted model on five breast-cancer features: switching the background from all tumours to benign ones changed the top feature for 58% of tumours, and the feature-means shortcut flipped 19% of signs with nearly the same base value |
+| 19 | A Planted Shortcut Wins the Test Set and Loses Everywhere Else | *the model with the better test score learned the task better*. A marker pixel on 90% of four digit classes: the shortcut model beat a clean one on a test set built the same way (0.986 against 0.971), fell to 0.947 on clean images and 0.663 with the markers moved. Permutation importance ranked the marker first of 64 |
+| 20 | Same Accuracy, Different Answers | *two models with the same accuracy make the same predictions*. On a task with Bayes error 0.28, five networks differing only in seed spanned one point of accuracy and disagreed on up to 22.5% of rows; 43% got both labels from some seed. On breast cancer, with errors near 2%, near-equal models disagreed on 1.4%: disagreement is bounded by the sum of error rates |
 
 ### Arc V — Training a network
 
@@ -475,11 +475,15 @@ and not before; the last series was a reminder of why.
 | 29 | — | *covariate shift costs accuracy*. Accuracy and calibration under controlled shifts, and importance weighting |
 | 30 | — | *scaling laws predict performance*. Power laws fitted on small character models, checked on larger ones |
 
-Arcs I and II are published. Several episodes changed shape while being measured:
+Arcs I to IV are published. Several episodes changed shape while being measured:
 episode 1's repeated splits turned out to measure the pool rather than the
 training sets, and episode 3's feature-selection leak, enormous on noise,
 vanished on real data where the true features win the selection anyway — which
 is what turned a list of leaks into a rule for sizing them. In Arc II, double
 descent survived as a curve and lost as advice: the second descent was real
 in every setting and won in none, and the ridge penalty that removed the peak
-was best around p = n rather than exactly at it.
+was best around p = n rather than exactly at it. In Arc III, impurity
+importance's famous bias was overwhelming on a null design and invisible on
+real data with strong signals, and out-of-bag error, sold as free
+cross-validation, turned out to be about as accurate only once the forest was
+large.

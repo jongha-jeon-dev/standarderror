@@ -13,7 +13,7 @@ images: ["ml109-hero.png"]
 
 Disclosure: this post was written with the assistance of an AI system (Claude), which wrote the analysis code, ran the experiments and drafted the text. The topic, the constraints, the data choices and the final review are the author's.
 
-*On a simulated regression where bias, variance and noise can be computed exactly, the three add up to the measured test error to within 0.003. For k-nearest neighbours the variance falls from 0.161 at k = 1 to 0.017 at k = 32 while bias squared rises from 0.0004 to 0.092; test error is a U with its bottom at k = 8. For a random forest, adding trees leaves bias where one tree put it and lowers variance monotonically, from 0.160 to 0.075, towards a floor of 0.074 set by a between-tree correlation of 0.46. There is no U.*
+*On a simulated regression where bias, variance and noise can be computed exactly, the three add up to the measured test error to within 0.003. For k-nearest neighbours the variance falls from 0.161 at k = 1 to 0.017 at k = 32 while bias squared rises from 0.0004 to 0.092; test error is a U with its bottom at k = 8. For a random forest, adding trees keeps bias near zero (within simulation error) and lowers variance monotonically, from 0.160 to 0.075, towards a floor of 0.074 set by a between-tree correlation of 0.46. There is no U.*
 
 Episode 9 of *Machine Learning, Taught Through What Breaks*. The syllabus and the other episodes: https://jongha-jeon-dev.github.io/standarderror/lectures/
 
@@ -111,7 +111,7 @@ So "test error is U-shaped in complexity" is a claim about a particular knob, no
 
 2. k in k-NN trades bias for variance, and test error had a U with its bottom at k = 8.
 
-3. Adding trees to a random forest left bias unchanged and lowered variance every time, from 0.160 to 0.075. No U.
+3. Adding trees to a random forest kept bias near zero, moving only within simulation error, and lowered variance every time, from 0.160 to 0.075. No U.
 
 4. The variance of an average of correlated models has a floor of ρσ²; for this forest ρ = 0.46. Lower it by decorrelating the members, not by adding more.
 

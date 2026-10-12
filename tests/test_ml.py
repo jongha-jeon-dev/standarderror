@@ -14,6 +14,8 @@ pytest.importorskip("scipy")
 from standarderror.ml import evaluation as ev  # noqa: E402
 from standarderror.ml import leakage as lk  # noqa: E402
 from standarderror.ml import linear as ln  # noqa: E402
+from standarderror.ml import reading as rd  # noqa: E402
+from standarderror.ml import trees as tr  # noqa: E402
 
 
 class TestATestScoreHasAnErrorBar:
@@ -229,3 +231,63 @@ class TestLinearModelsPushed:
         kw = dict(n=40, ps=[30, 40, 50], reps=8)
         assert (max(ln.random_features(ridge=1.0, **kw)["test"].values())
                 < max(ln.random_features(**kw)["test"].values()) / 5)
+
+
+class TestTreesAndEnsembles:
+
+    def test_bootstrapped_trees_vary_more_in_structure_than_accuracy(self):
+        b = tr.tree_bootstrap(boots=40)
+        assert b["accuracy_sd"] < 0.03
+        assert b["root_same"] < 0.9 and b["distinct_sets"] > 20
+
+    def test_impurity_importance_favours_many_split_points_under_the_null(self):
+        r = tr.importance_null(signal=0.0, reps=4, trees=50)
+        assert r["mdi"][-1] > 3 * r["mdi"][0]
+
+    def test_a_row_is_out_of_bag_for_about_one_tree_in_e(self):
+        assert tr.oob_coverage(200) == pytest.approx(math.exp(-1), abs=0.01)
+
+    def test_a_forest_never_predicts_above_its_largest_label(self):
+        ex = tr.extrapolation(trees=30, bands=((1.5, 2.0),))
+        assert ex["rows"][0]["forest_max"] <= ex["train_y_max"] + 1e-9
+
+    def test_staged_boosting_curves_have_one_value_per_checkpoint(self):
+        c = tr.boost_curves(rounds=30, reps=1)
+        assert len(c["error"]) == len(c["rounds"]) == 4
+
+
+class TestReadingAModel:
+
+    def test_exact_shapley_matches_the_linear_closed_form(self):
+        assert rd.linear_shapley_check() < 1e-9
+
+    def test_exact_shapley_is_efficient_for_a_nonlinear_function(self):
+        g = np.random.default_rng(0)
+        B, x = g.standard_normal((50, 3)), g.standard_normal(3)
+        phi, base, fx = rd.exact_shapley(
+            lambda Z: Z[:, 0] * Z[:, 1] + np.sin(Z[:, 2]), x, B)
+        assert phi.sum() == pytest.approx(fx - base, abs=1e-12)
+
+    def test_ale_and_pdp_agree_on_an_additive_function_of_independent_inputs(self):
+        class Additive:
+            def predict(self, Z):
+                return 2 * Z[:, 0] + Z[:, 1] ** 2
+
+        X, _ = rd.correlated_pair(noise=None, seed=0)
+        grid = np.linspace(0.1, 0.9, 9)
+        p = rd.pdp(Additive(), X, 0, grid)
+        a = rd.ale(Additive(), X, 0, grid)
+        assert np.ptp(p - a) < 1e-9
+        assert (p[-1] - p[0]) == pytest.approx(2 * 0.8)
+
+    def test_shuffling_a_correlated_feature_leaves_the_data(self):
+        o = rd.off_support()
+        assert o["outside"] > 10 * o["expected"]
+
+    def test_planted_markers_sit_on_blank_pixels(self):
+        from sklearn.datasets import load_digits
+        X, y = load_digits(return_X_y=True)
+        assert X[:, list(rd.SHORTCUT.values())].max() <= 1
+        Z = rd.plant(X, y, 1.0, seed=0)
+        for cls, pix in rd.SHORTCUT.items():
+            assert (Z[y == cls, pix] == 16).all()

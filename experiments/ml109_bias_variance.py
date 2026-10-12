@@ -271,7 +271,7 @@ def build() -> Post:
             f"{k32['variance']:.3f} at k = 32 while bias squared rises from "
             f"{k1['bias2']:.4f} to {k32['bias2']:.3f}; test error is a U with "
             f"its bottom at k = {best['k']}. For a random forest, adding "
-            f"trees leaves bias where one tree put it and lowers variance "
+            f"trees keeps bias near zero (within simulation error) and lowers variance "
             f"monotonically, from {f1['variance']:.3f} to "
             f"{f100['variance']:.3f}, towards a floor of {floor:.3f} set by "
             f"a between-tree correlation of {rho:.2f}. There is no U."),
@@ -360,7 +360,7 @@ So "test error is U-shaped in complexity" is a claim about a particular knob, no
 
 2. k in k-NN trades bias for variance, and test error had a U with its bottom at k = {best['k']}.
 
-3. Adding trees to a random forest left bias unchanged and lowered variance every time, from {f1['variance']:.3f} to {f100['variance']:.3f}. No U.
+3. Adding trees to a random forest kept bias near zero, moving only within simulation error, and lowered variance every time, from {f1['variance']:.3f} to {f100['variance']:.3f}. No U.
 
 4. The variance of an average of correlated models has a floor of ρσ²; for this forest ρ = {rho:.2f}. Lower it by decorrelating the members, not by adding more.
 
