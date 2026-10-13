@@ -324,7 +324,7 @@ That is what an augmentation is. It is not data in the sense of new observations
 
 {snip['flip'].markdown()}
 
-A mirrored {', '.join(str(d) for d in flip_all[:-1])} or {flip_all[-1]} is never read as itself, and neither is a half-turned {', '.join(str(d) for d in rot_all[:-1])} or {rot_all[-1]}: a half-turned 6 is a 9, and a mirrored 3 is no digit at all. Zeros survive both, and eights mostly do. Training on these copies under their original labels tells the network that the shape of a 9 is evidence for a 6, which is false, and it pays for the falsehood: {g['flip']:+.3f} from mirrors and {g['rot180']:+.3f} from half-turns, against the network that saw only the 150 originals. On the moved test digits they cost too, {gm['flip']:+.3f} and {gm['rot180']:+.3f}.
+A mirrored {', '.join(str(d) for d in flip_all[:-1])} or {flip_all[-1]} is never read as itself, and neither is a half-turned {', '.join(str(d) for d in rot_all[:-1])} or {rot_all[-1]}: a half-turned 6 looks like a 9, and a mirrored 3 like no digit at all. Zeros survive both, and eights mostly do. Training on these copies under their original labels tells the network that the shape of a 9 is evidence for a 6, which is false, and it pays for the falsehood: {g['flip']:+.3f} from mirrors and {g['rot180']:+.3f} from half-turns, against the network that saw only the 150 originals. On the moved test digits they cost too, {gm['flip']:+.3f} and {gm['rot180']:+.3f}.
 
 Pixel noise is the control. Its copies preserve the label, and it changed nothing: {g['noise']:+.3f} on the clean test set and {gm['noise']:+.3f} on the moved one. Neither test set contains noisy pixels, so the invariance it teaches is never asked for, and at a standard deviation of 2 on a 0-to-16 scale it does not disturb the image enough to get in the way. Copies that assert something true and irrelevant are simply wasted.""",
         figures=[figs["f2"]])
@@ -341,7 +341,7 @@ The practical reading is that an augmentation should be chosen the way a prior i
         "Where this breaks",
         """**A small network on centred images.** One hidden layer on raw pixels has no built-in tolerance for position, which is why a one-pixel move costs it so much. A convolutional network with pooling builds part of the shift invariance into its architecture and needs the augmentation less. The point about what augmentation supplies is the same; the size of the effect is specific to this model.
 
-**Equal steps, not equal epochs.** Every network took exactly 300 gradient steps, so each image in the augmented and the larger real sets was seen fewer times. Training the 150-digit network for the same number of epochs as the others would have been a different comparison, and a worse one for it.
+**Equal steps, not equal epochs.** Every network took exactly 300 gradient steps, so each image in the augmented and the larger real sets was seen fewer times. Giving every network the same number of epochs instead would have given the 150-digit network a fifth of the steps, a different comparison.
 
 **One kind of shift.** The moved test set uses exactly the transformation the shift augmentation uses. Test data that vary in a different way, by rotation of a few degrees or by thickness of stroke, would reward a different augmentation and not this one.
 

@@ -95,7 +95,7 @@ Weights are not free. A weighted sample of 500 rows carries less information tha
 
 That is why the weighted linear model's accuracy varies more from one training set to the next: its standard deviation over the twenty repetitions is 0.069 at s = 2 against 0.001 unweighted. The weights buy a smaller bias with a larger variance, and the trade gets worse the further the shift goes. When the test inputs lie where the training data have none, there is nothing to reweight.
 
-For the flexible model the weights make little difference in the region it can already follow, and a small one at s = 2: 0.805 unweighted, 0.816 weighted, with the spread across repetitions falling from 0.063 to 0.015. That is the extrapolating tail again. Weighting puts more of the fit's attention on the few rows near the test region, which steadies what the splines do just beyond them.
+For the flexible model the weights make little difference in the region it can already follow, and a small one at s = 2: 0.805 unweighted, 0.816 weighted, with the spread across repetitions falling from 0.063 to 0.015. That is the extrapolating tail again: weighting puts more of the fit's attention on the few rows near the test region, which plausibly steadies what the splines do just beyond them. The mechanism was not isolated here.
 
 ## Where this breaks
 

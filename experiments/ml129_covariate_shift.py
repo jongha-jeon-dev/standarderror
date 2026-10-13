@@ -349,7 +349,7 @@ At s = 1 accuracy goes the other way, from {r1['acc_linear']:.3f} to {r1['acc_li
 
 That is why the weighted linear model's accuracy varies more from one training set to the next: its standard deviation over the twenty repetitions is {r2['sd_linear_iw']:.3f} at s = 2 against {r2['sd_linear']:.3f} unweighted. The weights buy a smaller bias with a larger variance, and the trade gets worse the further the shift goes. When the test inputs lie where the training data have none, there is nothing to reweight.
 
-For the flexible model the weights make little difference in the region it can already follow, and a small one at s = 2: {r2['acc_flex']:.3f} unweighted, {r2['acc_flex_iw']:.3f} weighted, with the spread across repetitions falling from {r2['sd_flex']:.3f} to {r2['sd_flex_iw']:.3f}. That is the extrapolating tail again. Weighting puts more of the fit's attention on the few rows near the test region, which steadies what the splines do just beyond them.""")
+For the flexible model the weights make little difference in the region it can already follow, and a small one at s = 2: {r2['acc_flex']:.3f} unweighted, {r2['acc_flex_iw']:.3f} weighted, with the spread across repetitions falling from {r2['sd_flex']:.3f} to {r2['sd_flex_iw']:.3f}. That is the extrapolating tail again: weighting puts more of the fit's attention on the few rows near the test region, which plausibly steadies what the splines do just beyond them. The mechanism was not isolated here.""")
 
     post.add(
         "Where this breaks",

@@ -13,7 +13,7 @@ images: ["ml130-hero.png"]
 
 Disclosure: this post was written with the assistance of an AI system (Claude), which wrote the analysis code, ran the experiments and drafted the text. The topic, the constraints, the data choices and the final review are the author's.
 
-*Eight character-level transformers from 4,288 to 1,789,248 non-embedding parameters were trained on the same 4.1 million characters of Shakespeare for 2,000 steps. A power law L = 4.82 N^-0.085 fitted to the five smallest models' validation loss predicted the sixth to +0.04%, the seventh to +3.4% and the eighth to +8.2%, each measured loss higher than predicted. Training loss bent the same way, so the miss is not mainly overfitting. A floor fitted to the five small models came out at 0.00; fitted to all eight, at 0.86. The floor is set by the fixed data and training budget, and the small models never come near it.*
+*Eight character-level transformers from 4,288 to 1,789,248 non-embedding parameters were trained for the same 2,000 steps on the same million characters of Shakespeare (4.1 million characters seen). A power law L = 4.82 N^-0.085 fitted to the five smallest models' validation loss predicted the sixth to +0.04%, the seventh to +3.4% and the eighth to +8.2%, each measured loss higher than predicted. Training loss bent the same way, so the miss is not mainly overfitting. A floor fitted to the five small models came out at 0.00; fitted to all eight, at 0.86. The floor is set by the fixed data and training budget, and the small models never come near it.*
 
 Episode 30 of *Machine Learning, Taught Through What Breaks*. The syllabus and the other episodes: https://jongha-jeon-dev.github.io/standarderror/lectures/
 
@@ -132,7 +132,7 @@ That is episode 4's finding, met again at a larger scale. There a learning curve
 
 2. Over a longer reach they were optimistic: +3.4% for a model 5.2 times the largest fitted, +8.2% for one 12 times. A law fitted to three models hit the largest by cancelling two errors, and one fitted to seven missed it by +6.2%: judge a law by its residuals, not by one hit.
 
-3. Training loss missed the same way, so the cause was not overfitting. With a fixed budget, characters per parameter fell from 955 to 2.3, and the largest models were limited by data and steps rather than size.
+3. Training loss missed the same way, so the cause was not mainly overfitting. With a fixed budget, characters per parameter fell from 955 to 2.3, and the largest models were limited by data and steps rather than size.
 
 4. A floor fitted to the small models was 0.000; to all eight, 0.86. Extrapolate a fitted law only as far as the conditions that produced it still hold.
 

@@ -114,7 +114,7 @@ The practical failures of batch normalisation follow from the measurement direct
 
 3. In a batch of 2 every normalised unit is ±1 before the learned scale and shift: the layer keeps only which example was larger. Trained that way, the network scored 0.863 in inference mode, against 0.972 without normalisation.
 
-4. From batches of 16 up, normalisation helped by about half a point, and the two modes agreed. Check both conditions before trusting it: batches large enough and mixed enough that their statistics are the population's.
+4. From batches of 16 up, normalisation helped by about half a point; at 64 the two modes agreed to within a point. Check both conditions before trusting it: batches large enough and mixed enough that their statistics are the population's.
 
 ## Exercise
 

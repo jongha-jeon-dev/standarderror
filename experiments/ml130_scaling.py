@@ -291,8 +291,9 @@ def build() -> Post:
                   "optimistically."),
         summary=(
             f"Eight character-level transformers from {int(N[0]):,} to "
-            f"{int(N[-1]):,} non-embedding parameters were trained on the same "
-            f"4.1 million characters of Shakespeare for 2,000 steps. A power "
+            f"{int(N[-1]):,} non-embedding parameters were trained for the same "
+            f"2,000 steps on the same million characters of Shakespeare (4.1 "
+            f"million characters seen). A power "
             f"law L = {pv['a']:.2f} N^-{pv['b']:.3f} fitted to the five "
             f"smallest models' validation loss predicted the sixth to "
             f"{err[K]:+.2%}, the seventh to {err[K + 1]:+.1%} and the eighth "
@@ -395,7 +396,7 @@ That is episode 4's finding, met again at a larger scale. There a learning curve
 
 2. Over a longer reach they were optimistic: {err[K + 1]:+.1%} for a model {N[K + 1] / N[K - 1]:.1f} times the largest fitted, {err[K + 2]:+.1%} for one {N[K + 2] / N[K - 1]:.0f} times. A law fitted to three models hit the largest by cancelling two errors, and one fitted to seven missed it by {prof[7]['err'][-1]:+.1%}: judge a law by its residuals, not by one hit.
 
-3. Training loss missed the same way, so the cause was not overfitting. With a fixed budget, characters per parameter fell from {tpe[0]:,.0f} to {tpe[-1]:.1f}, and the largest models were limited by data and steps rather than size.
+3. Training loss missed the same way, so the cause was not mainly overfitting. With a fixed budget, characters per parameter fell from {tpe[0]:,.0f} to {tpe[-1]:.1f}, and the largest models were limited by data and steps rather than size.
 
 4. A floor fitted to the small models was {pf['c']:.3f}; to all eight, {pall['c']:.2f}. Extrapolate a fitted law only as far as the conditions that produced it still hold.""")
 

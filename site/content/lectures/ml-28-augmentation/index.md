@@ -74,7 +74,7 @@ flip   0:  3%  1: 36%  2: 80%  3: 99%  4:  9%  5:100%  6:100%  7: 89%  8: 15%  9
 rot180 0:  3%  1: 30%  2: 58%  3:100%  4: 14%  5: 55%  6:100%  7:100%  8: 18%  9:100%
 ```
 
-A mirrored 3, 5 or 6 is never read as itself, and neither is a half-turned 3, 6, 7 or 9: a half-turned 6 is a 9, and a mirrored 3 is no digit at all. Zeros survive both, and eights mostly do. Training on these copies under their original labels tells the network that the shape of a 9 is evidence for a 6, which is false, and it pays for the falsehood: -0.092 from mirrors and -0.123 from half-turns, against the network that saw only the 150 originals. On the moved test digits they cost too, -0.065 and -0.075.
+A mirrored 3, 5 or 6 is never read as itself, and neither is a half-turned 3, 6, 7 or 9: a half-turned 6 looks like a 9, and a mirrored 3 like no digit at all. Zeros survive both, and eights mostly do. Training on these copies under their original labels tells the network that the shape of a 9 is evidence for a 6, which is false, and it pays for the falsehood: -0.092 from mirrors and -0.123 from half-turns, against the network that saw only the 150 originals. On the moved test digits they cost too, -0.065 and -0.075.
 
 Pixel noise is the control. Its copies preserve the label, and it changed nothing: +0.001 on the clean test set and +0.002 on the moved one. Neither test set contains noisy pixels, so the invariance it teaches is never asked for, and at a standard deviation of 2 on a 0-to-16 scale it does not disturb the image enough to get in the way. Copies that assert something true and irrelevant are simply wasted.
 
@@ -94,7 +94,7 @@ The practical reading is that an augmentation should be chosen the way a prior i
 
 **A small network on centred images.** One hidden layer on raw pixels has no built-in tolerance for position, which is why a one-pixel move costs it so much. A convolutional network with pooling builds part of the shift invariance into its architecture and needs the augmentation less. The point about what augmentation supplies is the same; the size of the effect is specific to this model.
 
-**Equal steps, not equal epochs.** Every network took exactly 300 gradient steps, so each image in the augmented and the larger real sets was seen fewer times. Training the 150-digit network for the same number of epochs as the others would have been a different comparison, and a worse one for it.
+**Equal steps, not equal epochs.** Every network took exactly 300 gradient steps, so each image in the augmented and the larger real sets was seen fewer times. Giving every network the same number of epochs instead would have given the 150-digit network a fifth of the steps, a different comparison.
 
 **One kind of shift.** The moved test set uses exactly the transformation the shift augmentation uses. Test data that vary in a different way, by rotation of a few degrees or by thickness of stroke, would reward a different augmentation and not this one.
 

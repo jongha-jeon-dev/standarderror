@@ -98,7 +98,7 @@ That is the shape Power and colleagues reported: the delay between memorising an
 
 **A task with an exact rule.** Modular addition has a compact rule that fits every pair, including the unseen ones. Most real data have no such rule, only a noisy relationship, and episode 26's network, trained on real digits with noisy labels, got worse after fitting, not better. Grokking is a demonstration that the sentence is false, not evidence that training past 100% is generally wise.
 
-**Strong weight decay, full batches.** A weight decay of 1 with AdamW is far stronger than usual, and full-batch training removes the noise of minibatches. Both make the slow drift easy to see. With weaker decay the delay is longer; without it, here, the rule did not arrive at all.
+**Strong weight decay, full batches.** A weight decay of 1 with AdamW is far stronger than usual, and full-batch training removes the noise of minibatches. Both make the slow drift easy to see. Power and colleagues report a longer delay with weaker decay; without any, here, the rule did not arrive at all.
 
 **Early stopping would have failed.** A validation set drawn from the unseen pairs would have shown accuracy at 0 and stayed there for over a thousand steps after the training set was fitted. Any reasonable patience setting stops the run long before the rule arrives. The same tool that rescued episode 26's network discards this one.
 
@@ -138,6 +138,6 @@ Weight decay encoded a preference the data could not express: for small weights.
 
 - **environment**: standarderror=0.1.0, python=3.13.16, numpy=2.4.4
 - **code blocks**: executed at build time; the stored curves are checked against a fresh 200-step run, and the values the prose quotes are pinned
-- **determinism**: split and network seed 0, full batch, torch.set_num_threads(1); the 10,000-step runs take about 15 minutes each on one CPU thread
+- **determinism**: split and network seed 0, full batch, torch.set_num_threads(1); each 10,000-step run took between 7 and 26 minutes on one CPU thread
 
 Code: <https://github.com/jongha-jeon-dev/standarderror>
