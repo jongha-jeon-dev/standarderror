@@ -102,7 +102,7 @@ Both methods put the two noise columns at or near the bottom. Thirty real featur
 
 So the bias is real and conditional. It matters when real effects are weak relative to the noise, when features differ a lot in how many values they take — a binary treatment indicator beside continuous lab values, a postcode with thousands of levels beside a yes/no flag — and when the trees are grown deep. Those are also the settings in which a ranked importance chart is most often used as evidence of what matters, because nothing else stands out.
 
-Permutation importance has its own failure, which the breast-cancer run also shows: 5 of the 32 features have a permutation importance of zero or less, many of them real measurements whose information is duplicated by a correlated neighbour. Shuffle one and the forest uses the other. Episode 16 measures that problem directly.
+Permutation importance has its own failure, which the breast-cancer run also shows: 5 of the 32 features have a permutation importance of zero or less: the two noise columns, and 3 real measurements whose information is duplicated by a correlated neighbour. Shuffle one and the forest uses the other. Episode 16 measures that problem directly.
 
 ![A table of importances for five features under four settings, with a final row giving how often the binary feature is ranked first.](ml112-f2-table.png)
 

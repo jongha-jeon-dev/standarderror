@@ -232,6 +232,10 @@ def build() -> Post:
         assert rows[-1]["pdp_rmse"] > 3 * rows[-1]["ale_rmse"]
         assert rows[-1]["pdp_rmse2"] > 2.5 * rows[-1]["ale_rmse2"]
     assert hi["pdp_slope"] < 0.35 and hi["corr"] > 0.98
+    for k in range(3):
+        sl = [r["pdp_slopes"][k] for r in fr]
+        assert all(x > y for x, y in zip(sl, sl[1:]))
+        assert all(r["pdp_slopes"][k] < r["ale_slopes"][k] for r in fr[1:])
 
     post = Post(
         title=(f"{SERIES_TAG} 17: Partial Dependence Asks the Model About "
@@ -301,7 +305,7 @@ A simulation with a known answer shows what that costs. Let y = x1 + 2 x2² plus
 
 {snip['sweep'].markdown()}
 
-With independent inputs both methods find the line: slopes {ind['pdp_slope']:.2f} and {ind['ale_slope']:.2f}. As the correlation rises, the PDP's slope falls steadily, to **{hi['pdp_slope']:.2f} at a correlation of {hi['corr']:.3f}**. ALE stays within a few hundredths of 1 throughout.""",
+With independent inputs both methods find the line: slopes {ind['pdp_slope']:.2f} and {ind['ale_slope']:.2f}. As the correlation rises, the PDP's slope falls steadily, to **{hi['pdp_slope']:.2f} at a correlation of {hi['corr']:.3f}**. ALE stays within a tenth of 1 throughout.""",
         figures=[figs["f0"]])
 
     post.add(
@@ -330,17 +334,17 @@ ALE has a cost too. It needs enough rows per bin to estimate a local difference,
         "A one-line check",
         f"""Whether a PDP can be trusted is visible before drawing it. Take the feature and the one it is most correlated with, scatter them, and draw the vertical lines of rows the PDP will build at the lowest and highest grid values. The share of those rows inside the cloud is the share of the curve that describes the data; the rest describes the model somewhere else.
 
-In the simulation at a correlation of {hi['corr']:.3f}, the rows built at x1 = 0.1 are almost all far above the band, and the rows built at x1 = 0.9 almost all far below it. Nearly the whole PDP is computed off the data, which is why its slope is {hi['pdp_slope']:.2f}. At a correlation of {fr[1]['corr']:.2f} the band is wide enough to hold a good share of them, and the PDP's slope, {fr[1]['pdp_slope']:.2f}, is correspondingly closer to the truth. The check costs one plot, and it says in advance which of the two curves to believe.""")
+In the simulation at a correlation of {hi['corr']:.3f}, most of the rows built at x1 = 0.1 are far above the band, and most of those built at x1 = 0.9 far below it. Most of the PDP is computed off the data, which is why its slope is {hi['pdp_slope']:.2f}. At a correlation of {fr[1]['corr']:.2f} the band is wide enough to hold a good share of them, and the PDP's slope, {fr[1]['pdp_slope']:.2f}, is correspondingly closer to the truth. The check costs one plot, and it says in advance which of the two curves to believe.""")
 
     post.add(
         "Where this breaks",
-        """**Individual conditional expectation curves inherit the problem.** ICE plots show each row's curve instead of their average, which reveals heterogeneity but evaluates the same off-band rows.
+        f"""**Individual conditional expectation curves inherit the problem.** ICE plots show each row's curve instead of their average, which reveals heterogeneity but evaluates the same off-band rows.
 
 **Two features is the easy case.** In ten dimensions, "off the data" is the normal state of a modified row, and checking a 2-D scatter will not reveal it. ALE's local moves are the safer default whenever features are correlated at all.
 
 **The truth here is additive.** With an interaction between x1 and x2, the "effect of x1" depends on x2 and no single curve captures it. ALE's second-order plots and the functional-ANOVA decomposition address that; one-dimensional plots do not.
 
-**Three datasets per setting.** The slopes quoted move by a few hundredths between seeds; the ordering never changes.""")
+**Three datasets per setting.** Single datasets move the slopes by up to about a tenth — the forest's ALE slope at the highest correlation ranged from {min(hi['ale_slopes']):.2f} to {max(hi['ale_slopes']):.2f} — but in every dataset the PDP's slope fell as the correlation rose and stayed far below the ALE's.""")
 
     post.add(
         "What to keep",

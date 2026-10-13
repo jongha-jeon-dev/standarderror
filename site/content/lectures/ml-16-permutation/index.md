@@ -97,7 +97,7 @@ None of this makes importance a causal statement. A group of features that predi
 
 **Refitting has its own question.** Drop-column importance measures what the *data* lose without a feature, given the model class. It is expensive — one refit per feature — and it assigns zero to every member of a group of near-copies, which is equally misleading in the other direction. The honest unit is often the group.
 
-**R² on 133 test patients is noisy.** The numbers are averages of three splits; individual splits move by about 0.02. The gap between permuting and refitting bmi is many times that.
+**R² on 133 test patients is noisy.** The numbers are averages of three splits, and single splits differ a lot: test R² ranged from 0.26 to 0.42, and the loss from refitting without bmi from -0.07 to +0.13. The direction held in every split — permuting bmi always cost more than refitting without it — but the size of the drop-column numbers, here and in the table, is uncertain to about a tenth of R².
 
 **Other models distribute reliance differently.** A linear model with an exact copy has no unique coefficients at all; a lasso picks one of the two (episode 8). Permutation importance inherits whatever the fitting procedure did.
 

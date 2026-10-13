@@ -13,7 +13,7 @@ images: ["ml119-hero.png"]
 
 Disclosure: this post was written with the assistance of an AI system (Claude), which wrote the analysis code, ran the experiments and drafted the text. The topic, the constraints, the data choices and the final review are the author's.
 
-*A marker pixel, blank in every real digit image, is lit on 90% of the 3s, 5s, 8s and 9s in both training and test data. A random forest trained on it scores 0.986 on that test set, against 0.971 for a forest trained on clean images. On clean images it scores 0.947, on the marked classes alone 0.895 against 0.954, and with the markers moved to the wrong classes 0.663. Marking every image of those classes raises the test score to 0.991 and drops the clean score to 0.884. Permutation importance on the shortcut test set ranks a marker pixel first of 64.*
+*A marker pixel, blank or nearly so in every real digit image, is lit on 90% of the 3s, 5s, 8s and 9s in both training and test data. A random forest trained on it scores 0.986 on that test set, against 0.971 for a forest trained on clean images. On clean images it scores 0.947, on the marked classes alone 0.895 against 0.954, and with the markers moved to the wrong classes 0.663. Marking every image of those classes raises the test score to 0.991 and drops the clean score to 0.884. Permutation importance on the shortcut test set ranks a marker pixel first of 64.*
 
 Episode 19 of *Machine Learning, Taught Through What Breaks*. The syllabus and the other episodes: https://jongha-jeon-dev.github.io/standarderror/lectures/
 
@@ -78,7 +78,7 @@ rate 90%: best marker pixel ranks 1 of 64 by permutation importance
           marked-class accuracy on clean images 0.895
 ```
 
-Permutation importance on the shortcut test set ranks a marker pixel **first among 64** from 90% on — a pixel that is blank in every real digit, at the top of the importance chart. That is exactly the kind of result episodes 12 and 16 taught suspicion of, and here suspicion is the right response: a feature that should carry no information about the task is the most important feature.
+Permutation importance on the shortcut test set ranks a marker pixel **first among 64** from 90% on — a pixel that is blank or nearly so in every real digit, at the top of the importance chart. That is exactly the kind of result episodes 12 and 16 taught suspicion of, and here suspicion is the right response: a feature that should carry no information about the task is the most important feature.
 
 Three checks generalise beyond planted pixels. Look at what the model relies on and ask whether it *should* matter. Score the model on a slice where the suspected shortcut is absent or broken — here, clean images of the marked classes. And, most expensive and most informative, evaluate on data from a different source: another hospital, another scanner, another year. A shortcut tied to how one dataset was collected rarely survives a change of collection.
 

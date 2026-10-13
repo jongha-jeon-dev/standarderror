@@ -243,7 +243,7 @@ def build() -> Post:
                   "in the digits and the better score belongs to the model "
                   "that learned the pixel."),
         summary=(
-            f"A marker pixel, blank in every real digit image, is lit on 90% "
+            f"A marker pixel, blank or nearly so in every real digit image, is lit on 90% "
             f"of the 3s, 5s, 8s and 9s in both training and test data. A "
             f"random forest trained on it scores {r9['same']:.3f} on that "
             f"test set, against {c0['same']:.3f} for a forest trained on "
@@ -314,7 +314,7 @@ None of this is a malfunction. The forest was asked to predict the label from 64
 
 {snip['detect'].markdown()}
 
-Permutation importance on the shortcut test set ranks a marker pixel **first among 64** from 90% on — a pixel that is blank in every real digit, at the top of the importance chart. That is exactly the kind of result episodes 12 and 16 taught suspicion of, and here suspicion is the right response: a feature that should carry no information about the task is the most important feature.
+Permutation importance on the shortcut test set ranks a marker pixel **first among 64** from 90% on — a pixel that is blank or nearly so in every real digit, at the top of the importance chart. That is exactly the kind of result episodes 12 and 16 taught suspicion of, and here suspicion is the right response: a feature that should carry no information about the task is the most important feature.
 
 Three checks generalise beyond planted pixels. Look at what the model relies on and ask whether it *should* matter. Score the model on a slice where the suspected shortcut is absent or broken — here, clean images of the marked classes. And, most expensive and most informative, evaluate on data from a different source: another hospital, another scanner, another year. A shortcut tied to how one dataset was collected rarely survives a change of collection.""",
         figures=[figs["f2"]])

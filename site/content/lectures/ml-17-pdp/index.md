@@ -42,7 +42,7 @@ corr  0.94  PDP slope 0.44  ALE slope 0.96   (truth 1.00)
 corr  0.98  PDP slope 0.30  ALE slope 0.92   (truth 1.00)
 ```
 
-With independent inputs both methods find the line: slopes 0.98 and 1.02. As the correlation rises, the PDP's slope falls steadily, to **0.30 at a correlation of 0.985**. ALE stays within a few hundredths of 1 throughout.
+With independent inputs both methods find the line: slopes 0.98 and 1.02. As the correlation rises, the PDP's slope falls steadily, to **0.30 at a correlation of 0.985**. ALE stays within a tenth of 1 throughout.
 
 ![A dashed diagonal for the truth; the ALE curve follows it closely; the partial dependence curve rises far more gently.](ml117-f0-curves.png)
 
@@ -100,7 +100,7 @@ ALE has a cost too. It needs enough rows per bin to estimate a local difference,
 
 Whether a PDP can be trusted is visible before drawing it. Take the feature and the one it is most correlated with, scatter them, and draw the vertical lines of rows the PDP will build at the lowest and highest grid values. The share of those rows inside the cloud is the share of the curve that describes the data; the rest describes the model somewhere else.
 
-In the simulation at a correlation of 0.985, the rows built at x1 = 0.1 are almost all far above the band, and the rows built at x1 = 0.9 almost all far below it. Nearly the whole PDP is computed off the data, which is why its slope is 0.30. At a correlation of 0.69 the band is wide enough to hold a good share of them, and the PDP's slope, 0.78, is correspondingly closer to the truth. The check costs one plot, and it says in advance which of the two curves to believe.
+In the simulation at a correlation of 0.985, most of the rows built at x1 = 0.1 are far above the band, and most of those built at x1 = 0.9 far below it. Most of the PDP is computed off the data, which is why its slope is 0.30. At a correlation of 0.69 the band is wide enough to hold a good share of them, and the PDP's slope, 0.78, is correspondingly closer to the truth. The check costs one plot, and it says in advance which of the two curves to believe.
 
 ## Where this breaks
 
@@ -110,7 +110,7 @@ In the simulation at a correlation of 0.985, the rows built at x1 = 0.1 are almo
 
 **The truth here is additive.** With an interaction between x1 and x2, the "effect of x1" depends on x2 and no single curve captures it. ALE's second-order plots and the functional-ANOVA decomposition address that; one-dimensional plots do not.
 
-**Three datasets per setting.** The slopes quoted move by a few hundredths between seeds; the ordering never changes.
+**Three datasets per setting.** Single datasets move the slopes by up to about a tenth — the forest's ALE slope at the highest correlation ranged from 0.83 to 1.03 — but in every dataset the PDP's slope fell as the correlation rose and stayed far below the ALE's.
 
 ## What to keep
 

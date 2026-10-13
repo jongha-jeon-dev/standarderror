@@ -118,7 +118,7 @@ If the background is a choice, it should be made like one. Three questions decid
 
 *Is the background made of real rows?* A single row of feature means is cheap and not a tumour anyone has; it flipped 19% of signs. A sample of real rows, even a few hundred, costs more and answers a question about real cases.
 
-*Is the background stated?* An explanation without its reference is like an effect size without its baseline. a sentence of the form "this feature added so much to the log-odds, relative to the average benign tumour" can be checked and argued with; "this feature was the most important" cannot.
+*Is the background stated?* An explanation without its reference is like an effect size without its baseline. A sentence of the form "this feature added so much to the log-odds, relative to the average benign tumour" can be checked and argued with; "this feature was the most important" cannot.
 
 A useful habit is to show two backgrounds side by side whenever an explanation matters. Where they agree, the explanation is robust to the choice; where they disagree, as for more than half the tumours here, the disagreement is itself the honest answer.
 
@@ -126,7 +126,7 @@ A useful habit is to show two backgrounds side by side whenever an explanation m
 
 **Five features is a toy for enumeration.** Exact computation costs 2^p model evaluations per background row. Real explainers sample coalitions or exploit tree structure; their answers approximate the same quantities and inherit the same dependence on the background.
 
-**Log-odds, not probabilities.** Attributions in probability space are not additive in the same way for a logistic output, and libraries differ in which they report. The sign flips here are in log-odds; in probability space the magnitudes change, not the dependence on the background.
+**Log-odds, not probabilities.** Attributions computed on predicted probabilities instead of log-odds are different numbers, and libraries differ in which they report. Everything here is in log-odds; the dependence on the background is part of the definition on either scale, but its size was measured on this one only.
 
 **One model, one split.** A different model fitted to the same data, as episode 20 will show, can rank the features differently for the same tumour even with the background fixed.
 

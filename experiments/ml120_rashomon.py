@@ -332,7 +332,7 @@ The accuracies span **{mlp['acc_hi'] - mlp['acc_lo']:.3f}** — a single point. 
         "Why accuracy cannot see it",
         f"""Accuracy counts how many rows a model gets right, not which. Two models with error rates e₁ and e₂ can disagree on as few rows as |e₁ − e₂| — when one's mistakes are a subset of the other's — and on as many as e₁ + e₂, when their mistakes never overlap. Equal accuracy pins down only the first bound. The second is set by how often the models are wrong.
 
-Here each network is wrong on about a third of the rows, so two of them could in principle disagree on two-thirds. They use a third of that room. The probabilities show how differently they see the same row. The scatter plot below puts one seed's predicted probability against another's. A row the first network calls 0.2 the second may call 0.8. Neither is miscalibrated on average; both are equally accurate; they have simply drawn different boundaries through a region where the data cannot decide between them.
+Here each network is wrong on about a third of the rows, so two of them could in principle disagree on two-thirds. They use a third of that room. The probabilities show how differently they see the same row. The scatter plot below puts one seed's predicted probability against another's. A row the first network calls 0.2 the second may call 0.8. Both are equally accurate; they have simply drawn different boundaries through a region where the data cannot decide between them.
 
 Different model families do the same. Among all fifteen models, the best two are QDA and an SVM:
 
@@ -362,9 +362,9 @@ What does not work is picking one model by a tie-break on the test score, or by 
 
     post.add(
         "Where this breaks",
-        """**Ensembling reduces it.** Averaging the five networks would give one set of predictions that changes less with any one seed, as the forests show. It does not choose between the boundaries; it blurs them, and the blurred probabilities for disputed rows sit near 0.5, which is honest.
+        """**Ensembling reduces it.** Averaging the five networks would give one set of predictions that changes less with any one seed, as the forests show. It does not choose between the boundaries; it blurs them. On a disputed row the members' probabilities straddle 0.5, so their average is closer to 0.5 than the more confident of them, which is honest.
 
-**One hard task, simulated.** The networks are small and trained to convergence with light regularisation. Larger networks, more data or stronger regularisation all change the amount of disagreement; none removes the bound.
+**One hard task, simulated.** The networks are small, with light regularisation and at most 1,500 training iterations. Larger networks, more data or stronger regularisation all change the amount of disagreement; none removes the bound.
 
 **Disagreement is not error.** On rows where two models disagree, one of them is right. The point is not that both are bad but that the test score cannot say which to trust on those rows, and the person affected cannot either.
 

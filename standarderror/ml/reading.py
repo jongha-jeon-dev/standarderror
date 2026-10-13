@@ -88,6 +88,26 @@ def copy_importance(*, rhos=(None, 0.8, 0.95, 1.0), feature: str = "bmi",
     return out
 
 
+def split_spread(*, feature: str = "bmi", seeds=(0, 1, 2),
+                 repeats: int = 20) -> list[dict]:
+    """Per split, with no copy: test R^2, the permutation importance of
+    `feature` and its drop-column importance. How noisy the averages are."""
+    from sklearn.inspection import permutation_importance
+    out = []
+    for s in seeds:
+        Xa, Xb, ya, yb, names = _diabetes_split(s)
+        j = names.index(feature)
+        rf = _forest(s).fit(Xa, ya)
+        base = rf.score(Xb, yb)
+        pi = permutation_importance(rf, Xb, yb, n_repeats=repeats,
+                                    random_state=0).importances_mean[j]
+        keep = [k for k in range(Xa.shape[1]) if k != j]
+        drop = base - _forest(s).fit(Xa[:, keep], ya).score(Xb[:, keep], yb)
+        out.append({"seed": s, "r2": float(base), "permute": float(pi),
+                    "drop": float(drop)})
+    return out
+
+
 def off_support(*, a: str = "s1", b: str = "s2", level: float = 0.99,
                 seed: int = 0) -> dict:
     """Permute feature `a` of the diabetes data and count the rows whose
@@ -203,7 +223,9 @@ def pdp_vs_ale(*, noises=(None, 0.3, 0.1, 0.05), grid_n: int = 19,
                         acc["ale_slope"].append(np.polyfit(grid, a, 1)[0])
                 acc["corr"].append(np.corrcoef(X.T)[0, 1])
             out.append({"noise": noise, "model": name,
-                        **{k: float(np.mean(v)) for k, v in acc.items()}})
+                        **{k: float(np.mean(v)) for k, v in acc.items()},
+                        "pdp_slopes": [float(v) for v in acc["pdp_slope"]],
+                        "ale_slopes": [float(v) for v in acc["ale_slope"]]})
     return out
 
 

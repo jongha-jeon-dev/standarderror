@@ -40,7 +40,8 @@ SERIES_TAG = "ML"
 
 
 def compute() -> dict:
-    return {"copy": rd.copy_importance(), "off": rd.off_support()}
+    return {"copy": rd.copy_importance(), "off": rd.off_support(),
+            "spread": rd.split_spread()}
 
 
 def _label(rho) -> str:
@@ -211,7 +212,7 @@ def build() -> Post:
     figs = figures(res)
     snip = _snippets(res)
 
-    cp, off = res["copy"], res["off"]
+    cp, off, sp = res["copy"], res["off"], res["spread"]
     base, c8, c95, ex = cp
     ratio = base["feature"] / base["drop_feature"]
 
@@ -224,6 +225,8 @@ def build() -> Post:
     assert all(abs(r["drop_both"] - base["drop_feature"]) < 0.01 for r in cp)
     assert c8["feature"] > c95["feature"] > ex["feature"]
     assert off["outside"] > 20 * off["expected"] and off["corr"] > 0.85
+    assert all(r["permute"] > r["drop"] for r in sp)
+    assert max(r["drop"] for r in sp) - min(r["drop"] for r in sp) > 0.1
 
     post = Post(
         title=(f"{SERIES_TAG} 16: Permutation Importance Measures the Model, "
@@ -324,9 +327,9 @@ None of this makes importance a causal statement. A group of features that predi
 
     post.add(
         "Where this breaks",
-        """**Refitting has its own question.** Drop-column importance measures what the *data* lose without a feature, given the model class. It is expensive — one refit per feature — and it assigns zero to every member of a group of near-copies, which is equally misleading in the other direction. The honest unit is often the group.
+        f"""**Refitting has its own question.** Drop-column importance measures what the *data* lose without a feature, given the model class. It is expensive — one refit per feature — and it assigns zero to every member of a group of near-copies, which is equally misleading in the other direction. The honest unit is often the group.
 
-**R² on 133 test patients is noisy.** The numbers are averages of three splits; individual splits move by about 0.02. The gap between permuting and refitting bmi is many times that.
+**R² on 133 test patients is noisy.** The numbers are averages of three splits, and single splits differ a lot: test R² ranged from {min(r['r2'] for r in sp):.2f} to {max(r['r2'] for r in sp):.2f}, and the loss from refitting without bmi from {min(r['drop'] for r in sp):+.2f} to {max(r['drop'] for r in sp):+.2f}. The direction held in every split — permuting bmi always cost more than refitting without it — but the size of the drop-column numbers, here and in the table, is uncertain to about a tenth of R².
 
 **Other models distribute reliance differently.** A linear model with an exact copy has no unique coefficients at all; a lasso picks one of the two (episode 8). Permutation importance inherits whatever the fitting procedure did.
 

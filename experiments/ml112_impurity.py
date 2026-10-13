@@ -240,6 +240,7 @@ def build() -> Post:
     assert lf["mdi"][0] > s["mdi"][0] and lf["mdi"][-1] < s["mdi"][-1]
     assert lf["mdi_top_binary"] < 0.5 and lf["perm_top_binary"] >= 0.9
     assert min(rl["mdi_rank"]) >= 30 and min(rl["perm_rank"]) >= 25
+    assert min(rl["perm_rank"]) > rl["features"] - rl["perm_nonpositive"]
 
     post = Post(
         title=(f"{SERIES_TAG} 12: Impurity Importance Rewards Features With "
@@ -341,7 +342,7 @@ Both methods put the two noise columns at or near the bottom. Thirty real featur
 
 So the bias is real and conditional. It matters when real effects are weak relative to the noise, when features differ a lot in how many values they take — a binary treatment indicator beside continuous lab values, a postcode with thousands of levels beside a yes/no flag — and when the trees are grown deep. Those are also the settings in which a ranked importance chart is most often used as evidence of what matters, because nothing else stands out.
 
-Permutation importance has its own failure, which the breast-cancer run also shows: {rl['perm_nonpositive']} of the 32 features have a permutation importance of zero or less, many of them real measurements whose information is duplicated by a correlated neighbour. Shuffle one and the forest uses the other. Episode 16 measures that problem directly.""",
+Permutation importance has its own failure, which the breast-cancer run also shows: {rl['perm_nonpositive']} of the 32 features have a permutation importance of zero or less: the two noise columns, and {rl['perm_nonpositive'] - 2} real measurements whose information is duplicated by a correlated neighbour. Shuffle one and the forest uses the other. Episode 16 measures that problem directly.""",
         figures=[figs["f2"]])
 
     post.add(
