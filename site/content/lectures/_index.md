@@ -411,9 +411,9 @@ known answer, so a reader rebuilds every number offline. The network episodes
 run on a CPU, on models small enough to train many times, because most of their
 claims are about what happens *across* training runs.
 
-For episodes not yet published the table gives the sentence under test and how
-it will be measured, not a result. Their results go in when they are measured,
-and not before; the last series was a reminder of why.
+Each row gives the sentence under test and what measurement did to it. The
+results went in only once they were measured; the last series was a reminder
+of why.
 
 ### Arc I — What a score means
 
@@ -459,23 +459,23 @@ and not before; the last series was a reminder of why.
 
 | # | Episode | The sentence under test |
 |---|---|---|
-| 21 | — | *initialisation only needs to break symmetry*. Activation and gradient scale through depth for different initial scales |
-| 22 | — | *learning rate and batch size are separate knobs*. The linear scaling rule, and where it stops holding |
-| 23 | — | *Adam converges faster and generalises as well as SGD*. Both, measured on the same small problems over many seeds |
-| 24 | — | *batch normalisation normalises each example*. One example's prediction as the rest of its batch changes |
-| 25 | — | *dropout at test time is approximated by scaling the weights*. Weight scaling against averaging many dropout masks |
+| 21 | Initialisation Must Break Symmetry, at the Right Scale | *initialisation only needs to break symmetry*. With every weight equal, a 30-layer network's units stayed identical through training and it scored 0.197. Random weights broke symmetry and still failed at the wrong scale: with ReLU each layer multiplied the activations' scale by 0.719 at g = 1 and 1.438 at g = 2 (theory g/√2), and those networks scored 0.13 and 0.10 against 0.919 at g = √2. With 3 layers every random scale trained above 0.94 |
+| 22 | Learning Rate and Batch Size Are One Knob, Until the Rate Hits a Wall | *learning rate and batch size are separate knobs*. With plain SGD and a fixed number of examples, runs with the same ratio of rate to batch reached the same training loss to within 2.3%, from batches of 8 to 512, away from divergence. Above a rate of about 1.5, training diverged at batches of 128 and 512 alike; stopped there, they reached training losses 3 and 55 times the batch of 32's |
+| 23 | Adam Is a Little Faster and No Better | *Adam converges faster and generalises as well as SGD*. Tuned on validation data and run over 20 splits, Adam and SGD with momentum differed by +0.09 points on the digits and +0.05 on a hard task, within noise. At each one's fastest rate Adam reached a training loss of 0.01 in 6 epochs and SGD in 8; at the rates validation chose, SGD was faster. Adam's accuracy depended less on its rate |
+| 24 | Batch Normalisation Normalises the Batch, Not the Example | *batch normalisation normalises each example*. In training mode one digit's label changed with its random batch companions in 45% of batches of 2 and 0.6% of batches of 64, and in 23% of batches of 16 drawn from one class. Trained in batches of 2, the normalised network scored 0.863 against 0.972 without normalisation; from batches of 16 up it gained about half a point |
+| 25 | Weight Scaling Keeps Dropout's Answers, Not Its Doubts | *dropout at test time is approximated by scaling the weights*. Against the average of 300 masks, weight scaling gave the same label on 99.7% of digits at the same accuracy but was more confident (mean top probability 0.985 against 0.954), with 28% higher log loss. On a hard task the labels agreed on 94.3%, the disagreements falling on coin-flip rows. One sampled mask was worse than both |
 
 ### Arc VI — What generalisation looks like in a network
 
 | # | Episode | The sentence under test |
 |---|---|---|
-| 26 | — | *a network that generalises could not have fit noise*. The same network on true and on random labels |
-| 27 | — | *once training accuracy reaches 100%, learning is over*. Modular addition, trained long past that point, with and without weight decay |
-| 28 | — | *data augmentation adds data*. Label-preserving against label-breaking augmentations on the digits |
-| 29 | — | *covariate shift costs accuracy*. Accuracy and calibration under controlled shifts, and importance weighting |
-| 30 | — | *scaling laws predict performance*. Power laws fitted on small character models, checked on larger ones |
+| 26 | The Network That Memorises Noise Learns the Signal First | *a network that generalises could not have fit noise*. The same network fitted true digit labels in 41 full-batch steps (test 0.968) and random ones in 73 (test 0.120). With 20% of labels randomised it fitted the unchanged rows first, test accuracy peaking at 0.928, then memorised the changed ones and ended at 0.836 |
+| 27 | Perfect Training Accuracy Was Not the End of Learning | *once training accuracy reaches 100%, learning is over*. On (a + b) mod 97, a network trained on 40% of the pairs fitted them at step 200 with test accuracy 0.000, and reached 99% on the unseen pairs at step 4,900 with training accuracy at 100% throughout, while weight decay shrank its parameter norm from 112 to 76. Without weight decay, test accuracy was 0.1% after 10,000 steps; with 60% of the pairs, 99% came at step 1,500 |
+| 28 | Augmentation Adds an Assumption, Not Data | *data augmentation adds data*. From 150 training digits, four times more real digits added 4.1 points; four shifted copies of each cost 2.7 on the test set and added 32 on test digits moved by a pixel, where the real digits added 1.6. Noisy copies changed nothing; mirrors and half-turns, which change some digits' labels, cost 9 and 12 |
+| 29 | Covariate Shift Charges for Misspecification | *covariate shift costs accuracy*. With the inputs moved two standard deviations and P(y \| x) fixed, the Bayes accuracy stayed between 0.83 and 0.84; a flexible model lost under 3 points and a linear one fell from 0.816 to 0.536. Importance weighting refitted the line for the test inputs, with lower log loss at every shift but lower accuracy at a shift of 1, from an effective 6% of the sample |
+| 30 | A Power Law Fitted on Small Models Cannot See the Floor | *scaling laws predict performance*. Eight character transformers trained on the same text for the same 2,000 steps: a law fitted to the five smallest predicted the sixth to 0.04% and the seventh and eighth 3.4% and 8.2% too low, in training loss as well as validation loss, as characters seen per parameter fell to 2. A floor fitted to the five small models came out at zero; fitted to all eight, at 0.86. A law fitted to three models hit the largest only by cancelling two errors |
 
-Arcs I to IV are published. Several episodes changed shape while being measured:
+All six arcs are published. Several episodes changed shape while being measured:
 episode 1's repeated splits turned out to measure the pool rather than the
 training sets, and episode 3's feature-selection leak, enormous on noise,
 vanished on real data where the true features win the selection anyway — which
@@ -486,4 +486,13 @@ was best around p = n rather than exactly at it. In Arc III, impurity
 importance's famous bias was overwhelming on a null design and invisible on
 real data with strong signals, and out-of-bag error, sold as free
 cross-validation, turned out to be about as accurate only once the forest was
-large.
+large. In Arc V, the settings of training turned out less separate or less
+exact than their descriptions: learning rate and batch size acted as one ratio
+until a wall, dropout's weight scaling kept the answers and not the doubts, and
+of Adam's reputation only the half about generalising as well as SGD survived
+intact; its speed belonged to its learning rate. In Arc VI two episodes
+ran the clock in opposite directions, a network that fitted signal before noise
+and one that found a rule thousands of steps after fitting its training set,
+and the last episode ended where episode 4 began: a power law fitted to small
+models was optimistic, and the floor that bent it was invisible from the models
+that fitted it.

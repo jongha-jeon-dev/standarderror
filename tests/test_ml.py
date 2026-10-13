@@ -291,3 +291,91 @@ class TestReadingAModel:
         Z = rd.plant(X, y, 1.0, seed=0)
         for cls, pix in rd.SHORTCUT.items():
             assert (Z[y == cls, pix] == 16).all()
+
+
+class TestTrainingANetwork:
+
+    @pytest.fixture(autouse=True)
+    def _torch(self):
+        pytest.importorskip("torch")
+
+    def test_constant_training_pixels_keep_unit_scale(self):
+        from standarderror.ml import nets
+        for seed in range(5):
+            _, Xb, _, _ = nets.digits(seed)
+            assert float(Xb.abs().max()) < 1e3
+
+    def test_fit_takes_exactly_the_steps_asked_for(self):
+        from standarderror.ml import nets
+        Xa, _, ya, _ = nets.digits(0)
+        m = nets.mlp([64, 8, 10])
+        calls = []
+        m.register_forward_hook(lambda *a: calls.append(1))
+        nets.fit(m, Xa, ya, batch=512, steps=7)
+        assert len(calls) == 7
+
+    def test_two_example_batch_norm_outputs_are_plus_or_minus_one(self):
+        import torch
+        bn = torch.nn.BatchNorm1d(16, affine=False).train()
+        out = bn(torch.randn(2, 16, generator=torch.Generator().manual_seed(0)))
+        # Short of 1 only where the two values nearly coincide (the epsilon).
+        assert torch.allclose(out.abs(), torch.ones_like(out), atol=0.05)
+        assert torch.allclose(out[0], -out[1])
+
+    def test_a_deep_tanh_network_with_small_gain_loses_its_signal(self):
+        from standarderror.ml import nets
+        Xa, _, ya, _ = nets.digits(0)
+        sizes = [64] + [128] * 30 + [10]
+        small, _ = nets._layer_stats(nets.mlp(sizes, act="tanh", gain=0.5),
+                                     Xa, ya)
+        good, _ = nets._layer_stats(nets.mlp(sizes, act="tanh", gain=1.0),
+                                    Xa, ya)
+        assert small[-1] < 1e-6 < 0.05 < good[-1]
+
+
+class TestGeneralisationInNetworks:
+
+    @pytest.fixture(autouse=True)
+    def _torch(self):
+        pytest.importorskip("torch")
+
+    def test_mirror_and_half_turn_are_involutions(self):
+        from sklearn.datasets import load_digits
+
+        from standarderror.ml import nets
+        X = load_digits().data[:20]
+        g = np.random.default_rng(0)
+        for kind in ("flip", "rot180"):
+            twice = nets.augment(nets.augment(X, kind, g), kind, g)
+            assert np.array_equal(twice, X)
+
+    def test_without_a_shift_the_importance_weights_are_one(self):
+        from standarderror.ml import nets
+        r = nets.covariate_shift(shifts=(0.0,), reps=2, test=2000)[0]
+        assert r["ess"] == pytest.approx(1.0)
+        assert r["acc_linear_iw"] == r["acc_linear"]
+
+    def test_the_network_memorises_random_labels(self):
+        from standarderror.ml import nets
+        r = nets.random_labels(fractions=(1.0,), epochs=100)[0]
+        assert r["train_acc"] == 1.0 and r["test_acc"] < 0.2
+
+    def test_the_committed_grokking_run_reproduces(self):
+        from standarderror.ml import nets
+        stored = nets.grokking_runs()[0]
+        assert stored["weight_decay"] == 1.0 and stored["frac"] == 0.4
+        short = nets.modular(steps=200, every=100)
+        for a, b in zip(short["history"], stored["history"][:2]):
+            assert a["step"] == b["step"]
+            assert a["train"] == pytest.approx(b["train"], abs=1e-6)
+            assert a["test"] == pytest.approx(b["test"], abs=1e-6)
+            assert a["norm"] == pytest.approx(b["norm"], rel=1e-4)
+
+    def test_an_exact_power_law_is_fitted_exactly(self):
+        from standarderror.ml import scaling as sc
+        N = np.array([1e4, 3e4, 1e5, 3e5, 1e6])
+        p = sc.fit(N, 20 * N ** -0.3 + 1.2)
+        assert (p["a"], p["b"], p["c"]) == pytest.approx((20, 0.3, 1.2),
+                                                         rel=1e-3)
+        assert sc.predict(p, 1e7) == pytest.approx(20 * 1e7 ** -0.3 + 1.2,
+                                                   rel=1e-4)

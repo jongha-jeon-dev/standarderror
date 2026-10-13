@@ -80,6 +80,18 @@ metrics measured at every checkpoint. Each checkpoint is verified on load by
 - `small_final.pt` (step 6,000): sha256 `1f1e6c5e5a101e1d1d56246a465a425ef256d14550866d51f4a0402d5aa0b191`
 - `small_best.pt` (step 1,250): sha256 `210792ded6dee89739dae0797cc25902519b719e71384207e4db2efdb4139e7f`
 
+### `ml_grokking/` and `ml_scaling/` — our own training curves
+
+Measurements, not weights. `ml_grokking/results.json` holds the accuracy and
+weight-norm curves of four modular-addition networks trained by
+`scripts/train_grokking.py` for Machine Learning episode 27; the task is
+generated arithmetic, so there is no corpus. `ml_scaling/results.json` holds the
+training and validation loss curves of a ladder of character transformers
+trained by `scripts/train_scaling.py` for episode 30, on the same
+fetched-and-verified `tinyshakespeare` text as `tiny_gpt/` (Shakespeare, public
+domain; not committed). Both scripts are deterministic on a CPU, and
+`tests/test_ml.py` reruns the start of a grokking run to check the file.
+
 ### `worldbank/` — World Bank Open Data, CC BY 4.0
 
 The World Bank's licence for its Open Data catalogue "allows users to copy, modify
