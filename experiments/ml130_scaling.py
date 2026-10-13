@@ -408,7 +408,7 @@ Then train it, and a size beyond. If the second misses by more than the first, c
 
     post.add(
         "Next",
-        """This is the last episode of the series. Thirty sentences from the machine-learning curriculum were measured; a few survived as stated, most survived only with a condition attached, and some did not survive at all. The conditions are the useful part. Every one of them is a place where a number that looks like a property of a model turned out to be a property of the model together with its data, its training and the question being asked of it.""")
+        """Arc VI ends here, and with it the episodes about models themselves. Thirty sentences were measured; a few survived as stated, most survived only with a condition attached, and some did not survive at all. Each condition is a place where a number that looks like a property of a model turned out to be a property of the model together with its data, its training and the question asked of it. Arc VII turns to the routine steps around a model, starting with the one most often applied before it: reducing the inputs with principal components.""")
 
     return post
 

@@ -398,10 +398,10 @@ is not, and the model either carried or it did not.
 
 ## Machine Learning, Taught Through What Breaks
 
-The longest course here, thirty episodes, and the broadest: the standard
+The longest course here, thirty-five episodes, and the broadest: the standard
 machine-learning curriculum from how a model is scored, through linear models,
 trees and ensembles, reading what a model learned, training a network, and what
-generalisation looks like in one. Each episode takes **one sentence** that the
+generalisation looks like in one, to the routine steps around a model. Each episode takes **one sentence** that the
 curriculum states as fact and measures where it stops being true. Some of those
 sentences will survive measurement; when one does, the episode says so.
 
@@ -475,7 +475,17 @@ of why.
 | 29 | Covariate Shift Charges for Misspecification | *covariate shift costs accuracy*. With the inputs moved two standard deviations and P(y \| x) fixed, the Bayes accuracy stayed between 0.83 and 0.84; a flexible model lost under 3 points and a linear one fell from 0.816 to 0.536. Importance weighting refitted the line for the test inputs, with lower log loss at every shift but lower accuracy at a shift of 1, from an effective 6% of the sample |
 | 30 | A Power Law Fitted on Small Models Cannot See the Floor | *scaling laws predict performance*. Eight character transformers trained on the same text for the same 2,000 steps: a law fitted to the five smallest predicted the sixth to 0.04% and the seventh and eighth 3.4% and 8.2% too low, in training loss as well as validation loss, as characters seen per parameter fell to 2. A floor fitted to the five small models came out at zero; fitted to all eight, at 0.86. A law fitted to three models hit the largest only by cancelling two errors |
 
-All six arcs are published. Several episodes changed shape while being measured:
+### Arc VII — Around the model
+
+| # | Episode | The sentence under test |
+|---|---|---|
+| 31 | Principal Components Keep Variance, Not Relevance | *the first principal components keep the information that matters*. On raw breast-cancer measurements the first component held 98.2% of the variance and was led by worst area, the feature with the largest units; the 95% rule kept one component raw and ten standardised. On diabetes the fourth component, with 9.6% of the variance, explained 12.8% of the target, more than the second and third together; partial least squares reached with two components the R² that PCA needed four for |
+| 32 | k-Means Finds k Pieces Whether or Not There Are Clusters | *k-means finds the clusters in the data*. It recovered four separated blobs (ARI 1.00) and the silhouette chose k = 4. On uniform noise the silhouette also chose 4, scoring 0.40, more than twice its best on the digits' ten real classes; on one large group with two small ones, and on two long parallel groups, k-means at the true k scored ARI 0.09 and 0.00 |
+| 33 | The Curse of Dimensionality Counts the Dimensions the Data Use | *in high dimensions, nearest neighbours stop meaning anything*. For uniform points the nearest/median distance ratio rose from 0.03 in 2 dimensions to 0.94 in 1,024. The digits' 64 pixels had the ratio of 8 uniform dimensions and 5-NN scored 0.986; 1,024 appended noise columns dropped it to 0.659, while logistic regression fell only to 0.871 |
+| 34 | Recalibration Fixes the Average, Given Enough Rows | *Platt scaling or isotonic regression fixes a model's probabilities*. On 50 calibration rows Platt scaling cut an overconfident model's log loss from 0.748 to 0.612 and isotonic regression raised it to 0.761; an already-calibrated model was made worse by either method on 500 rows or fewer. A model calibrated to 0.005 overall was off by 0.19 in a group holding 30% of the rows |
+| 35 | The Best Cross-Validated Score Is the Search's Best Luck | *the best cross-validated score estimates how well the tuned model will do*. On 200 rows, untuned cross-validation was 0.013 pessimistic; the best of 64 configurations was 0.023 optimistic, and its model did no better on fresh data than the untuned default (0.647 against 0.659). On coin-flip labels the best of 64 scores averaged 0.575 for models right half the time; nested cross-validation gave 0.524 |
+
+All seven arcs are published. Several episodes changed shape while being measured:
 episode 1's repeated splits turned out to measure the pool rather than the
 training sets, and episode 3's feature-selection leak, enormous on noise,
 vanished on real data where the true features win the selection anyway — which
@@ -493,6 +503,11 @@ of Adam's reputation only the half about generalising as well as SGD survived
 intact; its speed belonged to its learning rate. In Arc VI two episodes
 ran the clock in opposite directions, a network that fitted signal before noise
 and one that found a rule thousands of steps after fitting its training set,
-and the last episode ended where episode 4 began: a power law fitted to small
+and its last episode ended where episode 4 began: a power law fitted to small
 models was optimistic, and the floor that bent it was invisible from the models
-that fitted it.
+that fitted it. Arc VII measured the routine steps around a model and found
+each answering a narrower question than the one it is used for: principal
+components ranked by variance rather than relevance, k-means and the silhouette
+rating uniform noise above the digits, distance failing because of
+uninformative columns rather than many columns, calibration holding on average
+and not within a group, and a search's best score reporting its luck.

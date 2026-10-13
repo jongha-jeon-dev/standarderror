@@ -379,3 +379,46 @@ class TestGeneralisationInNetworks:
                                                          rel=1e-3)
         assert sc.predict(p, 1e7) == pytest.approx(20 * 1e7 ** -0.3 + 1.2,
                                                    rel=1e-4)
+
+
+class TestAroundTheModel:
+
+    def test_pca_ranks_by_variance_so_the_signal_comes_last(self):
+        from standarderror.ml import around
+        s = around.pca_simulation(n=600)
+        assert s["share"] == sorted(s["share"], reverse=True)
+        assert max(s["acc"][:9]) < 0.6 < 0.85 < s["acc"][9]
+
+    def test_kmeans_recovers_separated_blobs_and_cuts_noise_anyway(self):
+        from sklearn.cluster import KMeans
+        from sklearn.metrics import adjusted_rand_score
+
+        from standarderror.ml import around
+        X, y, k = around._shapes("separated", 0)
+        lab = KMeans(k, n_init=10, random_state=0).fit_predict(X)
+        assert adjusted_rand_score(y, lab) > 0.99
+        U, _, _ = around._shapes("uniform", 0)
+        assert len(set(KMeans(4, n_init=10, random_state=0).fit_predict(U))) == 4
+
+    def test_distance_contrast_shrinks_with_dimension(self):
+        from standarderror.ml import around
+        c = around.contrast(dims=(2, 64), n=300, queries=50)
+        assert c[0]["ratio"] < 0.1 < 0.6 < c[1]["ratio"]
+
+    def test_platt_scaling_keeps_the_ranking(self):
+        from sklearn.linear_model import LogisticRegression
+        from sklearn.metrics import roc_auc_score
+
+        from standarderror.ml import around
+        g = np.random.default_rng(0)
+        y = g.integers(0, 2, 400)
+        s = 1 / (1 + np.exp(-(2 * y - 1 + g.normal(size=400)) * 3))
+        z = around._logit(s)[:, None]
+        p = LogisticRegression().fit(z, y).predict_proba(z)[:, 1]
+        assert roc_auc_score(y, p) == pytest.approx(roc_auc_score(y, s))
+
+    def test_the_one_cell_grid_is_the_default(self):
+        from standarderror.ml import around
+        assert around._grid(1) == {"C": [1.0], "gamma": [0.1]}
+        g = around._grid(16)
+        assert len(g["C"]) * len(g["gamma"]) == 16
