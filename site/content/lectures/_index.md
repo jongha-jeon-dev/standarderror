@@ -398,10 +398,11 @@ is not, and the model either carried or it did not.
 
 ## Machine Learning, Taught Through What Breaks
 
-The longest course here, thirty-five episodes, and the broadest: the standard
+The longest course here, forty-five episodes, and the broadest: the standard
 machine-learning curriculum from how a model is scored, through linear models,
 trees and ensembles, reading what a model learned, training a network, and what
-generalisation looks like in one, to the routine steps around a model. Each episode takes **one sentence** that the
+generalisation looks like in one, to the routine steps around a model, where
+the rows came from, and how models are combined and compared. Each episode takes **one sentence** that the
 curriculum states as fact and measures where it stops being true. Some of those
 sentences will survive measurement; when one does, the episode says so.
 
@@ -485,7 +486,27 @@ of why.
 | 34 | Recalibration Fixes the Average, Given Enough Rows | *Platt scaling or isotonic regression fixes a model's probabilities*. On 50 calibration rows Platt scaling cut an overconfident model's log loss from 0.748 to 0.612 and isotonic regression raised it to 0.761; an already-calibrated model was made worse by either method on 500 rows or fewer. A model calibrated to 0.005 overall was off by 0.19 in a group holding 30% of the rows |
 | 35 | The Best Cross-Validated Score Is the Search's Best Luck | *the best cross-validated score estimates how well the tuned model will do*. On 200 rows, untuned cross-validation was 0.013 pessimistic; the best of 64 configurations was 0.023 optimistic, and its model did no better on fresh data than the untuned default (0.647 against 0.659). On coin-flip labels the best of 64 scores averaged 0.575 for models right half the time; nested cross-validation gave 0.524 |
 
-All seven arcs are published. Several episodes changed shape while being measured:
+### Arc VIII — Where the rows come from
+
+| # | Episode | The sentence under test |
+|---|---|---|
+| 36 | Shuffling a Time Series Is Safe Until the Errors Remember | *never shuffle a time series for cross-validation; split it forward*. On a stationary autoregression with its lags as features, shuffled folds were within 3% of the error on the next 250 steps for linear regression, 5-NN and a forest. With residuals of persistence 0.9 they were 13% optimistic for the forest, at 0.99 22%, and with a drifting level and a time index 25%. Forward splits were 18–20% pessimistic at persistence 0.99 and 11–14% for the drifting forests; contiguous blocks were the closest scheme in five of the seven hard settings |
+| 37 | Rows From the Same People Are Not New Data | *more rows means more data, and row-level cross-validation measures how the model will do*. 2,000 rows from 20 simulated subjects: row-level CV scored 5-NN at 0.825 and it scored 0.685 on new people; row-level scores were higher the fewer people the same rows came from, while true accuracy fell. Subject-level folds came within 0.025 at 20 subjects. 6,400 rows from 20 subjects trained logistic regression to 0.788, about what 100 rows from 100 subjects gave |
+| 38 | A Missing Value Is Information, Until the Process Behind It Changes | *fill missing values in as accurately as you can and model the rest*. On breast cancer with 30% of cells removed at random, the best imputation gave the best model. When large values went missing, mean imputation plus indicators (log loss 0.121) beat iterative imputation (0.143), the better imputer. When benign tumours' cells went missing more often, the indicator model scored 0.999, above the complete data's 0.980, and 0.817 once the gaps became random |
+| 39 | The Applicants You Refused Are the Data You Do Not Have | *a model trained on the outcomes you observed predicts the outcomes you did not*. With approval on the model's features only and a correct model, it predicted 0.453 defaults among the refused against 0.432. When a loan officer also used information the model lacks, 0.137 against 0.486, with AUC unchanged. AUC on the accepted was off in both directions. A model on the 5% approved at random matched one trained on everyone |
+| 40 | Target Encoding Fitted on the Training Rows Still Leaks, Into Training | *fit target encoding on the training rows only and it cannot leak*. A 1,000-level noise category encoded by per-level means took boosted trees from test AUC 0.763 to 0.640; the encoded column alone ranked its own training labels at 0.774 and fresh ones at 0.498. Shrinkage largely rescued logistic regression and not trees; cross-fitting matched dropping the column on noise to within 0.002 and kept the signal when there was one |
+
+### Arc IX — Combining and comparing models
+
+| # | Episode | The sentence under test |
+|---|---|---|
+| 41 | An Average of Models Beats the Average Model, Not the Best One | *averaging several models gives a better model than any of them*. Of 57 averaged combinations of six classifiers on the digits, 11 beat their best member and 8 fell below their members' mean. A single tree, certain about every digit, won all 819 disagreements with the SVM it was averaged with. The guarantee is against the mean member: on diabetes the average's error was the members' mean minus their spread, to 1e-12, and still worse than ridge alone |
+| 42 | Stacking Learns to Pick the Best Model, Given Honest Predictions | *stacking learns the best way to combine models*. On in-sample predictions the meta-model gave 1-NN a weight of 13 and reproduced its accuracy exactly, the worst of four members. On out-of-fold predictions it chose the SVM and matched it, never more than 0.001 above it; at 100 rows it lost to the best member, and, in a pool without 1-NN, a plain average beat every member |
+| 43 | Naive Bayes Counts Correlated Evidence Twice, and Only Its Probabilities Notice | *naive Bayes works well even though its independence assumption is wrong*. On breast cancer it trailed logistic regression by 4 points of accuracy and a factor of 8 in log loss, with 67% of its errors at above 0.99 confidence. Copying every feature ten times left the AUC of its log-odds unchanged to four decimals and nearly tripled its log loss; copying only the size features changed its answers |
+| 44 | Cross-Validation Folds Are Not Independent Samples, and the t-Test Assumes They Are | *a paired t-test on cross-validation folds tells you whether one model is better*. Two algorithms equal by symmetry, 400 data sets: the ten-fold t-test found a difference in 14%, the 10 × 10 version in 58%. The corrected resampled t-test, 5x2cv and McNemar held 5%; with a real difference the corrected test was the most powerful of the three |
+| 45 | A Test Set Answers Honestly Only the First Time | *a test set stays unbiased however often you look, if you never train on it*. A majority vote of random guesses kept for beating 0.5 scored 0.713 on a leaderboard of coin flips and 0.497 on the private labels. Noise features kept because they replicated on the holdout scored 0.687 there and 0.498 fresh. Forward selection guided by the holdout reported 0.690, above the true model's 0.676; fresh accuracy was 0.576 |
+
+All nine arcs are published. Several episodes changed shape while being measured:
 episode 1's repeated splits turned out to measure the pool rather than the
 training sets, and episode 3's feature-selection leak, enormous on noise,
 vanished on real data where the true features win the selection anyway — which
@@ -510,4 +531,13 @@ each answering a narrower question than the one it is used for: principal
 components ranked by variance rather than relevance, k-means and the silhouette
 rating uniform noise above the digits, distance failing because of
 uninformative columns rather than many columns, calibration holding on average
-and not within a group, and a search's best score reporting its luck.
+and not within a group, and a search's best score reporting its luck. Arc VIII
+went back to the rows, and found the rules about them right for narrower reasons
+than their usual ones: shuffled folds failed a time series only when something
+unseen changed slowly, rows from the same people counted as far fewer examples
+than their number, missing values and missing labels both recorded decisions,
+and a target encoding fitted on the training rows leaked into those rows. Arc IX
+found combining and comparing models as easy to get wrong as fitting them: an
+average that handed its decisions to its most confident member, a stack that
+became 1-NN when shown in-sample predictions, tests that saw differences
+between equal algorithms, and a test set worn out by being consulted.

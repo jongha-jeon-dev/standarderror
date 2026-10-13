@@ -119,13 +119,13 @@ The second number is what your search reports when there is nothing to find. If 
 
 ## Next
 
-Arc VII ends here, at thirty-five episodes. The steps around a model turned out to need measuring as much as the model: components that keep variance and not relevance, clusters that are partitions of space, distances that depend on which columns carry information, calibration that holds on average, and scores that report the luck of the search that produced them.
+Arc VII ends here, at thirty-five episodes. The steps around a model turned out to need measuring as much as the model: components that keep variance and not relevance, clusters that are partitions of space, distances that depend on which columns carry information, calibration that holds on average, and scores that report the luck of the search that produced them. Arc VIII goes one step further back, to the rows themselves and the process that produced them, starting with episode 36 and the most familiar rule about rows that come in order: never shuffle a time series.
 
 ---
 
 ### Data
 
-- Simulated: episode 4's two-class Gaussian task in 10 dimensions (Bayes error 0.276), 200 training rows per repetition (seeds 1,000 to 1,019) and 20,000 fixed test rows; and the same with ten standard-normal features and coin-flip labels (seeds 0 to 19).
+- Simulated: episode 4's two-class Gaussian task in 10 dimensions (Bayes error 0.268), 200 training rows per repetition (seeds 1,000 to 1,019) and 20,000 fixed test rows; and the same with ten standard-normal features and coin-flip labels (seeds 0 to 19).
 - Machinery: `standarderror/ml/around.py`, tested in `tests/test_ml.py`; scikit-learn's SVC (RBF kernel) and GridSearchCV with five stratified folds; grids log-spaced in C from 0.1 to 1,000 and gamma from 0.001 to 3.2 (the one-cell grid is C = 1, gamma = 0.1); nested estimates with five outer folds.
 - Where this stops: Varma and Simon, "Bias in error estimation when using cross-validation for model selection", *BMC Bioinformatics* (2006); Cawley and Talbot, "On over-fitting in model selection and subsequent selection bias in performance evaluation", *JMLR* (2010); episode 2 of this series.
 

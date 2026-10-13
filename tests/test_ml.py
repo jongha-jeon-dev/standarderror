@@ -422,3 +422,84 @@ class TestAroundTheModel:
         assert around._grid(1) == {"C": [1.0], "gamma": [0.1]}
         g = around._grid(16)
         assert len(g["C"]) * len(g["gamma"]) == 16
+
+
+class TestWhereTheRowsComeFrom:
+
+    def test_lags_line_up_with_their_targets(self):
+        from standarderror.ml import rows
+        y = np.arange(10.0)
+        X, t = rows._lags(y, 2)
+        assert X[0].tolist() == [1.0, 0.0] and t[0] == 2.0
+        assert len(X) == len(t) == 8
+
+    def test_a_short_window_correlates_independent_slow_processes(self):
+        from standarderror.ml import rows
+        w = rows.window_correlation(phis=(0.0, 0.99), reps=40)
+        assert w[0.0] < 0.06 < 0.1 < w[0.99]
+
+    def test_subjects_share_their_signature(self):
+        from standarderror.ml import rows
+        X, y, s = rows._subjects(5, 40, np.random.default_rng(0))
+        assert X.shape == (200, 10) and len(set(s)) == 5
+        within = np.mean([X[s == k].std(0).mean() for k in range(5)])
+        assert within < X.std(0).mean()
+
+    def test_missingness_masks_hit_their_rate_and_their_target(self):
+        from standarderror.ml import rows
+        X, y = rows._breast_cancer()
+        g = np.random.default_rng(0)
+        for kind in ("random", "large values", "by diagnosis"):
+            m = rows._missing_mask(kind, X, y, g)
+            assert abs(m.mean() - 0.3) < 0.02
+        m = rows._missing_mask("by diagnosis", X, y, g)
+        assert m[y == 1].mean() > 5 * m[y == 0].mean()
+
+    def test_the_old_policy_accepts_half(self):
+        from standarderror.ml import rows
+        X, y, a = rows._applicants(4000, np.random.default_rng(0),
+                                   curved=False, officer=True)
+        assert a.mean() == pytest.approx(0.5, abs=0.001)
+        assert y[a].mean() < y[~a].mean()
+
+    def test_mean_encoding_reads_a_rows_own_label(self):
+        from standarderror.ml import rows
+        c = np.array([0, 0, 1, 1, 2])
+        y = np.array([1, 0, 1, 1, 0])
+        a, b = rows._mean_encode(c, y, np.array([0, 3]))
+        assert a.tolist() == [0.5, 0.5, 1.0, 1.0, 0.0]
+        assert b.tolist() == [0.5, 0.6]
+
+
+class TestCombiningAndComparing:
+
+    def test_the_ambiguity_identity_is_exact(self):
+        from standarderror.ml import combine
+        a = combine.ambiguity()
+        assert a["identity_gap"] < 1e-9
+        assert a["ensemble"] == pytest.approx(a["mean_member"] - a["ambiguity"])
+
+    def test_naive_bayes_copies_scale_the_log_odds(self):
+        from sklearn.naive_bayes import GaussianNB
+
+        from standarderror.ml import combine
+        X, y, _ = combine._bc()
+        j1 = GaussianNB().fit(X, y).predict_joint_log_proba(X)
+        j3 = GaussianNB().fit(np.tile(X, 3), y).predict_joint_log_proba(
+            np.tile(X, 3))
+        prior = np.log(np.bincount(y) / len(y))
+        lo1 = (j1[:, 1] - prior[1]) - (j1[:, 0] - prior[0])
+        lo3 = (j3[:, 1] - prior[1]) - (j3[:, 0] - prior[0])
+        assert np.allclose(lo3, 3 * lo1, rtol=1e-6, atol=1e-6)
+
+    def test_the_rotated_task_is_rotation_invariant(self):
+        from standarderror.ml import combine
+        X, y = combine._ttask(20000, np.random.default_rng(0))
+        r0, r1 = np.linalg.norm(X[y == 0], axis=1), np.linalg.norm(X[y == 1], axis=1)
+        assert r1.mean() > 1.4 * r0.mean()
+        assert abs(np.corrcoef(X.T)[0, 1]) < 0.03
+
+    def test_a_leaderboard_rewards_kept_random_guesses(self):
+        from standarderror.ml import combine
+        r = combine.leaderboard_attack(queries=(1, 300), n=500, reps=10)
+        assert r[1]["public"] > 0.58 and abs(r[1]["private"] - 0.5) < 0.03
