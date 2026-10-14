@@ -357,7 +357,7 @@ If any are marked, the reported score is optimistic by an unknown amount. Hold o
 
     post.add(
         "Next",
-        """Arc IX ends here, at forty-five episodes. Combining and comparing turned out to need the same care as fitting: an average that hands its decisions to its most confident member, a stack that learns from memorised predictions unless shown honest ones, naive Bayes counting the same evidence twice, tests that see a difference between equal algorithms one time in seven or more, and a test set that stays honest only as long as nobody acts on what it says.""")
+        """Arc IX ends here, at forty-five episodes. Combining and comparing turned out to need the same care as fitting: an average that hands its decisions to its most confident member, a stack that learns from memorised predictions unless shown honest ones, naive Bayes counting the same evidence twice, tests that see a difference between equal algorithms one time in seven or more, and a test set that stays honest only as long as nobody acts on what it says. Arc X follows predictions into the decisions made with them, starting with episode 46 and the threshold most classifiers use by default.""")
 
     return post
 

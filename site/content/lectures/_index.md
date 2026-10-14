@@ -398,11 +398,12 @@ is not, and the model either carried or it did not.
 
 ## Machine Learning, Taught Through What Breaks
 
-The longest course here, forty-five episodes, and the broadest: the standard
+The longest course here, fifty episodes, and the broadest: the standard
 machine-learning curriculum from how a model is scored, through linear models,
 trees and ensembles, reading what a model learned, training a network, and what
 generalisation looks like in one, to the routine steps around a model, where
-the rows came from, and how models are combined and compared. Each episode takes **one sentence** that the
+the rows came from, how models are combined and compared, and what happens
+when predictions are turned into decisions. Each episode takes **one sentence** that the
 curriculum states as fact and measures where it stops being true. Some of those
 sentences will survive measurement; when one does, the episode says so.
 
@@ -506,7 +507,17 @@ of why.
 | 44 | Cross-Validation Folds Are Not Independent Samples, and the t-Test Assumes They Are | *a paired t-test on cross-validation folds tells you whether one model is better*. Two algorithms equal by symmetry, 400 data sets: the ten-fold t-test found a difference in 14%, the 10 × 10 version in 58%. The corrected resampled t-test, 5x2cv and McNemar held 5%; with a real difference the corrected test was the most powerful of the three |
 | 45 | A Test Set Answers Honestly Only the First Time | *a test set stays unbiased however often you look, if you never train on it*. A majority vote of random guesses kept for beating 0.5 scored 0.713 on a leaderboard of coin flips and 0.497 on the private labels. Noise features kept because they replicated on the holdout scored 0.687 there and 0.498 fresh. Forward selection guided by the holdout reported 0.690, above the true model's 0.676; fresh accuracy was 0.576 |
 
-All nine arcs are published. Several episodes changed shape while being measured:
+### Arc X — From prediction to decision
+
+| # | Episode | The sentence under test |
+|---|---|---|
+| 46 | The Right Threshold Is a Cost Ratio, If the Probabilities Are Calibrated | *a classifier predicts the positive class above 0.5*. With a miss costing ten false alarms, flagging at 0.5 cost 1.4 to 2.0 per case, 2.9 to 4.0 times flagging everyone (0.497). The threshold 1/(1 + r) came within 0.003 of the best for recalibrated boosted trees and cost the overconfident raw ones 0.762. Tuned on 1,000 rows it lost to flagging everyone for three of five models at r = 20; even the true probabilities saved only 11% at r = 10 |
+| 47 | The Model With the Best AUC Was Never the Best When Misses Cost Ten Times More | *the model with the higher AUC makes better decisions*. A forest had the best AUC in 10 of 10 training sets and the lowest cost at equal costs in 10. At r = 10 it was cheapest in none; boosted trees in 7 and logistic regression, last by AUC, in 3. Among the 2% of cases each rated safest, the forest's held 5.6% positives and logistic regression's 2.8% |
+| 48 | What a Model Relies On Is Not What to Change | *the features a model relies on most are the levers*. A test result produced by the outcome carried 0.43 to 0.45 of AUC importance and moved predicted risk by 0.31 per standard deviation; changing it changes nothing. A habit sharing a cause with the outcome had a what-if of about −0.03 and no effect. The real lever, true effect 0.085, had a what-if of 0.024; adjusting for the common cause recovered 0.089 |
+| 49 | Target the Effect, Not the Risk | *give the intervention to those most at risk*. Offering a retention deal to the highest predicted churners prevented about 21 churns per 1,000 customers, about the same as random targeting; ranking by the predicted effect from a randomised trial's two arms prevented 39 to 50, against a best possible 55. 11% of the highest-risk fifth were made more likely to leave, against 6% overall |
+| 50 | A Rule That Chooses Its Own Data Learns Its Own Choices | *a model retrained on the data it collects corrects itself*. Inspectors sent where most violations had been found ended all in one district in 500 of 500 simulated years, the lower-rate one in 46%. Splitting by violations found was within 0.1 of the truth in 21%; dividing by visits made, in every run. Greedy on the per-visit rate ended in the worse district in 30%, and in 8% with 10% exploration |
+
+All ten arcs are published. Several episodes changed shape while being measured:
 episode 1's repeated splits turned out to measure the pool rather than the
 training sets, and episode 3's feature-selection leak, enormous on noise,
 vanished on real data where the true features win the selection anyway — which
@@ -540,4 +551,10 @@ and a target encoding fitted on the training rows leaked into those rows. Arc IX
 found combining and comparing models as easy to get wrong as fitting them: an
 average that handed its decisions to its most confident member, a stack that
 became 1-NN when shown in-sample predictions, tests that saw differences
-between equal algorithms, and a test set worn out by being consulted.
+between equal algorithms, and a test set worn out by being consulted. Arc X
+followed predictions into decisions: a default threshold that assumed equal
+costs, an AUC that chose the wrong model where the decision was made, a
+feature importance that pointed at consequences rather than causes, a risk
+ranking that did no better than random at finding the people a treatment
+would help, and a rule that
+learned its own choices back from the data they produced.

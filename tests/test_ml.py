@@ -503,3 +503,35 @@ class TestCombiningAndComparing:
         from standarderror.ml import combine
         r = combine.leaderboard_attack(queries=(1, 300), n=500, reps=10)
         assert r[1]["public"] > 0.58 and abs(r[1]["private"] - 0.5) < 0.03
+
+
+class TestPredictionToDecision:
+
+    def test_best_cost_matches_a_brute_force_search(self):
+        from standarderror.ml import decide
+        g = np.random.default_rng(0)
+        y = g.integers(0, 2, 300)
+        p = np.clip(0.5 * y + 0.5 * g.random(300), 0, 1)
+        brute = min(decide._cost(p, y, t, 5) for t in np.r_[p, 2.0])
+        assert decide._best_cost(p, y, 5) == pytest.approx(brute)
+        t = decide._best_threshold(p, y, 5)
+        assert decide._cost(p, y, t, 5) == pytest.approx(brute)
+
+    def test_intervening_downstream_changes_nothing(self):
+        from standarderror.ml import decide
+        _, y0, _ = decide._scm(5000, np.random.default_rng(3))
+        _, y1, _ = decide._scm(5000, np.random.default_rng(3), do="x3", shift=2.0)
+        _, y2, _ = decide._scm(5000, np.random.default_rng(3), do="x2", shift=2.0)
+        assert (y0 == y1).all() and y2.mean() > y0.mean()
+
+    def test_the_offer_backfires_for_a_minority(self):
+        from standarderror.ml import decide
+        _, p0, p1 = decide._customers(50_000, np.random.default_rng(0))
+        harmed = np.mean(p1 > p0)
+        assert 0.05 < harmed < 0.08 and np.mean(p0 - p1) > 0.1
+
+    def test_greedy_counting_locks_in(self):
+        from standarderror.ml import decide
+        r = decide.feedback_loop(days=60, runs=40)
+        assert r["greedy"]["locked"] == 1.0
+        assert r["per visit"]["within_10"] > 0.8
