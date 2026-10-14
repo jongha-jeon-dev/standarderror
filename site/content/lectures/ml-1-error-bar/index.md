@@ -3,7 +3,7 @@ title: "ML 1: Your Test Score Has an Error Bar, and It Is Wider Than Your Gain"
 date: 2026-10-08
 slug: "ml-1-error-bar"
 draft: false
-description: "A test accuracy is a proportion measured on a finite sample. On 360 test digits its error bar is as wide as the gaps between three good classifiers, and repeating the split does not measure what it seems to."
+description: "A test accuracy is a proportion measured on a finite sample. On 360 test digits its error bar is wider than the gap between the top two of three good classifiers, and repeating the split does not measure what it seems to."
 author: "Jongha Jeon"
 tags: ["machine-learning", "data-science", "statistics", "model-evaluation", "lectures"]
 series: ["Machine Learning, Taught Through What Breaks"]
@@ -19,7 +19,7 @@ Episode 1 of *Machine Learning, Taught Through What Breaks*. The syllabus and th
 
 ## One split, three models
 
-This series takes one sentence from the standard machine-learning curriculum per episode and measures where it stops being true. Thirty of them, from evaluation through linear models, trees, explanation, training networks and what generalisation looks like in them. The first sentence is the one every other episode leans on: *the model with the higher test score is the better model.*
+This series takes one sentence from the standard machine-learning curriculum per episode and measures where it stops being true. Fifty of them, from evaluation through linear models, trees, explanation, training networks and what generalisation looks like in them, to the routine steps around a model and what happens when its predictions become decisions. The first sentence is the one every other episode leans on: *the model with the higher test score is the better model.*
 
 The rules are the same throughout. Every number is measured by code in the repository and pinned by a test, so a claim that drifts fails the build. The data is either bundled with scikit-learn or simulated with a known answer, so anyone can rebuild it offline. And when a measurement contradicts the sentence I set out to illustrate — it happened twice in the last series — the episode says so rather than quietly changing the question.
 
@@ -63,12 +63,12 @@ for name, acc in sp["accuracy"].items():
 ```text
 logistic  SD 0.0079  binomial 0.0089  pool 0.0079  fixed model 0.0084
 RBF SVM   SD 0.0069  binomial 0.0070  pool 0.0063  fixed model 0.0063
-3-NN      SD 0.0053  binomial 0.0058  pool 0.0052  fixed model 0.0051
+3-NN      SD 0.0052  binomial 0.0058  pool 0.0052  fixed model 0.0051
 ```
 
 The columns are the standard deviation of accuracy over the 200 splits, the binomial standard error of one 360-image test set, the same with a finite-population correction, and a control explained below. The spread over splits, 0.0069 for the SVM, is close to the binomial standard error of 0.0070 — slightly *below* it, for every model. That is the first sign the repetition is measuring something narrower than it looks.
 
-Two hundred splits of one pool of 1,797 images do not draw two hundred fresh test sets. They draw 360-image subsets of the same images, so the finite-population correction applies: the variance of a subset mean is smaller by (N - n)/(N - 1). With it, the predicted spread is 0.0063. The last column is the control that settles what the spread is made of: fix each image's right-or-wrong from one cross-validated run, so the model never changes, and draw random 360-image subsets. That spread, 0.0063 for the SVM, is the pure test-set noise with the training set held still, and it accounts for most of the repeated-split spread. The share of variance left over for retraining on different data is -15% for logistic regression, 15% for the SVM and 8% for 3-NN — a negative share meaning the control alone is already a little wider than the measured spread.
+Two hundred splits of one pool of 1,797 images do not draw two hundred fresh test sets. They draw 360-image subsets of the same images, so the finite-population correction applies: the variance of a subset mean is smaller by (N - n)/(N - 1). With it, the predicted spread is 0.0063. The last column is the control that settles what the spread is made of: fix each image's right-or-wrong from one cross-validated run, so the model never changes, and draw random 360-image subsets. That spread, 0.0063 for the SVM, is the pure test-set noise with the training set held still, and it accounts for most of the repeated-split spread. The share of variance left over for retraining on different data is -15% for logistic regression, 15% for the SVM and 7% for 3-NN — a negative share meaning the control alone is already a little wider than the measured spread.
 
 So repeating the split re-measures the test-set noise of *this* pool, slightly understated, and almost none of the variation from training on different data. It does not tell you how the score would move on a new sample of digits; the binomial standard error of one test set is the better answer to that. What the repetition does show plainly is the ranking: the SVM and 3-NN trade places in 14% of the 200 splits.
 

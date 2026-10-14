@@ -3,7 +3,7 @@ title: "ML 12: Impurity Importance Rewards Features With Many Places to Split"
 date: 2026-10-12
 slug: "ml-12-impurity"
 draft: false
-description: "A forest's default feature importance is computed on the data it was fitted to. On a design where the answer is known, it ranks the only useful feature last, every time."
+description: "A forest's default feature importance is computed on the data it was fitted to. On a design where the answer is known, it never ranks the only useful feature first, and ranks it last in 19 of 20 datasets."
 author: "Jongha Jeon"
 tags: ["machine-learning", "data-science", "statistics", "random-forest", "feature-importance", "lectures"]
 series: ["Machine Learning, Taught Through What Breaks"]
@@ -13,7 +13,7 @@ images: ["ml112-hero.png"]
 
 Disclosure: this post was written with the assistance of an AI system (Claude), which wrote the analysis code, ran the experiments and drafted the text. The topic, the constraints, the data choices and the final review are the author's.
 
-*Five features that differ only in how many distinct values they take, and a label that is a coin flip: a random forest's impurity importance gives the continuous feature 42% of the total and the binary one 5%. Give the binary feature, and only it, a real effect, and impurity importance still ranks it last in all 20 datasets; permutation importance on fresh data ranks it first in 95%. Leaves of at least 20 rows shrink the bias without removing it. On the breast-cancer data, where real signals are strong, both methods rank added noise columns at the bottom.*
+*Five features that differ only in how many distinct values they take, and a label that is a coin flip: a random forest's impurity importance gives the continuous feature 42% of the total and the binary one 5%. Give the binary feature, and only it, a real effect, and impurity importance never ranks it first and ranks it last in 19 of 20 datasets; permutation importance on fresh data ranks it first in 95%. Leaves of at least 20 rows shrink the bias without removing it. On the breast-cancer data, where real signals are strong, both methods rank added noise columns at the bottom.*
 
 Episode 12 of *Machine Learning, Taught Through What Breaks*. The syllabus and the other episodes: https://jongha-jeon-dev.github.io/standarderror/lectures/
 
@@ -42,9 +42,9 @@ binary      MDI 0.046   permutation on new data -0.0008
 continuous  MDI 0.417   permutation on new data -0.0013
 ```
 
-MDI climbs with the number of distinct values, from 0.046 for the binary feature to **0.417 for the continuous one**, in perfect order. Fully grown trees split down to single rows, and the feature with the most thresholds to choose from is the one that most often finds a split that separates a few coin flips from a few others. All of that is memorised noise, and MDI counts it as importance.
+MDI climbs with the number of distinct values, from 0.046 for the binary feature to **0.417 for the continuous one**, in perfect order — and not only on average: the order holds in each of the 20 datasets separately. Fully grown trees split down to single rows, and the feature with the most thresholds to choose from is the one that most often finds a split that separates a few coin flips from a few others. All of that is memorised noise, and MDI counts it as importance.
 
-Permutation importance asks a different question on different rows: on 2,000 *new* rows, how much accuracy is lost when a feature's column is shuffled? For every feature here the answer is zero to within its standard error.
+Permutation importance asks a different question on different rows: on 2,000 *new* rows, how much accuracy is lost when a feature's column is shuffled? For every feature here the answer is zero to within one standard error of its mean over the 20 datasets.
 
 ![Two sets of bars rising left to right from the binary feature to the continuous one, nearly identical whether or not the binary feature carries signal.](ml112-f0-mdi.png)
 
@@ -62,16 +62,19 @@ for leaf in (1, 20):
           " ".join(f"{v:.3f}" for v in r["mdi"]) +
           f"  binary first: MDI {r['mdi_top_binary']:.0%},"
           f" permutation {r['perm_top_binary']:.0%}")
+    print(f"{'':14s}binary last by MDI: {r['mdi_last_binary']:.0%}")
 ```
 
 ```text
 leaves >=  1: MDI 0.053 0.101 0.187 0.256 0.403  binary first: MDI 0%, permutation 95%
+              binary last by MDI: 95%
 leaves >= 20: MDI 0.254 0.101 0.152 0.196 0.297  binary first: MDI 25%, permutation 100%
+              binary last by MDI: 5%
 ```
 
-With fully grown trees, MDI ranks the one informative feature **last in every one of the 20 datasets**: its share rises only from 0.046 to 0.053, while the continuous noise feature keeps 0.403. Permutation importance ranks it first in 95%.
+With fully grown trees, MDI never ranks the one informative feature first, and ranks it **last in 19 of the 20 datasets**: its share rises only from 0.046 to 0.053, while the continuous noise feature keeps 0.403. Permutation importance ranks it first in 95%.
 
-The reason is the same as before. A binary feature can be split exactly once per node; once it has been used, it has nothing more to offer below. The continuous feature can be split again and again, and in fully grown trees most splits are deep in the tree, among a handful of rows, where they fit noise. MDI adds those up.
+The likely reason is the same as before. A binary feature can be split only once on any path from the root; once it has been used, it has nothing more to offer below. The continuous feature can be split again and again, and in fully grown trees most splits are deep in the tree, among a handful of rows, where they fit noise. MDI adds those up.
 
 Larger leaves remove the deepest, noisiest splits. With at least 20 rows per leaf the binary feature's share rises to 0.254 and the continuous feature's falls to 0.297 — but MDI still ranks the binary feature first in only 25% of datasets. The bias is smaller, not gone.
 
@@ -98,25 +101,25 @@ rank of noise (continuous, binary) among 32: MDI (31, 32), permutation (31, 32)
 features with permutation importance <= 0: 5
 ```
 
-Both methods put the two noise columns at or near the bottom. Thirty real features with strong, well-separated signals soak up the splits near the top of every tree, and the noise column's deep, lucky splits add up to only a fraction of a percent of the total.
+Both methods put the two noise columns at the bottom. Their impurity shares are 0.2% for the continuous column and 0.03% for the binary one: whatever lucky splits they win add up to a fraction of a percent of the total. A plausible reading, not tested here, is that thirty real features with strong, well-separated signals take the splits near the top of every tree and leave the noise only the deep ones.
 
 So the bias is real and conditional. It matters when real effects are weak relative to the noise, when features differ a lot in how many values they take — a binary treatment indicator beside continuous lab values, a postcode with thousands of levels beside a yes/no flag — and when the trees are grown deep. Those are also the settings in which a ranked importance chart is most often used as evidence of what matters, because nothing else stands out.
 
-Permutation importance has its own failure, which the breast-cancer run also shows: 5 of the 32 features have a permutation importance of zero or less: the two noise columns, and 3 real measurements whose information is duplicated by a correlated neighbour. Shuffle one and the forest uses the other. Episode 16 measures that problem directly.
+Permutation importance has its own failure, which the breast-cancer run also shows: 5 of the 32 features have a permutation importance of zero or less: the two noise columns, and 3 real measurements. This run does not say why those real measurements score nothing; the usual explanation is that each has a strongly correlated neighbour, so that when one is shuffled the trees that split on the other still work. Episode 16 measures that problem directly.
 
-![A table of importances for five features under four settings, with a final row giving how often the binary feature is ranked first.](ml112-f2-table.png)
+![A table of importances for five features under four settings, with two final rows giving how often the binary feature is ranked first and how often it is ranked last.](ml112-f2-table.png)
 
 *Leaves of at least 20 rows cut the continuous feature's share and lift the binary one, but MDI still prefers the feature with nothing to say.*
 
 ## Where this breaks
 
-**Permutation importance needs held-out rows.** Computed on the training data, permutation importance inherits much of the same bias: the forest has memorised the noise feature's values there, and shuffling them hurts. The fresh rows are what make it honest.
+**Permutation importance needs held-out rows.** Computed on the training data, permutation importance should inherit much of the same bias, since the forest has memorised the noise feature's values there and shuffling them hurts. That version was not run here; the fresh rows are what make the numbers above honest.
 
-**Categorical coding matters.** Here the categories are coded as integers, which is what scikit-learn's forests see. One-hot coding gives each level its own binary column and changes which columns MDI favours, without removing the preference for many split points.
+**Categorical coding matters.** Here the categories are coded as integers, which is what scikit-learn's forests see. One-hot coding gives each level its own binary column, which would change which columns MDI favours; whether it removes the preference for many split points was not tested here.
 
-**Corrected MDI exists.** Out-of-bag versions of impurity importance and the debiased MDI of Li et al. (2019) score splits on rows the tree did not train on, which removes most of this bias. They are not what the default `feature_importances_` attribute reports.
+**Corrected MDI exists.** Out-of-bag versions of impurity importance and the debiased MDI of Li et al. (2019) score splits on rows the tree did not train on, which is designed to remove most of this bias. They are not what the default `feature_importances_` attribute reports.
 
-**Twenty datasets per setting.** The orderings quoted are consistent across all twenty; the shares themselves carry a standard error of about 0.005.
+**Twenty datasets per setting.** The counts quoted are per dataset, and they are not all unanimous. With no signal, MDI rose with the number of distinct values in all 20 datasets. With signal, it ranked the binary feature last in 19 of 20 and first in none; permutation ranked it first in 95%. With leaves of 20 the picture is mixed: MDI ranked the binary feature first in 25% of datasets and last in 5%. The mean shares carry standard errors of at most 0.004 with fully grown trees and up to 0.022 with leaves of 20.
 
 ## What to keep
 
@@ -124,7 +127,7 @@ Permutation importance has its own failure, which the breast-cancer run also sho
 
 2. With no signal anywhere, it gave a continuous feature 42% of the importance and a binary one 5%.
 
-3. With a real effect on the binary feature alone, it ranked that feature last in all 20 datasets; permutation importance on fresh data ranked it first in 95%.
+3. With a real effect on the binary feature alone, it never ranked that feature first and ranked it last in 19 of 20 datasets; permutation importance on fresh data ranked it first in 95%.
 
 4. Larger leaves reduced the bias; they did not remove it.
 

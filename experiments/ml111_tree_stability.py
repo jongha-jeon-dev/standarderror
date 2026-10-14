@@ -9,7 +9,8 @@ Measured on 200 bootstrap resamples of a breast-cancer training set:
   only half the resamples, and four other features take turns. Their best
   single splits are within 5% of each other in impurity reduction.
 * The top of the tree -- the features in its first three levels -- comes
-  out differently in 194 of 200 resamples.
+  out as 194 different sets in 200 resamples, and not one of them is the
+  full-data tree's set.
 * And the trees disagree on the diagnosis of 36% of test tumours.
 
 Run: `standarderror run ml111_tree_stability --publish`
@@ -206,8 +207,10 @@ def _snippets(res: dict) -> dict:
         """)
     out["rows"] = s.run("""
         print(f"distinct top-3-level feature sets: {b['distinct_sets']} of 200")
+        print(f"same set as the full-data tree: {b['full_set_same']} of 200")
         print(f"test rows where some tree disagrees: {b['any_disagree']:.1%}")
-        print(f"two random trees disagree on: {b['pair_disagreement']:.1%}")
+        print(f"two trees disagree on, averaged over pairs: "
+              f"{b['pair_disagreement']:.1%}")
         """)
     return out
 
@@ -225,8 +228,28 @@ def build() -> Post:
     gains = [c["relative"] for c in b["candidates"]]
     err = 1 - acc.mean()
     second = b["roots"][1]
+    cut = b["full_threshold"]
+    worst_roots = [n for n, _ in b["roots"] if n.startswith("worst ")]
+    mean_roots = [n for n, _ in b["roots"] if n.startswith("mean ")]
+
+    # How closely the contenders track one another, on all 569 tumours.
+    from sklearn.datasets import load_breast_cancer
+    bcd = load_breast_cancer()
+    fn = [str(n) for n in bcd.feature_names]
+
+    def corr(a: str, c: str) -> float:
+        return float(np.corrcoef(bcd.data[:, fn.index(a)],
+                                 bcd.data[:, fn.index(c)])[0, 1])
+
+    r_size = min(corr("worst perimeter", "worst radius"),
+                 corr("worst perimeter", "worst area"))
+    r_conc = corr("worst perimeter", "worst concave points")
 
     # The spine, asserted rather than trusted.
+    assert len(worst_roots) == 4 and mean_roots == ["mean concave points"]
+    assert b["full_set_same"] == 0 and b["modal_set_count"] <= 3
+    assert b["grown_leaves"] < 30 and b["grown_leaves"] > 2 ** b["depth"]
+    assert r_size > 0.95 and 0.7 < r_conc < r_size
     assert acc.std() < 0.02
     assert b["root_same"] <= 0.55 and len(b["roots"]) >= 4
     assert min(gains) > 0.94
@@ -259,10 +282,11 @@ def build() -> Post:
             f"feature, {b['full_root']}, is the root in "
             f"{b['root_same']:.0%} of resamples; four other features take "
             f"the rest, and all five have best splits within "
-            f"{1 - min(gains):.0%} of each other. The set of features in the "
-            f"top three levels differs in {b['distinct_sets']} of "
-            f"{b['boots']} resamples, and {b['any_disagree']:.0%} of test "
-            f"tumours get a different diagnosis from at least one tree."),
+            f"{1 - min(gains):.0%} of each other. The {b['boots']} resamples "
+            f"put {b['distinct_sets']} different sets of features in the top "
+            f"three levels, none of them the full-data tree's, and "
+            f"{b['any_disagree']:.0%} of test tumours get a different "
+            f"diagnosis from at least one tree."),
         tags=["machine-learning", "data-science", "statistics",
               "decision-trees", "interpretability", "lectures"],
         author=se.SETTINGS.author,
@@ -296,7 +320,7 @@ def build() -> Post:
 
     post.add(
         "The case for trees",
-        f"""Arc II pushed linear models past their textbook conditions. Arc III does the same for trees and the ensembles built from them, and starts with the reason a single tree is chosen at all: it can be read. A depth-3 tree is at most eight rules a clinician could check by hand — *if the largest nuclei have a perimeter above about {b['threshold'][1]:.0f}, call it suspicious and look further down the tree* — and that readability is often the whole argument for using one instead of something more accurate.
+        f"""Arc II pushed linear models past their textbook conditions. Arc III does the same for trees and the ensembles built from them, and starts with the reason a single tree is chosen at all: it can be read. A depth-3 tree is at most eight rules a clinician could check by hand — *if the largest nuclei have a perimeter above about {cut:.0f}, call it suspicious and look further down the tree* — and that readability is often the whole argument for using one instead of something more accurate.
 
 Reading a tree as an account of the data assumes the tree is a property of the data. A different sample from the same population should give roughly the same tree. That is checkable: draw bootstrap resamples of the training rows, refit, and compare.
 
@@ -313,27 +337,27 @@ The accuracy is what a model-selection report would show, and it is steady: {acc
 
 {snip['cands'].markdown()}
 
-All five are within {1 - min(gains):.0%} of the best. That is not a coincidence of this dataset; they measure overlapping things. Perimeter, radius and area of the largest nuclei are almost deterministic functions of one another, and concavity tracks size in malignant cells. A resample that shifts a handful of borderline tumours is enough to change which one edges ahead.
+All five are within {1 - min(gains):.0%} of the best. That is not a coincidence of this dataset; they measure overlapping things. Perimeter, radius and area of the largest nuclei are almost deterministic functions of one another — across all 569 tumours worst perimeter correlates with worst radius and worst area at {r_size:.2f} or more — and concavity goes with size, less tightly: worst perimeter and worst concave points correlate at {r_conc:.2f}. With contenders that close, a resample that shifts a handful of borderline tumours can plausibly change which one edges ahead.
 
 The instability then propagates. Every split below the root is chosen on the rows the root sent down, so a different root means different subsets and a different contest at every node beneath. The threshold moves too: even when the root feature matches, its cut point ranges from {b['threshold'][0]:.0f} to {b['threshold'][2]:.0f} between the 5th and 95th percentiles of resamples.
 
 {snip['rows'].markdown()}
 
-The features used in the first three levels come out as a different set in {b['distinct_sets']} of {b['boots']} resamples. A reader who took any one of these trees as *the* structure of the data would be reading one draw from a wide distribution.""",
+The {b['boots']} resamples put {b['distinct_sets']} different sets of features in the first three levels. The most common set turns up only {b['modal_set_count']} times, and the full-data tree's own set — the one a reader would be shown — turns up {b['full_set_same']} times. A reader who took any one of these trees as *the* structure of the data would be reading one draw from a wide distribution.""",
         figures=[figs["f1"]])
 
     post.add(
         "Different rules, different diagnoses",
-        f"""Structure could move while predictions stayed put; two trees can encode the same decision with different rules. They do not. Any two of these trees disagree on {b['pair_disagreement']:.1%} of test tumours, about the size of their own error rate ({err:.1%}), and across all two hundred, **{b['any_disagree']:.0%} of tumours get a different diagnosis from at least one tree**.
+        f"""Structure could move while predictions stayed put; two trees can encode the same decision with different rules. They do not. Two of these trees disagree on {b['pair_disagreement']:.1%} of test tumours on average (over every pair among the first sixty), about the size of their own error rate ({err:.1%}), and across all two hundred, **{b['any_disagree']:.0%} of tumours get a different diagnosis from at least one tree**.
 
-Those tumours are not random. They are the ones near the boundary, where several rules of similar quality draw the line in slightly different places. That is also where a diagnosis matters most, and where a tree's printed path — "malignant because worst perimeter > {b['threshold'][1]:.0f}" — is least an account of the data and most an account of the sample.
+Those tumours are not random. They are the ones near the boundary, where several rules of similar quality draw the line in slightly different places. That is also where a diagnosis matters most, and where a tree's printed path — "malignant because worst perimeter > {cut:.0f}" — is least an account of the data and most an account of the sample.
 
 The accuracy hides all this because it is an average over tumours, most of which are easy. It is the same lesson as episode 1's error bar, one level down: the number is stable because it averages over exactly the cases where the model is not.""",
         figures=[figs["f2"]])
 
     post.add(
         "What does survive",
-        f"""Not everything moves. Every one of the {b['boots']} roots is one of {len(b['roots'])} features, and all of them describe either the size or the concavity of the largest, most irregular nuclei. A statement at that level — *the first thing that separates these tumours is how large and how irregular the worst nuclei are* — holds in every resample. A statement at the level of the printed tree — *worst perimeter, cut at {b['threshold'][1]:.0f}* — holds in about half.
+        f"""Not everything moves. Every one of the {b['boots']} roots is one of {len(b['roots'])} features, and all of them measure either the size or the concavity of the nuclei: {len(worst_roots)} describe the largest, most irregular nuclei, and the fifth, {mean_roots[0]}, the concavity averaged over all of them. A statement at that level — *the first thing that separates these tumours is how large and how concave their nuclei are* — holds in every resample. A statement at the level of the printed tree — *worst perimeter, cut at {cut:.0f}* — holds in about half as far as the feature goes, and less often to the unit, since the cut itself ranges from {b['threshold'][0]:.0f} to {b['threshold'][2]:.0f}.
 
 That suggests how to present a tree honestly. Report the set of features that compete for each of the top splits and how often each wins, not the single winner; quote thresholds as ranges across resamples; and say which statements about the data are stable and which are a property of one fit. It is more work than printing the tree, and it is what the tree's readability was supposed to buy in the first place: a claim about the data that a reader can check.
 
@@ -341,19 +365,19 @@ It also says what not to do. A tree is not evidence that its root feature is *th
 
     post.add(
         "Where this breaks",
-        """**Deeper trees are worse, not better.** Depth 3 is the readable case. Fully grown trees on this data have dozens of leaves, and every leaf below the top inherits the instability above it.
+        f"""**Deeper trees are unlikely to be better.** Depth 3 is the readable case. Grown without a depth limit, a tree on these 398 rows has {b['grown_leaves']} leaves and depth {b['grown_depth']}. Those were not refitted on the resamples here, but every split below the top is chosen on the rows the splits above it selected, so they can be expected to inherit the instability above them.
 
 **Some data have one dominant split.** When one feature separates the classes far better than any other, the root is stable and the instability starts further down. The size of the gap between the best and second-best split at the root is the thing to check, and on data with many correlated measurements it is usually small.
 
-**Bagging is the fix for prediction, not for reading.** Averaging these two hundred trees gives a forest whose predictions are stable, which was Breiman's point in 1996. It also gives up the single readable tree. Episodes 12 and 16 measure what is left of the reading once trees are averaged.
+**Bagging is the fix for prediction, not for reading.** Averaging many such trees should give predictions that move far less between resamples than any one tree's — Breiman's point in 1996, not measured here. It also gives up the single readable tree. Episodes 12 and 16 measure what is left of the reading once trees are averaged.
 
-**Unbiased split selection changes which features win, not how often.** Conditional inference trees choose the root by a significance test instead of a raw impurity decrease. That corrects a bias episode 12 measures, but with five near-equivalent candidates the resample still decides.""")
+**Unbiased split selection is unlikely to settle the contest.** Conditional inference trees choose the root by a significance test instead of a raw impurity decrease. That corrects a bias episode 12 measures, but with five candidates within {1 - min(gains):.0%} of one another the resample would still be expected to decide; conditional inference trees were not fitted here.""")
 
     post.add(
         "What to keep",
         f"""1. Two hundred bootstrap refits of a depth-3 tree scored {acc.mean():.3f} ± {acc.std():.3f}: the accuracy is a property of the data.
 
-2. The root feature matched the full-data tree's in {b['root_same']:.0%} of them, and the top three levels used a different feature set in {b['distinct_sets']} of {b['boots']}: the structure is a property of the sample.
+2. The root feature matched the full-data tree's in {b['root_same']:.0%} of them, and the top three levels came out as {b['distinct_sets']} different feature sets in {b['boots']} resamples, none of them the full-data tree's: the structure is a property of the sample.
 
 3. The root moves because the candidates are close. Here the best five splits were within {1 - min(gains):.0%} of one another.
 

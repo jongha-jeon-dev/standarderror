@@ -2,7 +2,7 @@
 
 The third episode of *Machine Learning, Taught Through What Breaks*. "Fit
 every preprocessing step inside the cross-validation folds" is right, and is
-usually taught as if every violation were equally bad. Six violations,
+usually taught as if every violation were equally bad. Seven violations,
 measured against their honest versions, range from nothing to a third of
 the accuracy scale.
 
@@ -15,7 +15,7 @@ Measured:
   to choose.
 * Selecting 5 of 1,030 features on the real breast-cancer data, also on all
   rows: no leak, because the real features win the selection anyway.
-* Target-encoding a 200-level noise column on all rows: +2.3 points.
+* Target-encoding a 200-level noise column on all rows: +2.4 points.
 * Duplicated rows straddling folds: +0.9 points for logistic regression,
   +3.7 for 1-NN.
 
@@ -310,7 +310,7 @@ def build() -> Post:
         "One rule, taught as one rule",
         f"""Episode 2 ended on what cross-validation estimates. This one is about the most common way to make it estimate something else. Every course teaches the rule: anything fitted to data — a scaler, an imputer, a feature selector, an encoder — must be fitted inside each training fold and applied to the held-out fold, never fitted on all the rows first. Violations are called leakage, and Kapoor and Narayanan found them in hundreds of published papers across seventeen fields.
 
-The rule is right. What the usual teaching leaves out is that violations differ in size by orders of magnitude, and the size is predictable. That matters in practice, because the expensive question is never "did we leak?" but "how much of the reported number is leak?"
+The rule is right. What the usual teaching leaves out is that violations differ in size by orders of magnitude, and that the size can be reasoned about from what the step does. That matters in practice, because the expensive question is never "did we leak?" but "how much of the reported number is leak?"
 
 So here are seven violations, each measured against its honest version on the same folds. Start with the famous one. A hundred rows, 5,000 features of pure noise, labels from a fair coin. Pick the 20 features most associated with the label, then cross-validate logistic regression on them.
 
@@ -333,7 +333,7 @@ The leak is exactly zero with 20 candidates — there is nothing to choose — a
 
 {snip['table'].markdown()}
 
-**Standardising and imputing on all rows leak nothing measurable**: {std['gap'] * 100:+.2f} and {imp['gap'] * 100:+.2f} points. Neither looks at the label, and a mean and a standard deviation estimated from 569 rows instead of 455 differ by too little to move a decision boundary. These are the violations most often flagged in code review, and they are the least consequential.
+**Standardising and imputing on all rows leak nothing measurable**: {std['gap'] * 100:+.2f} and {imp['gap'] * 100:+.2f} points. Neither looks at the label, and a mean and a standard deviation estimated from 569 rows instead of 455 differ by too little to move a decision boundary. They are also the easiest to spot by reading the code, and here they were the least consequential.
 
 **Selecting features on all rows leaked nothing either** — {sel['gap'] * 100:+.2f} points — even though the selection looked at every label and chose 5 of 1,030 columns, 1,000 of them pure noise. The real features are so much stronger than any noise column's chance alignment that the selection picks them whether or not it sees the held-out labels. The noise experiment above leaked because there was nothing real to find. Using the label is necessary for this kind of leak and not sufficient: what leaks is the room to fit chance.
 

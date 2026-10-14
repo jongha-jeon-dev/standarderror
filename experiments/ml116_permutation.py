@@ -5,10 +5,11 @@ opening Arc IV. "Permutation importance measures how much a model needs a
 feature." Measured on the diabetes data with a random forest:
 
 * Shuffling bmi costs 0.168 of test R^2. Refitting without bmi costs 0.043:
-  the forest relies on bmi, but the data can do most of its work without it.
+  the forest relies on bmi, but a forest refitted without it loses about a
+  quarter as much (on average over three splits that differ widely).
 * Add an exact copy of bmi and its permutation importance falls to 0.017,
   the copy's is 0.021, and their sum is a quarter of what bmi had alone.
-  Dropping either one costs nothing.
+  Dropping bmi and keeping the copy costs nothing.
 * A permutation invents rows. Shuffle s1, which is correlated 0.90 with s2,
   and 29% of the shuffled rows fall outside the region that holds 99% of the
   real (s1, s2) pairs.
@@ -88,8 +89,9 @@ def figures(res: dict) -> dict:
              "as much as refitting without bmi did alone."),
         caption=(f"Alone, shuffling bmi costs **{base['feature']:.3f}** and "
                  f"refitting without it {base['drop_feature']:.3f}. With an "
-                 f"exact copy, shuffling either costs about 0.02, and only "
-                 f"removing both costs anything ({ex['drop_both']:.3f})."),
+                 f"exact copy, shuffling either costs about 0.02; removing "
+                 f"bmi and keeping the copy costs nothing, and removing both "
+                 f"costs {ex['drop_both']:.3f}."),
         path=str(IMG / f"ml116-f0-copies.{EXT}"))[0]
 
     off = res["off"]
@@ -224,6 +226,10 @@ def build() -> Post:
     assert max(r["drop_feature"] for r in cp[1:]) < 0.01
     assert all(abs(r["drop_both"] - base["drop_feature"]) < 0.01 for r in cp)
     assert c8["feature"] > c95["feature"] > ex["feature"]
+    # at 0.8 the copy gets nothing; at 0.95 a little, the original still dominant
+    assert abs(c8["copy"]) < 0.005 and c8["copy"] < c95["copy"] < 0.2 * c95["feature"]
+    assert 0.4 < base["feature"] / base["r2"] < 0.6     # shuffling bmi halves R^2
+    assert abs(ex["feature"] - ex["copy"]) < 0.5 * (ex["feature"] + ex["copy"])
     assert off["outside"] > 20 * off["expected"] and off["corr"] > 0.85
     assert all(r["permute"] > r["drop"] for r in sp)
     assert max(r["drop"] for r in sp) - min(r["drop"] for r in sp) > 0.1
@@ -249,7 +255,7 @@ def build() -> Post:
             f"Add an exact copy of bmi and the permutation importances are "
             f"{ex['feature']:.3f} for bmi and {ex['copy']:.3f} for the copy "
             f"— together a quarter of what bmi had alone — while dropping "
-            f"either costs nothing and dropping both costs "
+            f"bmi and keeping the copy costs nothing and dropping both costs "
             f"{ex['drop_both']:.3f}, as before. Shuffling s1, correlated "
             f"{off['corr']:.2f} with s2, puts {off['outside']:.0%} of rows "
             f"outside the region that holds 99% of real (s1, s2) pairs."),
@@ -290,20 +296,20 @@ def build() -> Post:
 
 That is often described as "how much the model needs the feature". There are at least three different questions hiding in that phrase. How much does *this fitted model* lean on the column? How much would *a model refitted without it* lose? How much *information* does the column carry that nothing else does? Permutation importance answers only the first, and it answers it on rows the shuffle invented.
 
-The diabetes data and a random forest show the gap. bmi is one of its two strongest predictors. Add a second column that copies bmi with a chosen correlation, and measure four things:
+The diabetes data and a random forest show the gap. bmi matters to this forest: shuffling it, as the first row below shows, removes about half of its test R² of {base['r2']:.2f}. Add a second column that copies bmi with a chosen correlation, and measure four things:
 
 {snip['copy'].markdown()}
 
-Start with the first row, no copy. Shuffling bmi costs **{base['feature']:.3f}** of test R². Refitting the forest without bmi costs {base['drop_feature']:.3f}, {ratio:.0f} times less. Both are correct; they measure different things. The fitted forest has organised itself around bmi and is badly hurt when bmi is scrambled. A forest grown without bmi finds most of the same information in s5, bp and the other measurements, and loses only a little.""",
+Start with the first row, no copy. Shuffling bmi costs **{base['feature']:.3f}** of test R². Refitting the forest without bmi costs {base['drop_feature']:.3f}, {ratio:.0f} times less. Both are correct; they measure different things. The fitted forest has organised itself around bmi and is badly hurt when bmi is scrambled. A forest grown without bmi loses only a little — presumably because it finds much of the same information in the other measurements, though which ones carry it was not measured here.""",
         figures=[figs["f0"]])
 
     post.add(
         "A copy hides the original",
-        f"""Now add the copy. With an exact duplicate, the forest splits on whichever of the two it happens to pick at each node, and its reliance is divided between them. Shuffle one and the trees that used the other still work. Permutation importance falls to {ex['feature']:.3f} for bmi and {ex['copy']:.3f} for its copy. Their sum, {ex['feature'] + ex['copy']:.3f}, is a quarter of what bmi had alone: permutation importance is not even additive over copies.
+        f"""Now add the copy. With an exact duplicate, the two columns offer identical splits, so which one a node uses comes down to tie-breaking, and the forest's reliance is presumably divided between them. Shuffle one and the splits on the other still work. Permutation importance falls to {ex['feature']:.3f} for bmi and {ex['copy']:.3f} for its copy. Their sum, {ex['feature'] + ex['copy']:.3f}, is a quarter of what bmi had alone: permutation importance is not even additive over copies.
 
-Refitting tells the same story differently. Remove bmi and keep its copy, and nothing is lost ({ex['drop_feature']:.3f}). Remove both and the loss is {ex['drop_both']:.3f}, the same as removing bmi when there was no copy. That last column is stable across every row of the table — the information bmi carries is worth about {base['drop_feature']:.2f} of R² however it is presented — while the permutation numbers move by a factor of ten.
+Refitting tells the same story differently. Remove bmi and keep its copy, and nothing is lost ({ex['drop_feature']:.3f}). Remove both and the loss is {ex['drop_both']:.3f}, the same as removing bmi when there was no copy. That last column is stable across every row of the table — averaged over the same three splits, the information bmi carries is worth about {base['drop_feature']:.2f} of R² however it is presented — while the permutation numbers move by a factor of ten.
 
-Real tables are full of near-copies: total cholesterol and LDL, height and weight, a price and the same price in another currency, a date and the age computed from it. Every such pair splits its permutation importance between its members and pushes both down a ranking. Episode 12's breast-cancer run already showed it: of 32 features, several real measurements had permutation importance at or below zero.""",
+Real tables are full of near-copies: total cholesterol and LDL, height and weight, a price and the same price in another currency, a date and the age computed from it. A pair close enough can split its permutation importance between its members and push both down a ranking. How close is close enough is in the table: at a correlation of 0.8 the forest still leaned almost entirely on the original, and the copy's importance was {c8['copy']:+.3f}; at 0.95 the copy took {c95['copy']:.3f} against bmi's {c95['feature']:.3f}; only the exact copy split it evenly. Episode 12's breast-cancer run had three real measurements with permutation importance at or below zero, which is what this effect would produce, though that run did not check the cause.""",
         figures=[figs["f2"]])
 
     post.add(
@@ -321,7 +327,7 @@ So part of what permutation importance measures is how badly the model extrapola
         "Asking a better question",
         f"""If permutation importance answers the narrowest of the three questions, the fix is to ask a wider one deliberately, and the table already contains the answer to it. Removing bmi and its copy together and refitting cost {ex['drop_both']:.3f} of R², within a hundredth of the {base['drop_feature']:.3f} that removing bmi cost when it had no copy. Measured as a group, the information is stable: duplicated, nearly duplicated or alone, it is worth the same.
 
-That suggests a working procedure. Cluster the features by correlation first — a simple threshold on the absolute correlation is enough to start. Report importance for each cluster, by permuting all its members together or by refitting without the whole cluster. Within a cluster, say which member the model happened to lean on, and say that a different fit could lean on another. Permuting a whole cluster also leaves fewer impossible rows behind, since its members move together and keep their relationship to one another; what is broken is only their relationship to everything else.
+That suggests a working procedure. Cluster the features by correlation first — a simple threshold on the absolute correlation is enough to start. Report importance for each cluster, by permuting all its members together or by refitting without the whole cluster. Within a cluster, say which member the model happened to lean on, and say that a different fit could lean on another. Permuting a whole cluster should also leave fewer impossible rows behind, since its members move together and keep their relationship to one another; what is broken is only their relationship to everything else. That was not measured here.
 
 None of this makes importance a causal statement. A group of features that predicts well may be a proxy for something else entirely, as episode 19 will show with a single pixel. It does make the ranking a property of the information in the data rather than of which column the forest's random splits happened to favour.""")
 
@@ -331,9 +337,9 @@ None of this makes importance a causal statement. A group of features that predi
 
 **R² on 133 test patients is noisy.** The numbers are averages of three splits, and single splits differ a lot: test R² ranged from {min(r['r2'] for r in sp):.2f} to {max(r['r2'] for r in sp):.2f}, and the loss from refitting without bmi from {min(r['drop'] for r in sp):+.2f} to {max(r['drop'] for r in sp):+.2f}. The direction held in every split — permuting bmi always cost more than refitting without it — but the size of the drop-column numbers, here and in the table, is uncertain to about a tenth of R².
 
-**Other models distribute reliance differently.** A linear model with an exact copy has no unique coefficients at all; a lasso picks one of the two (episode 8). Permutation importance inherits whatever the fitting procedure did.
+**Other models distribute reliance differently.** A linear model with an exact copy has no unique coefficients at all, and neither does a lasso: any split of the coefficient between the two columns with the same sign has the same penalty, so the answer depends on the solver. With near-copies, episode 8 found the lasso's choice between the two varying from fit to fit. Permutation importance inherits whatever the fitting procedure did.
 
-**A copy is the extreme case.** At correlation 0.8 the forest still prefers the original and the copy's permutation importance is near zero; at 0.95 they share. Most real pairs sit somewhere in between, and so does the distortion.""")
+**A copy is the extreme case.** At correlation 0.8 the forest still prefers the original and the copy's permutation importance is near zero; at 0.95 the copy starts to take a share, and the original still dominates. Most real pairs sit somewhere in between, and so does the distortion.""")
 
     post.add(
         "What to keep",
@@ -341,7 +347,7 @@ None of this makes importance a causal statement. A group of features that predi
 
 2. On diabetes, shuffling bmi cost {base['feature']:.3f} of R²; refitting without it cost {base['drop_feature']:.3f}.
 
-3. With an exact copy, the two columns' permutation importances summed to {ex['feature'] + ex['copy']:.3f}, a quarter of bmi's alone. Correlated features hide each other.
+3. With an exact copy, the two columns' permutation importances summed to {ex['feature'] + ex['copy']:.3f}, a quarter of bmi's alone. Exact copies hide each other; at a correlation of 0.8 the effect had not yet appeared.
 
 4. Shuffling a correlated feature invents rows: {off['outside']:.0%} of shuffled (s1, s2) pairs lay outside the 99% region of real ones.
 

@@ -3,7 +3,7 @@ title: "ML 15: A Forest Cannot Predict Beyond the Largest Value It Has Seen"
 date: 2026-10-12
 slug: "ml-15-extrapolation"
 draft: false
-description: "Tree ensembles are said to approximate any function. Inside the training range they do; outside it their predictions stop at the largest label they saw, and the best model becomes the worst."
+description: "Tree ensembles are said to approximate any function. Inside the training range they do; outside it their predictions go flat, below the largest label they saw, and the best single model becomes the worst."
 author: "Jongha Jeon"
 tags: ["machine-learning", "data-science", "statistics", "random-forest", "extrapolation", "lectures"]
 series: ["Machine Learning, Taught Through What Breaks"]
@@ -13,7 +13,7 @@ images: ["ml115-hero.png"]
 
 Disclosure: this post was written with the assistance of an AI system (Claude), which wrote the analysis code, ran the experiments and drafted the text. The topic, the constraints, the data choices and the final review are the author's.
 
-*Trained on x between 0 and 1 with y rising as 2x, a random forest has test error 0.12 inside the range, against 0.51 for linear regression, and 2.71 between 1.5 and 2 — 22 times worse — because it never predicts above 2.87. Histogram boosting does the same. Fitting the trend linearly and a forest to the residuals gives 0.11 inside and 0.12 beyond. On the diabetes data a forest beats linear regression on a random split and loses to it by 40% on the highest-bmi patients when trained without them.*
+*Trained on x between 0 and 1 with y rising as 2x, a random forest has test error 0.12 inside the range, against 0.51 for linear regression, and 2.71 between 1.5 and 2 — 22 times worse — because past x = 1 it never predicts above 2.87. Histogram boosting does the same. Fitting the trend linearly and a forest to the residuals gives 0.11 inside and 0.12 beyond. On the diabetes data a forest edges linear regression on a random split and loses to it by 40% on the highest-bmi patients when trained without them.*
 
 Episode 15 of *Machine Learning, Taught Through What Breaks*. The syllabus and the other episodes: https://jongha-jeon-dev.github.io/standarderror/lectures/
 
@@ -42,25 +42,33 @@ x in [1.25, 1.50]  forest 0.841  boosting 0.798  linear 0.508  trend + forest 0.
 x in [1.50, 2.00]  forest 2.713  boosting 2.625  linear 0.508  trend + forest 0.119
 ```
 
-Inside the range the trees are the best models measured: 0.122 for the forest and 0.123 for boosting, against 0.508 for a linear regression that cannot represent the sine term. In the first band past the edge the forest's error is already 2.2 times larger. Between 1.5 and 2 it is **2.71, 22 times its error inside**, and the linear model, unchanged at 0.508, is 5.3 times better.
+Inside the range the trees are the best of the single models, second only to a hybrid that appears below: 0.122 for the forest and 0.123 for boosting, against 0.508 for a linear regression that cannot represent the sine term. In the first band past the edge the forest's error is already 2.2 times larger. Between 1.5 and 2 it is **2.71, 22 times its error inside**, and the linear model, unchanged at 0.508, is 5.3 times better.
 
 ![A dashed rising line for the truth; the forest and boosting curves follow it to x = 1 and then run flat; the linear and trend-plus-forest curves keep rising with it.](ml115-f0-curves.png)
 
-*The forest never predicts above 2.87; the training labels peaked at 3.58. At x between 1.5 and 2 the truth averages 3.51.*
+*Past x = 1 the forest never predicts above 2.87; inside the range its largest prediction is 3.07, and the training labels peaked at 3.58. At x between 1.5 and 2 the truth averages 3.51.*
 
 ## A ceiling, not a mistake
 
 The figure makes the mechanism plain. Along x, the forest and the boosted trees follow the trend to the edge of the training data and then run flat:
 
 ```python
-print(f"largest training label {ex['train_y_max']:.2f}; "
-      f"largest forest prediction at x in [1.5, 2]: "
-      f"{ex['rows'][-1]['forest_max']:.2f}")
+print(f"largest training label {ex['train_y_max']:.2f}")
+for r in ex["rows"]:
+    lo, hi = r["band"]
+    print(f"largest forest prediction at x in [{lo:4.2f}, {hi:4.2f}]: "
+          f"{r['forest_max']:.2f}")
 ```
 
 ```text
-largest training label 3.58; largest forest prediction at x in [1.5, 2]: 2.87
+largest training label 3.58
+largest forest prediction at x in [0.00, 1.00]: 3.07
+largest forest prediction at x in [1.00, 1.25]: 2.87
+largest forest prediction at x in [1.25, 1.50]: 2.87
+largest forest prediction at x in [1.50, 2.00]: 2.87
 ```
+
+Past the edge the forest's largest prediction is 2.87 in every band, the same number whether x is 1.1 or 1.9 — below both the largest training label, 3.58, and the forest's own largest prediction inside the range, 3.07. The ceiling that binds is lower than the one the averaging argument guarantees.
 
 Nothing went wrong in fitting. Every split threshold on x lies inside [0, 1], so every test row with x above 1 falls into the same leaves as the training rows with the largest x, and gets their average. The model has no representation of "and it keeps rising"; it has a step function that ends.
 
@@ -89,13 +97,13 @@ random forest MSE 3,158 (mean error -11.4)  linear MSE 3,371 (mean error -12.6)
 beyond forest MSE 5,136 (mean error -33.7)  linear MSE 3,660 (mean error -18.3)
 ```
 
-On the random split the forest wins, 3,158 against 3,371. On the high-bmi patients it loses by **40%**, and its errors lean one way: it under-predicts their disease progression by 34 on average, against 18 for the linear model. The relationship between bmi and progression keeps rising past the training range, and the forest, as on the simulation, stops.
+On the random split the forest comes out ahead, 3,158 against 3,371 — a gap of 7% on 45 patients, which one split cannot distinguish from a tie. On the high-bmi patients it loses by **40%**, and its errors lean one way: it under-predicts their disease progression by 34 on average, against 18 for the linear model. The likely reading, by analogy with the simulation, is that progression keeps rising with bmi past the training range and the forest stops; the linear model under-predicts too, so the outcome on these patients is also higher than either model's account of it.
 
-The effect is much smaller than in the simulation, because bmi is one of ten inputs and the outcome is noisy. That is the realistic version: not a dramatic failure but a quiet, systematic bias on exactly the cases at the edge — the heaviest patients, the largest loans, the newest dates — that are often the ones a model is deployed to judge.
+The effect is much smaller than in the simulation — plausibly because bmi is one of ten inputs and the outcome is noisy, though neither was varied here. That is the realistic version: not a dramatic failure but a quiet, systematic bias on exactly the cases at the edge — the heaviest patients, the largest loans, the newest dates — that are often the ones a model is deployed to judge.
 
 ![A four-row table: on a random split the forest has the lower error; on the highest-bmi patients the linear model does, and the forest under-predicts by more.](ml115-f2-table.png)
 
-*The forest wins the random split and loses the extrapolation, and its misses on the high-bmi patients are systematically low.*
+*The forest edges the random split, within the noise of 45 patients, and clearly loses the extrapolation; its misses on the high-bmi patients are systematically low.*
 
 ## How to see it coming
 
@@ -103,9 +111,9 @@ The ceiling is easy to detect before it costs anything, because it is a property
 
 Compare each input's range in the data the model will score with its range in the training data. A row whose value of x is beyond the largest training value is a row the trees will treat as if it sat at the edge. In the simulation, every row in the last band is such a row.
 
-Compare the model's predictions with the training labels. A forest's predictions are confined to the label range by construction; if the outcome you expect is outside it — next year's sales, a larger loan, an older patient — the model cannot produce it, and its predictions will pile up just under the old maximum. Here they stop at 2.87, under a training maximum of 3.58.
+Compare the model's predictions with the training labels. A forest's predictions are confined to the label range by construction; if the outcome you expect is outside it — next year's sales, a larger loan, an older patient — the model cannot produce it, and its predictions will pile up below the old maximum. Here, past the edge, they stop at 2.87, under a training maximum of 3.58.
 
-Score the model on a split by the drifting variable, not only a random one. The diabetes table is that check: the random split rated the forest the better model; the split by bmi reversed the ranking.
+Score the model on a split by the drifting variable, not only a random one. The diabetes table is that check: the random split put the forest slightly ahead; the split by bmi reversed the ranking by a wide margin.
 
 ## Where this breaks
 
@@ -119,13 +127,13 @@ Score the model on a split by the drifting variable, not only a random one. The 
 
 ## What to keep
 
-1. A tree's prediction is an average of training labels, so a forest cannot predict beyond the range of the labels it saw. This forest's ceiling was 2.87.
+1. A tree's prediction is an average of training labels, so a forest cannot predict beyond the range of the labels it saw. Past the edge of its training range this forest went flat at 2.87, under a largest label of 3.58.
 
-2. Inside the training range the trees were the best models measured (0.12 against 0.51 for linear); between 1.5 and 2 the forest's error was 22 times larger.
+2. Inside the training range the trees were the best single models (0.12 against 0.51 for linear); between 1.5 and 2 the forest's error was 22 times larger.
 
 3. Fitting the trend first and the forest to the residuals was best everywhere: 0.11 inside, 0.12 beyond.
 
-4. On diabetes, a forest that won a random split lost by 40% on the highest-bmi patients and under-predicted them systematically.
+4. On diabetes, a forest that edged a random split lost by 40% on the highest-bmi patients and under-predicted them systematically.
 
 5. Before deploying a tree ensemble, check where its inputs will fall relative to the training data — especially any input that drifts, such as time.
 

@@ -6,15 +6,15 @@ range of the training data, yes. Measured on a simulated trend and on the
 diabetes data:
 
 * Trained on x in [0, 1] with y rising as 2x, a random forest and histogram
-  boosting are the best models inside the range (test MSE 0.12, against 0.51
-  for linear regression) and the worst beyond it: at x in [1.5, 2] their
-  error is 22 times larger, because their predictions stop at the largest y
-  they saw.
+  boosting are the best single models inside the range (test MSE 0.12,
+  against 0.51 for linear regression) and the worst beyond it: at x in
+  [1.5, 2] the forest's error is 22 times larger, because past x = 1 its
+  predictions go flat, at 2.87, below the largest y it saw (3.58).
 * Fitting the trend linearly and the forest to the residuals is best
   everywhere: 0.11 inside and 0.12 beyond.
-* On the diabetes data, a forest beats linear regression on a random split
-  and loses to it by 40% on the patients with the highest bmi when trained
-  without them.
+* On the diabetes data, a forest edges linear regression on a random split
+  (within noise) and loses to it by 40% on the patients with the highest bmi
+  when trained without them.
 
 Run: `standarderror run ml115_extrapolation --publish`
 """
@@ -67,7 +67,7 @@ def figures(res: dict) -> dict:
         ax.set_ylim(-0.5, 4.6)
         ax.legend(frameon=False, fontsize=8.5, loc="upper left")
 
-    last = ex["rows"][-1]
+    last, first = ex["rows"][-1], ex["rows"][0]
     out["f0"] = charts.diagram(
         curves,
         title="Past the training range, the trees go flat",
@@ -80,10 +80,11 @@ def figures(res: dict) -> dict:
         alt=("A dashed rising line for the truth; the forest and boosting "
              "curves follow it to x = 1 and then run flat; the linear and "
              "trend-plus-forest curves keep rising with it."),
-        caption=(f"The forest never predicts above "
-                 f"{last['forest_max']:.2f}; the training labels peaked at "
-                 f"{ex['train_y_max']:.2f}. At x between 1.5 and 2 the truth "
-                 f"averages {last['truth_mean']:.2f}."),
+        caption=(f"Past x = 1 the forest never predicts above "
+                 f"{last['forest_max']:.2f}; inside the range its largest "
+                 f"prediction is {first['forest_max']:.2f}, and the training "
+                 f"labels peaked at {ex['train_y_max']:.2f}. At x between 1.5 "
+                 f"and 2 the truth averages {last['truth_mean']:.2f}."),
         path=str(IMG / f"ml115-f0-curves.{EXT}"))[0]
 
     def bands(ax, m):
@@ -137,9 +138,9 @@ def figures(res: dict) -> dict:
         alt=("A four-row table: on a random split the forest has the lower "
              "error; on the highest-bmi patients the linear model does, and "
              "the forest under-predicts by more."),
-        caption=("The forest wins the random split and loses the "
-                 "extrapolation, and its misses on the high-bmi patients are "
-                 "systematically low."),
+        caption=("The forest edges the random split, within the noise of 45 "
+                 "patients, and clearly loses the extrapolation; its misses "
+                 "on the high-bmi patients are systematically low."),
         bold_cells={(0, 2), (3, 2)},
         align="llrr",
         path=str(IMG / f"ml115-f2-table.{EXT}"))[0]
@@ -168,13 +169,14 @@ def _hero(res: dict):
     return charts.lecture_hero(
         series=SERIES_TAG, episode=15,
         headline="Trees answer only within what they have seen",
-        panels=[(flat, f"{last['forest_max']:.2f}", "forest's ceiling"),
+        panels=[(flat, f"{last['forest_max']:.2f}", "forest's ceiling past 1"),
                 (ratio, f"{last['forest'] / first['forest']:.0f}x",
                  "error beyond the range"),
                 (hyb, f"{last['trend + forest']:.2f}", "trend + forest error")],
         note=("A forest predicts averages of training labels, so it cannot "
-              "go above the largest one it saw. Inside its range it beats a "
-              "linear model; past it, it is the worst model measured. "
+              "go above the largest one it saw, and past its training range "
+              "it goes flat. Inside its range it beats a linear model; past "
+              "it, it is the worst model measured. "
               "Fitting the trend first and the trees to what is left fixes "
               "both."),
         alt=("Three hand-drawn frames: a rising dashed line with a solid "
@@ -200,9 +202,11 @@ def _snippets(res: dict) -> dict:
                 ("forest", "boosting", "linear", "trend + forest")))
         """)
     out["ceiling"] = s.run("""
-        print(f"largest training label {ex['train_y_max']:.2f}; "
-              f"largest forest prediction at x in [1.5, 2]: "
-              f"{ex['rows'][-1]['forest_max']:.2f}")
+        print(f"largest training label {ex['train_y_max']:.2f}")
+        for r in ex["rows"]:
+            lo, hi = r["band"]
+            print(f"largest forest prediction at x in [{lo:4.2f}, {hi:4.2f}]: "
+                  f"{r['forest_max']:.2f}")
         """)
     out["diab"] = s.run("""
         d = tr.diabetes_extrapolation(quantile=0.9)
@@ -236,7 +240,13 @@ def build() -> Post:
                zip(ex["rows"], ex["rows"][1:]))
     assert max(r["trend + forest"] for r in ex["rows"]) < first["forest"] + 0.01
     assert last["forest_max"] <= ex["train_y_max"] + 1e-9
-    assert dr["forest"]["mse"] < dr["linear"]["mse"]
+    # the hybrid beats the trees even inside the range; the trees beat linear
+    assert first["trend + forest"] < min(first["forest"], first["boosting"])
+    # past x = 1 the forest is flat, below its own maximum inside the range
+    assert all(abs(r["forest_max"] - last["forest_max"]) < 0.01
+               for r in ex["rows"][1:])
+    assert last["forest_max"] < first["forest_max"] <= ex["train_y_max"] + 1e-9
+    assert dr["forest"]["mse"] < dr["linear"]["mse"] < 1.15 * dr["forest"]["mse"]
     assert db["forest"]["mse"] > 1.3 * db["linear"]["mse"]
     assert db["forest"]["bias"] < db["linear"]["bias"] < 0
 
@@ -252,18 +262,19 @@ def build() -> Post:
         requires_baseline=False,
         subtitle=("Tree ensembles are said to approximate any function. "
                   "Inside the training range they do; outside it their "
-                  "predictions stop at the largest label they saw, and the "
-                  "best model becomes the worst."),
+                  "predictions go flat, below the largest label they saw, "
+                  "and the best single model becomes the worst."),
         summary=(
             f"Trained on x between 0 and 1 with y rising as 2x, a random "
             f"forest has test error {first['forest']:.2f} inside the range, "
             f"against {first['linear']:.2f} for linear regression, and "
             f"{last['forest']:.2f} between 1.5 and 2 — {ratio:.0f} times "
-            f"worse — because it never predicts above {last['forest_max']:.2f}."
-            f" Histogram boosting does the same. Fitting the trend linearly "
-            f"and a forest to the residuals gives {first['trend + forest']:.2f}"
+            f"worse — because past x = 1 it never predicts above "
+            f"{last['forest_max']:.2f}. Histogram boosting does the same. "
+            f"Fitting the trend linearly and a forest to the residuals gives "
+            f"{first['trend + forest']:.2f}"
             f" inside and {last['trend + forest']:.2f} beyond. On the "
-            f"diabetes data a forest beats linear regression on a random "
+            f"diabetes data a forest edges linear regression on a random "
             f"split and loses to it by {loss:.0%} on the highest-bmi "
             f"patients when trained without them."),
         tags=["machine-learning", "data-science", "statistics",
@@ -307,7 +318,7 @@ Inside the region the training data cover, that costs nothing. Outside it, it is
 
 {snip['bands'].markdown()}
 
-Inside the range the trees are the best models measured: {first['forest']:.3f} for the forest and {first['boosting']:.3f} for boosting, against {first['linear']:.3f} for a linear regression that cannot represent the sine term. In the first band past the edge the forest's error is already {ex['rows'][1]['forest'] / first['forest']:.1f} times larger. Between 1.5 and 2 it is **{last['forest']:.2f}, {ratio:.0f} times its error inside**, and the linear model, unchanged at {last['linear']:.3f}, is {last['forest'] / last['linear']:.1f} times better.""",
+Inside the range the trees are the best of the single models, second only to a hybrid that appears below: {first['forest']:.3f} for the forest and {first['boosting']:.3f} for boosting, against {first['linear']:.3f} for a linear regression that cannot represent the sine term. In the first band past the edge the forest's error is already {ex['rows'][1]['forest'] / first['forest']:.1f} times larger. Between 1.5 and 2 it is **{last['forest']:.2f}, {ratio:.0f} times its error inside**, and the linear model, unchanged at {last['linear']:.3f}, is {last['forest'] / last['linear']:.1f} times better.""",
         figures=[figs["f0"]])
 
     post.add(
@@ -315,6 +326,8 @@ Inside the range the trees are the best models measured: {first['forest']:.3f} f
         f"""The figure makes the mechanism plain. Along x, the forest and the boosted trees follow the trend to the edge of the training data and then run flat:
 
 {snip['ceiling'].markdown()}
+
+Past the edge the forest's largest prediction is {last['forest_max']:.2f} in every band, the same number whether x is 1.1 or 1.9 — below both the largest training label, {ex['train_y_max']:.2f}, and the forest's own largest prediction inside the range, {first['forest_max']:.2f}. The ceiling that binds is lower than the one the averaging argument guarantees.
 
 Nothing went wrong in fitting. Every split threshold on x lies inside [0, 1], so every test row with x above 1 falls into the same leaves as the training rows with the largest x, and gets their average. The model has no representation of "and it keeps rising"; it has a step function that ends.
 
@@ -329,9 +342,9 @@ The fix keeps the trees' strengths and removes the ceiling: fit the trend with a
 
 {snip['diab'].markdown()}
 
-On the random split the forest wins, {dr['forest']['mse']:,.0f} against {dr['linear']['mse']:,.0f}. On the high-bmi patients it loses by **{loss:.0%}**, and its errors lean one way: it under-predicts their disease progression by {-db['forest']['bias']:.0f} on average, against {-db['linear']['bias']:.0f} for the linear model. The relationship between bmi and progression keeps rising past the training range, and the forest, as on the simulation, stops.
+On the random split the forest comes out ahead, {dr['forest']['mse']:,.0f} against {dr['linear']['mse']:,.0f} — a gap of {dr['linear']['mse'] / dr['forest']['mse'] - 1:.0%} on {d['test_rows']} patients, which one split cannot distinguish from a tie. On the high-bmi patients it loses by **{loss:.0%}**, and its errors lean one way: it under-predicts their disease progression by {-db['forest']['bias']:.0f} on average, against {-db['linear']['bias']:.0f} for the linear model. The likely reading, by analogy with the simulation, is that progression keeps rising with bmi past the training range and the forest stops; the linear model under-predicts too, so the outcome on these patients is also higher than either model's account of it.
 
-The effect is much smaller than in the simulation, because bmi is one of ten inputs and the outcome is noisy. That is the realistic version: not a dramatic failure but a quiet, systematic bias on exactly the cases at the edge — the heaviest patients, the largest loans, the newest dates — that are often the ones a model is deployed to judge.""",
+The effect is much smaller than in the simulation — plausibly because bmi is one of ten inputs and the outcome is noisy, though neither was varied here. That is the realistic version: not a dramatic failure but a quiet, systematic bias on exactly the cases at the edge — the heaviest patients, the largest loans, the newest dates — that are often the ones a model is deployed to judge.""",
         figures=[figs["f2"]])
 
     post.add(
@@ -340,9 +353,9 @@ The effect is much smaller than in the simulation, because bmi is one of ten inp
 
 Compare each input's range in the data the model will score with its range in the training data. A row whose value of x is beyond the largest training value is a row the trees will treat as if it sat at the edge. In the simulation, every row in the last band is such a row.
 
-Compare the model's predictions with the training labels. A forest's predictions are confined to the label range by construction; if the outcome you expect is outside it — next year's sales, a larger loan, an older patient — the model cannot produce it, and its predictions will pile up just under the old maximum. Here they stop at {last['forest_max']:.2f}, under a training maximum of {ex['train_y_max']:.2f}.
+Compare the model's predictions with the training labels. A forest's predictions are confined to the label range by construction; if the outcome you expect is outside it — next year's sales, a larger loan, an older patient — the model cannot produce it, and its predictions will pile up below the old maximum. Here, past the edge, they stop at {last['forest_max']:.2f}, under a training maximum of {ex['train_y_max']:.2f}.
 
-Score the model on a split by the drifting variable, not only a random one. The diabetes table is that check: the random split rated the forest the better model; the split by bmi reversed the ranking.""")
+Score the model on a split by the drifting variable, not only a random one. The diabetes table is that check: the random split put the forest slightly ahead; the split by bmi reversed the ranking by a wide margin.""")
 
     post.add(
         "Where this breaks",
@@ -356,13 +369,13 @@ Score the model on a split by the drifting variable, not only a random one. The 
 
     post.add(
         "What to keep",
-        f"""1. A tree's prediction is an average of training labels, so a forest cannot predict beyond the range of the labels it saw. This forest's ceiling was {last['forest_max']:.2f}.
+        f"""1. A tree's prediction is an average of training labels, so a forest cannot predict beyond the range of the labels it saw. Past the edge of its training range this forest went flat at {last['forest_max']:.2f}, under a largest label of {ex['train_y_max']:.2f}.
 
-2. Inside the training range the trees were the best models measured ({first['forest']:.2f} against {first['linear']:.2f} for linear); between 1.5 and 2 the forest's error was {ratio:.0f} times larger.
+2. Inside the training range the trees were the best single models ({first['forest']:.2f} against {first['linear']:.2f} for linear); between 1.5 and 2 the forest's error was {ratio:.0f} times larger.
 
 3. Fitting the trend first and the forest to the residuals was best everywhere: {first['trend + forest']:.2f} inside, {last['trend + forest']:.2f} beyond.
 
-4. On diabetes, a forest that won a random split lost by {loss:.0%} on the highest-bmi patients and under-predicted them systematically.
+4. On diabetes, a forest that edged a random split lost by {loss:.0%} on the highest-bmi patients and under-predicted them systematically.
 
 5. Before deploying a tree ensemble, check where its inputs will fall relative to the training data — especially any input that drifts, such as time.""")
 

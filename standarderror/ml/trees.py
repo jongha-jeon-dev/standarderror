@@ -7,9 +7,10 @@ the training rows.
 Episode 12, `importance_null` and `importance_real`: what impurity (MDI)
 importance rewards when no feature, or only a coarse one, carries signal.
 
-Episode 13, `oob_study` and `oob_duplicates`: out-of-bag error against
-cross-validation and a held-out test set, across forest sizes, and when rows
-are not independent.
+Episode 13, `oob_study`, `oob_novote` and `oob_duplicates`: out-of-bag error
+against cross-validation and a held-out test set, across forest sizes; how
+much of a small forest's OOB error comes from rows with no OOB vote; and
+what happens when rows are not independent.
 
 Episode 14, `boost_curves`: test error and test log loss of gradient
 boosting against the number of rounds, with and without shrinkage and label
@@ -80,7 +81,13 @@ def tree_bootstrap(*, boots: int = 200, depth: int = 3, seed: int = 0
     """Fit a depth-`depth` tree to `boots` bootstrap resamples of a breast
     cancer training split and record what changes: the root feature, the
     features in the top three levels, the test accuracy and the test
-    predictions."""
+    predictions.
+
+    `distinct_sets` counts how many different top-level feature sets the
+    resamples produced; `full_set_same` how many reproduced the full-data
+    tree's set. `pair_disagreement` averages over all pairs among the first
+    60 resampled trees. `grown_leaves` is the leaf count of an unpruned tree
+    on the full training split."""
     np = _np()
     from collections import Counter
 
@@ -88,6 +95,8 @@ def tree_bootstrap(*, boots: int = 200, depth: int = 3, seed: int = 0
     Xa, Xb, ya, yb, names = _bc_split(seed)
     full = DecisionTreeClassifier(max_depth=depth, random_state=0).fit(Xa, ya)
     root = int(full.tree_.feature[0])
+    full_top = _top_features(full, 2)
+    grown = DecisionTreeClassifier(random_state=0).fit(Xa, ya)
     g = np.random.default_rng(int(seed))
     roots, sets = Counter(), Counter()
     acc, preds, thr = [], [], []
@@ -120,6 +129,11 @@ def tree_bootstrap(*, boots: int = 200, depth: int = 3, seed: int = 0
             "row_share": P.mean(0), "truth": yb,
             "distinct_sets": len(sets),
             "modal_set_share": sets.most_common(1)[0][1] / boots,
+            "modal_set_count": int(sets.most_common(1)[0][1]),
+            "full_set_same": int(sets[full_top]),
+            "full_threshold": float(full.tree_.threshold[0]),
+            "grown_leaves": int(grown.get_n_leaves()),
+            "grown_depth": int(grown.get_depth()),
             "threshold": [float(v) for v in np.percentile(thr, [5, 50, 95])],
             "candidates": root_candidates(Xa, ya, names),
             "test_rows": int(len(yb))}
@@ -146,7 +160,10 @@ STROBL_NAMES = ("binary", "4 levels", "10 levels", "20 levels", "continuous")
 def importance_null(*, signal: float = 0.0, reps: int = 20, n: int = 500,
                     leaf: int = 1, trees: int = 100) -> dict:
     """Impurity (MDI) importance on the training data and permutation
-    importance on fresh data, averaged over `reps` simulated datasets."""
+    importance on fresh data, averaged over `reps` simulated datasets.
+    Also the share of datasets in which the binary feature is ranked first
+    by each method, last by MDI (`mdi_last_binary`), and in which MDI rises
+    strictly with the number of distinct values (`mdi_ordered`)."""
     np = _np()
     from sklearn.ensemble import RandomForestClassifier
     from sklearn.inspection import permutation_importance
@@ -166,6 +183,9 @@ def importance_null(*, signal: float = 0.0, reps: int = 20, n: int = 500,
             "perm": perm.mean(0), "perm_se": perm.std(0, ddof=1) / k,
             "mdi_top_binary": float(np.mean(mdi.argmax(1) == 0)),
             "perm_top_binary": float(np.mean(perm.argmax(1) == 0)),
+            "mdi_last_binary": float(np.mean(mdi.argmin(1) == 0)),
+            "mdi_ordered": float(np.mean(np.all(np.diff(mdi, axis=1) > 0,
+                                                axis=1))),
             "reps": int(reps)}
 
 
@@ -247,6 +267,40 @@ def oob_coverage(trees: int, *, n: int = 1000, seed: int = 0) -> float:
     for t in range(trees):
         inbag[t, g.integers(0, n, n)] = True
     return float((~inbag).mean())
+
+
+def oob_novote(*, data: str = "breast cancer", trees: int = 5,
+               reps: int = 10) -> dict:
+    """Split the out-of-bag error of a small forest into the part from rows
+    that no tree left out of its bootstrap sample and the rest.
+
+    scikit-learn gives such rows an all-zero OOB decision function (it
+    divides by a vote count it has set to 1), so their OOB prediction is
+    the first class, and they count as errors unless they belong to it.
+    Same half splits and seeds as `oob_study`."""
+    np = _np()
+    from sklearn.ensemble import RandomForestClassifier
+    from sklearn.model_selection import train_test_split
+    X, y = _data(data)
+    tot, nov, share, voted = [], [], [], []
+    for s in range(int(reps)):
+        Xa, Xb, ya, yb = train_test_split(X, y, test_size=0.5,
+                                          random_state=s, stratify=y)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            rf = RandomForestClassifier(trees, oob_score=True, random_state=s,
+                                        n_jobs=2).fit(Xa, ya)
+        D = rf.oob_decision_function_
+        none = D.sum(1) == 0
+        wrong = rf.classes_[D.argmax(1)] != ya
+        tot.append(wrong.mean())
+        nov.append((wrong & none).mean())
+        share.append(none.mean())
+        voted.append(wrong[~none].mean())
+    return {"data": data, "trees": int(trees), "oob": float(np.mean(tot)),
+            "from_novote": float(np.mean(nov)),
+            "novote_share": float(np.mean(share)),
+            "voted_error": float(np.mean(voted)), "reps": int(reps)}
 
 
 def oob_duplicates(*, reps: int = 5, trees: int = 300) -> dict:

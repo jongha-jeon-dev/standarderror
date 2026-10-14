@@ -13,7 +13,7 @@ images: ["ml106-hero.png"]
 
 Disclosure: this post was written with the assistance of an AI system (Claude), which wrote the analysis code, ran the experiments and drafted the text. The topic, the constraints, the data choices and the final review are the author's.
 
-*Every one of 50 stratified half splits of the Wisconsin breast cancer data is linearly separable on its 30 features, so the unpenalised logistic likelihood has no maximum. scikit-learn returns coefficients of norm 2.4 at a stopping tolerance of 1e-2, 399 at its default 1e-4 and 1,289 at 1e-10, with test log loss going from 0.08 to 1.47. Gradient descent's weight norm grows 3.3 per tenfold more steps, for ever, while its direction creeps towards the hard-margin SVM - 46 degrees away at the start, 8.1 after 100,000 steps. Test accuracy improves along the way; test log loss turns and rises.*
+*Every one of 50 stratified half splits of the Wisconsin breast cancer data is linearly separable on its 30 features, so the unpenalised logistic likelihood has no maximum. scikit-learn returns coefficients of norm 2.4 at a stopping tolerance of 1e-2, 399 at its default 1e-4 and 1,289 at 1e-10, with test log loss going from 0.08 to 1.47. Gradient descent's weight norm grows 3.3 per tenfold more steps, for ever, while its direction creeps towards a max-margin limit - 46 degrees from scikit-learn's hard-margin SVM at the start, 8.1 after 100,000 steps, heading for 5.9, because gradient descent counts the intercept in the norm. Test accuracy improves along the way; test log loss turns and rises.*
 
 Episode 6 of *Machine Learning, Taught Through What Breaks*. The syllabus and the other episodes: https://jongha-jeon-dev.github.io/standarderror/lectures/
 
@@ -35,9 +35,9 @@ print(f"half splits separable: {ln.separable_fraction(splits=50):.0%}")
 half splits separable: 100%
 ```
 
-Every stratified half of the Wisconsin breast cancer data — 284 tumours, 30 measurements — is perfectly separated by some hyperplane. With 30 features and a few hundred rows that is the expected situation, not a fluke: the more features per row, the likelier a separating plane is to exist.
+Every stratified half of the Wisconsin breast cancer data — 284 tumours, 30 measurements — is perfectly separated by some hyperplane. With 30 features this informative that is the expected situation, not a fluke — and it is the informativeness, not the count of features per row, that does it.
 
-Cover counted this in 1965. For points in general position in d dimensions with random labels, a separating hyperplane almost surely exists while there are fewer than about 2d of them, and almost surely does not beyond. Here d is 31 with the intercept and there are 284 rows, far past 2d, so random labels would not be separable. Real labels are not random: the classes differ systematically, and a modest signal in each of 30 features adds up to a margin. The better a feature set predicts, the more likely the textbook estimator is not to exist. That is backwards from the intuition that maximum likelihood fails on hard problems; it fails on easy ones.
+Cover counted the count's part in 1965. For points in general position in d dimensions with random labels, a separating hyperplane exists with high probability while there are fewer than about 2d of them, and with high probability does not beyond, the switch growing sharper as d grows. Here d is 31 with the intercept and there are 284 rows, far past 2d, so random labels would not be separable. Real labels are not random: the classes differ systematically, and a modest signal in each of 30 features adds up to a margin. The better a feature set predicts, the more likely the textbook estimator is not to exist. That is backwards from the intuition that maximum likelihood fails on hard problems; it fails on easy ones.
 
 ## What the library hands back
 
@@ -57,7 +57,7 @@ tol 1e-08   43 iterations  norm    877.4  test log loss 1.575
 tol 1e-10   52 iterations  norm   1288.9  test log loss 1.575
 ```
 
-The coefficient norm runs from 2.4 to 1,289: a factor of 548, set entirely by when the optimiser was told it was close enough. At the library's default tolerance the model puts 95% of training rows within one in a million of certainty, and on held-out tumours its log loss is 1.47 against 0.08 for the loosest tolerance — every mistake it makes, it makes with total confidence. Even its accuracy is lower, 0.954 against 0.982: the loose tolerance stopped early, and early stopping is a regulariser.
+The coefficient norm runs from 2.4 to 1,289: a factor of 548, set entirely by when the optimiser was told it was close enough. At the library's default tolerance the model puts 95% of training rows within one in a million of certainty, and on held-out tumours its log loss is 1.47 against 0.08 for the loosest tolerance — a log loss that size, from a model that is right 95.4% of the time, means its mistakes are made with near-total confidence. Even its accuracy is lower, 0.954 against 0.982: the loose tolerance stopped early, and early stopping is a regulariser.
 
 Most people never see this, because scikit-learn's default is not unpenalised. It applies an L2 penalty with C = 1, which makes the optimum exist; the bottom row of the table below is that model, and it is the best of the six on log loss. The sentence is true of what the library does by default and false of what the textbook describes.
 
@@ -88,13 +88,13 @@ step 74,438  norm  13.08  angle   8.3  train loss 3.0e-05
 growth per tenfold steps: 3.32
 ```
 
-The training loss falls towards zero and the weight norm grows by about 3.3 for every tenfold increase in steps — logarithmically, the rate Soudry and colleagues proved. It never stops. What does converge is the *direction*: the angle to the hard-margin SVM falls from 46 degrees to 8.1, and will reach zero, slowly. Unpenalised logistic regression trained by gradient descent is, in the limit, a hard-margin SVM — a fact about the optimiser, not about the likelihood.
+The training loss falls towards zero and the weight norm grows by about 3.3 for every tenfold increase in steps — logarithmically, the rate Soudry and colleagues proved. It never stops. What does converge is the *direction*. The angle to scikit-learn's hard-margin SVM falls from 46 degrees to 8.1, but it will not reach zero. This gradient descent treats the intercept as one more weight, on a column of ones, so the margin it maximises is that of the augmented problem, in which the intercept counts towards the norm; the SVM leaves its intercept free. On these digits the two max-margin directions are 5.9 degrees apart, and that is where the angle is heading, slowly. Unpenalised logistic regression trained by gradient descent is, in the limit, a hard-margin SVM for the problem as the optimiser poses it — a fact about the optimiser, not about the likelihood.
 
 The test set shows the two faces of that. Accuracy improves as the direction approaches the max-margin one, from 0.910 to 0.978. Log loss reaches its minimum, 0.0626, at step 661, and then rises to 0.0830: the direction gets better, and the confidence gets worse faster.
 
-![A weight norm rising as a straight line against log steps, and a dashed angle falling slowly towards zero.](ml106-f0-norm.png)
+![A weight norm rising as a straight line against log steps, and a dashed angle falling slowly.](ml106-f0-norm.png)
 
-*The norm grows by **3.3 per tenfold more steps** - logarithmically, without limit. The direction converges to the hard-margin SVM's, at 8.1 degrees after 100,000 steps.*
+*The norm grows by **3.3 per tenfold more steps** - logarithmically, without limit. The angle to scikit-learn's hard-margin SVM is 8.1 degrees after 100,000 steps, heading for 5.9, where the max-margin direction of the problem gradient descent solves lies.*
 
 ![A test log loss that falls to a minimum and then rises, and a dashed test accuracy that climbs in steps towards a dotted line.](ml106-f1-test.png)
 
@@ -122,7 +122,7 @@ C    1e+04  norm   82.27  test accuracy 0.951  test log loss 0.688
 C    1e+05  norm  116.39  test accuracy 0.951  test log loss 0.834
 ```
 
-The norm grows with C without limit, roughly logarithmically again, because the unpenalised problem underneath has no ceiling. Test log loss is best at C = 1 and degrades steadily beyond it. Choosing C by cross-validation, as arc I described, is choosing how far along that unbounded path to stop — the same decision the tolerance made silently, made out loud.
+The norm grows with C without limit, roughly logarithmically again, because the unpenalised problem underneath has no ceiling. Test log loss is best at C = 1 and degrades steadily beyond it. Choosing C by cross-validation, as is standard, is choosing how far along that unbounded path to stop — the same decision the tolerance made silently, made out loud.
 
 The two curves also say something about how to read a fitted coefficient. Under separation a coefficient's size is not a measurement of an effect; it is a measurement of how long the optimiser ran, or how weak the penalty was. Its sign and its ratio to the other coefficients carry information — that is the direction, and it converges. Its magnitude, and anything computed from it, such as an odds ratio, does not.
 
@@ -142,7 +142,7 @@ The two curves also say something about how to read a fitted coefficient. Under 
 
 2. Unpenalised, the coefficients a library returns are set by its stopping rule: norm 2.4 to 1,289 across tolerances, test log loss 0.08 to 1.58.
 
-3. Gradient descent's norm grows like log t (3.3 per decade here) and its direction converges to the hard-margin SVM.
+3. Gradient descent's norm grows like log t (3.3 per decade here) and its direction converges to the max-margin direction of the problem it solves — with the intercept in the norm, 5.9 degrees from scikit-learn's hard-margin SVM here.
 
 4. Along that path test accuracy can improve while test log loss gets worse: the direction improves, the confidence overshoots.
 

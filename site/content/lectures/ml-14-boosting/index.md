@@ -3,7 +3,7 @@ title: "ML 14: Boosting Overfits Its Probabilities Long Before Its Accuracy"
 date: 2026-10-12
 slug: "ml-14-boosting"
 draft: false
-description: "Whether boosting overfits depends on what you measure. Over 2,000 rounds its test error never turns up; its test log loss turns after a few dozen, and shrinkage only postpones the turn."
+description: "Whether boosting overfits depends on what you measure. Over 2,000 rounds its test error never turns up after the first few dozen; its test log loss turns after a few dozen, and below a learning rate of 0.1 shrinkage only postpones the turn."
 author: "Jongha Jeon"
 tags: ["machine-learning", "data-science", "statistics", "gradient-boosting", "calibration", "lectures"]
 series: ["Machine Learning, Taught Through What Breaks"]
@@ -13,7 +13,7 @@ images: ["ml114-hero.png"]
 
 Disclosure: this post was written with the assistance of an AI system (Claude), which wrote the analysis code, ran the experiments and drafted the text. The topic, the constraints, the data choices and the final review are the author's.
 
-*Gradient-boosted trees on the breast-cancer data, ten half splits, 2,000 rounds. With clean labels and a learning rate of 0.1 the test error falls to 0.046 and never rises. The test log loss is lowest after about 46 rounds (0.161) and 2.6 times worse at 2,000. Each tenfold cut in the learning rate moves the best round roughly tenfold later (3.5, 46, 400) without lowering the best log loss. With 10% of training labels flipped the error rises by 0.017 and the log loss 3.3-fold.*
+*Gradient-boosted trees on the breast-cancer data, ten half splits, 2,000 rounds. With clean labels and a learning rate of 0.1 the test error falls to 0.046 and, from round 30 on, never rises. The test log loss is lowest at the 30-round checkpoint (0.161; the median best round per split is 46) and 2.6 times worse at 2,000. Each tenfold cut in the learning rate moves the best round roughly tenfold later (3.5, 46, 400). The first cut, from 1 to 0.1, lowered the best log loss from 0.203 to 0.161; the second, to 0.01, did not (0.162). With 10% of training labels flipped the error rises by 0.017 and the log loss 3.3-fold.*
 
 Episode 14 of *Machine Learning, Taught Through What Breaks*. The syllabus and the other episodes: https://jongha-jeon-dev.github.io/standarderror/lectures/
 
@@ -43,13 +43,13 @@ round 1,000  test error 0.0463  test log loss 0.416
 round 2,000  test error 0.0463  test log loss 0.416
 ```
 
-By the error rate there is nothing to stop: it falls to 0.046 and is still at its lowest after 2,000 rounds. By log loss the model peaked long ago. The log loss is lowest at about **46 rounds (0.161)** and is 0.416 by the end — 2.6 times worse.
+By the error rate there is nothing to stop: it falls to 0.046 and is still at its lowest after 2,000 rounds. Apart from a tick of 0.0004 between rounds 10 and 30 — under a third of a tumour per split — it never rises at any checkpoint. By log loss the model peaked long ago. Of the checkpoints, the log loss is lowest at **30 rounds (0.161)**; computed round by round, the best round has a median of 46 across the ten splits. By the end it is 0.416 — 2.6 times worse.
 
-The two numbers disagree because they look at different things. The error counts which side of 0.5 each prediction falls. Log loss charges for confidence: a tumour predicted at 0.999 benign that turns out malignant costs almost seven nats. As the rounds go on, the model pushes every training probability towards 0 or 1. On test tumours it mostly keeps the same answers, so the error stands still, but the few it gets wrong it now gets wrong with near certainty.
+The two numbers disagree because they look at different things. The error counts which side of 0.5 each prediction falls. Log loss charges for confidence: a tumour predicted at 0.999 benign that turns out malignant costs almost seven nats. As the rounds go on, the model presumably pushes its training probabilities towards 0 or 1 — the training loss was not tracked here. On test tumours it mostly keeps the same answers, so the error stands still, but the few it gets wrong it gets wrong more and more confidently, which is what the rising log loss records.
 
-![Three U-shaped curves, shifted right as the learning rate falls, each reaching about the same minimum before rising.](ml114-f0-logloss.png)
+![Three U-shaped curves, shifted right as the learning rate falls; the two smaller rates bottom out at about the same level, the largest rate higher.](ml114-f0-logloss.png)
 
-*At learning rate 0.1 the log loss bottoms at 0.161 after 30 rounds and reaches **0.416** by 2,000. A smaller rate reaches the same bottom later; it does not lower it.*
+*At learning rate 0.1 the log loss bottoms at 0.161 after 30 rounds and reaches **0.416** by 2,000. Cutting the rate from 1 to 0.1 lowered the bottom; cutting it again to 0.01 only reached the same bottom later.*
 
 ## Shrinkage slows it; it does not stop it
 
@@ -59,7 +59,7 @@ The usual remedy is shrinkage: scale each tree's contribution by a small learnin
 - learning rate 0.1: best 0.161, after about 46;
 - learning rate 0.01: best 0.162, after about 400.
 
-Each tenfold cut in the learning rate moves the best round about tenfold later, and below 1 it does not lower the best log loss at all: 0.161 against 0.162. A smaller learning rate buys a wider window in which stopping is safe and costs proportionally more trees. It does not make running forever safe. At 2,000 rounds the learning-rate-0.01 model is already past its best, at 0.272.
+Each tenfold cut in the learning rate moves the best round about tenfold later. The two cuts differ in what else they do. The first, from 1 to 0.1, lowered the best log loss, from 0.203 to 0.161 — plausibly because at a rate of 1 each tree takes a full step, and the curve is past its bottom within a handful of rounds. The second, from 0.1 to 0.01, did not lower it at all: 0.161 against 0.162. Below 0.1, a smaller learning rate buys a wider window in which stopping is safe and costs proportionally more trees. It does not make running forever safe. At 2,000 rounds the learning-rate-0.01 model is already past its best, at 0.272.
 
 That is why early stopping is part of every serious boosting library, and why what it monitors matters. A validation set scored by accuracy, here, would never trigger it, and the model shipped would be the one with the worst probabilities of any checkpoint after the first few dozen.
 
@@ -69,11 +69,11 @@ That is why early stopping is part of every serious boosting library, and why wh
 
 ## What a stopping rule picks
 
-Early stopping takes the round at which a validation metric is best. Which metric it watches decides which model you ship. On the clean runs at learning rate 0.1, watching the error rate picks the last checkpoint, 2,000 rounds, because the error is still at its lowest there. That model's test log loss is 0.416. Watching log loss picks a model from around round 46, with test log loss 0.161 and a test error of 0.056 at the nearby checkpoint of 30 rounds — 0.010 worse than the long run.
+Early stopping takes the round at which a validation metric is best. Which metric it watches decides which model you ship. On the clean runs at learning rate 0.1, watching the error rate picks the last checkpoint, 2,000 rounds, because the error is still at its lowest there. That model's test log loss is 0.416. Watching log loss picks a model near the 30-round checkpoint (round 46 in the median split), with test log loss 0.161 and a test error of 0.056 — 0.010 worse than the long run.
 
-So the trade is real but lopsided: about a point of accuracy against a 2.6-fold difference in the quality of the probabilities. If the output is a decision at a fixed threshold, the long run is the better model. If the output is a probability — and most deployed classifiers are read as risks, ranked, or combined with costs — the short run is better by a wide margin, and only a stopping rule on log loss will find it.
+So the trade is real but lopsided: about a point of accuracy against a 2.6-fold difference in the quality of the probabilities. If the output is a decision at a fixed threshold, the long run is the better model here, though a point on about 285 test tumours per split is close to the noise. If the output is a probability — and most deployed classifiers are read as risks, ranked, or combined with costs — the short run is better by a wide margin, and only a stopping rule on log loss will find it.
 
-Why does the error keep improving while confidence runs away? Schapire and colleagues' margin explanation is the usual answer: later rounds mostly push correctly classified training points further from the boundary, which changes probabilities a great deal and decisions very little. On test points near the boundary the boundary itself barely moves; on test points the model gets wrong, the pushed-out probabilities make each mistake more expensive.
+Why does the error keep improving while confidence runs away? Schapire and colleagues' margin explanation is the usual answer, developed for AdaBoost and not tested here: later rounds mostly push correctly classified training points further from the boundary, which changes probabilities a great deal and decisions very little. On that account the boundary itself barely moves near the test points that sit on it, while on test points the model gets wrong, the pushed-out probabilities make each mistake more expensive.
 
 ## Noisy labels
 
@@ -103,21 +103,21 @@ Mease and Wyner made the accuracy half of this point in 2008: boosted classifier
 
 ## Where this breaks
 
-**One dataset.** Breast cancer is easy, with a test error under 5%. On harder data, where many test rows sit near the boundary, error turns up sooner and further; the ordering — log loss first, error later — is what generalises.
+**One dataset.** Breast cancer is easy, with a test error under 5%. On harder data, where many test rows sit near the boundary, the error can be expected to turn up sooner and further, as it did here once labels were flipped; that the ordering — log loss first, error later — carries over to other data is a reasonable expectation, not something measured here.
 
-**Probabilities can be repaired afterwards.** Calibrating an overfit booster on held-out data (Platt scaling, isotonic regression) recovers much of the lost log loss, as Niculescu-Mizil and Caruana showed. It needs a held-out set, and it repairs the symptom, not the training.
+**Probabilities can be repaired afterwards.** Calibrating a booster on held-out data (Platt scaling, isotonic regression) improved its log loss substantially in Niculescu-Mizil and Caruana's comparison — though the boosting they studied distorted probabilities towards the middle rather than towards 0 and 1, and recalibration was not run here. It needs a held-out set, and it repairs the symptom, not the training.
 
-**Checkpoints, not every round.** The curves are sampled at eight round counts. The best round quoted is computed from every round, per split, and its median is reported.
+**Checkpoints, not every round.** The curves are sampled at eight round counts, and the best log loss quoted is the lowest of those checkpoints on the curve averaged over splits. The best round is computed from every round, per split, and its median is reported. The two need not coincide: at a learning rate of 0.1 the best checkpoint is 30 rounds and the median best round 46.
 
-**Other boosters regularise more by default.** Libraries with leaf-weight penalties, row subsampling and minimum leaf sizes reach the same place more slowly. scikit-learn's classic implementation, with its defaults, is the plainest version of the algorithm.
+**Other boosters regularise more by default.** Libraries with leaf-weight penalties, row subsampling and minimum leaf sizes would be expected to reach the same place more slowly; none was run here. scikit-learn's classic implementation, with its defaults, is the plainest version of the algorithm.
 
 ## What to keep
 
-1. With clean labels, test error of gradient boosting never turned up in 2,000 rounds: 0.046 at the end.
+1. With clean labels, test error of gradient boosting never turned up from round 30 to round 2,000: 0.046 at the end.
 
-2. Test log loss was lowest after about 46 rounds and 2.6 times worse at 2,000. The model's decisions held; its confidence ran away.
+2. Test log loss was lowest within the first few dozen rounds and 2.6 times worse at 2,000. The model's decisions held; its confidence ran away.
 
-3. Each tenfold cut in the learning rate moved the best round about tenfold later and left the best log loss where it was. Shrinkage widens the window; it does not remove the need to stop.
+3. Each tenfold cut in the learning rate moved the best round about tenfold later. Cutting it from 1 to 0.1 lowered the best log loss; cutting it from 0.1 to 0.01 left it where it was. Shrinkage widens the window; it does not remove the need to stop.
 
 4. With 10% label noise the error rose by under two points and the log loss more than tripled.
 

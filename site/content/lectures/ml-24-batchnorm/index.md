@@ -13,7 +13,7 @@ images: ["ml124-hero.png"]
 
 Disclosure: this post was written with the assistance of an AI system (Claude), which wrote the analysis code, ran the experiments and drafted the text. The topic, the constraints, the data choices and the final review are the author's.
 
-*A two-layer network with batch normalisation scored 0.990 on 100 test digits in inference mode. In training mode, each digit's label changed with its random batch companions in 45% of batches of 2, 20% of batches of 4, 3.2% of batches of 16 and 0.6% of batches of 64; with 15 companions from one class, in 23%. Trained in batches of 2, the normalised network scored 0.863 in inference mode against 0.972 without normalisation; trained in batches of 16 or 64 it gained about half a point.*
+*A two-layer network with batch normalisation scored 0.990 on 100 test digits in inference mode. In training mode, each digit's label changed with its random batch companions in 45% of batches of 2, 20% of batches of 4, 3.2% of batches of 16 and 0.6% of batches of 64; with 15 companions from one class, in 23%. Trained in batches of 2, the normalised network scored 0.863 in inference mode against 0.972 without normalisation; trained in batches of 16 or 64 it scored 0.5 and 0.8 points higher, over three seeds.*
 
 Episode 24 of *Machine Learning, Taught Through What Breaks*. The syllabus and the other episodes: https://jongha-jeon-dev.github.io/standarderror/lectures/
 
@@ -80,7 +80,7 @@ batches of 16: plain 0.970  batch norm 0.975  (training mode 0.953)
 batches of 64: plain 0.967  batch norm 0.975  (training mode 0.972)
 ```
 
-Without normalisation, accuracy is about the same at every batch size, 0.967 to 0.972. With it, the network trained in batches of 2 scores **0.863** in inference mode and 0.580 when evaluated in training mode on test batches of 2: normalisation cost it 0.109. In batches of 4 the cost is 0.006. From batches of 16 up, normalisation helps, by 0.005 and 0.008, which is the improvement it is known for. In batches of 64 the two modes agree to within a point, 0.975 and 0.972, which is the condition under which the running averages are a faithful stand-in for the batch.
+Without normalisation, accuracy is about the same at every batch size, 0.967 to 0.972. With it, the network trained in batches of 2 scores **0.863** in inference mode and 0.580 when evaluated in training mode on test batches of 2: normalisation cost it 0.109. In batches of 4 the cost is 0.006. From batches of 16 up, normalisation helps, by 0.005 and 0.008, in the direction it is known for; over three seeds, though, the smaller gain is 4.7 of the 899 test digits, and the spread across seeds was not measured. In batches of 64 the two modes agree to within a point, 0.975 and 0.972, which is the condition under which the running averages are a faithful stand-in for the batch.
 
 ![Grouped bars: the plain network stays near 0.97 at every batch size; the normalised one is far lower at batch 2 and slightly higher from batch 16; training mode is lowest at small batches.](ml124-f1-train.png)
 
@@ -98,13 +98,13 @@ The practical failures of batch normalisation follow from the measurement direct
 
 ## Where this breaks
 
-**Fully connected layers on small images.** In convolutional networks the statistics are pooled over all spatial positions as well as the batch, so a batch of 2 images contributes many values per channel and the dependence is weaker than here.
+**Fully connected layers on small images.** In convolutional networks the statistics are pooled over all spatial positions as well as the batch, so a batch of 2 images contributes many values per channel and the dependence is likely weaker than here; that was not measured.
 
 **Frozen running statistics in the first study.** The momentum was set to zero so that the evaluation did not change the network; in a real training-mode deployment the running averages would also drift with every batch.
 
 **One architecture, one data set.** The batch size at which normalisation turns from hurting to helping, between 4 and 16 here, depends on the network and on how much the batch statistics vary, and is not a general constant.
 
-**Adam at one learning rate.** The batch-size study holds the learning rate at 1e-3 for every batch size; episode 22 showed that the best rate moves with the batch, so the plain network's flat line is partly a matter of where 1e-3 happens to sit.
+**Adam at one learning rate.** The batch-size study holds the learning rate at 1e-3 for every batch size; episode 22 showed, for plain SGD, that the best rate moves with the batch, and Adam's rate is unlikely to be immune, so the plain network's flat line is partly a matter of where 1e-3 happens to sit.
 
 ## What to keep
 
@@ -114,7 +114,7 @@ The practical failures of batch normalisation follow from the measurement direct
 
 3. In a batch of 2 every normalised unit is ±1 before the learned scale and shift: the layer keeps only which example was larger. Trained that way, the network scored 0.863 in inference mode, against 0.972 without normalisation.
 
-4. From batches of 16 up, normalisation helped by about half a point; at 64 the two modes agreed to within a point. Check both conditions before trusting it: batches large enough and mixed enough that their statistics are the population's.
+4. From batches of 16 up, normalisation scored 0.5 and 0.8 points higher over three seeds; at 64 the two modes agreed to within a point. Check both conditions before trusting it: batches large enough and mixed enough that their statistics are the population's.
 
 ## Exercise
 

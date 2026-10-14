@@ -13,7 +13,7 @@ images: ["ml120-hero.png"]
 
 Disclosure: this post was written with the assistance of an AI system (Claude), which wrote the analysis code, ran the experiments and drafted the text. The topic, the constraints, the data choices and the final review are the author's.
 
-*On a simulated task with Bayes error 0.276, five neural networks that differ only in their random seed score between 0.670 and 0.680 on 5,000 test rows. Two of them disagree on 22.5% of the rows, and 43% of rows get both labels from some seed. QDA and an SVM, the two best models, disagree on 9.4%. On breast cancer, where errors are rare, models within a point of the best disagree on 1.4%. Two models can disagree on as many rows as the sum of their error rates: equal accuracy promises agreement only when both are nearly always right.*
+*On a simulated task where the best possible rule errs on 27.6% of the 5,000 test rows, five neural networks that differ only in their random seed score between 0.670 and 0.680 on 5,000 test rows. Two of them disagree on 22.5% of the rows, and 43% of rows get both labels from some seed. QDA and an SVM, the two best models, disagree on 9.4%. On breast cancer, where errors are rare, models within a point of the best disagree on 1.4%. Two models can disagree on as many rows as the sum of their error rates: equal accuracy promises agreement only when both are nearly always right.*
 
 Episode 20 of *Machine Learning, Taught Through What Breaks*. The syllabus and the other episodes: https://jongha-jeon-dev.github.io/standarderror/lectures/
 
@@ -23,7 +23,7 @@ Episode 19 showed a test score that could not tell a shortcut from the task. Thi
 
 Breiman called the phenomenon the *Rashomon effect*: many different models fit the same data equally well. Episode 11 met it in a single tree's structure. Here it is measured where it matters most, in the predictions.
 
-The task is episode 4's: two overlapping Gaussian classes in ten dimensions, Bayes error 0.276, so even the best possible classifier is wrong on more than a quarter of rows. Train the same small neural network five times, changing nothing but the random seed:
+The task is episode 4's: two overlapping Gaussian classes in ten dimensions, so even the best possible classifier is wrong on more than a quarter of rows. The Bayes rule, computed from the true densities, errs on 27.6% of the 5,000 test rows used here; episode 4 quotes 0.268, its error on that episode's larger 20,000-row test set, and the two differ only by sampling. Train the same small neural network five times, changing nothing but the random seed:
 
 ```python
 from standarderror.ml import reading as rd
@@ -51,7 +51,7 @@ The accuracies span **0.010** — a single point. By any significance test they 
 
 Accuracy counts how many rows a model gets right, not which. Two models with error rates e₁ and e₂ can disagree on as few rows as |e₁ − e₂| — when one's mistakes are a subset of the other's — and on as many as e₁ + e₂, when their mistakes never overlap. Equal accuracy pins down only the first bound. The second is set by how often the models are wrong.
 
-Here each network is wrong on about a third of the rows, so two of them could in principle disagree on two-thirds. They use a third of that room. The probabilities show how differently they see the same row. The scatter plot below puts one seed's predicted probability against another's. A row the first network calls 0.2 the second may call 0.8. Both are equally accurate; they have simply drawn different boundaries through a region where the data cannot decide between them.
+Here each network is wrong on about a third of the rows, so two of them could in principle disagree on two-thirds. They use a third of that room. The probabilities show how differently they see the same row. The scatter plot below puts one seed's predicted probability against another's. On 5.1% of rows their probabilities differ by 0.5 or more — one network near 0.2 where the other is near 0.7 or higher. Both are equally accurate; they have simply drawn different boundaries through a region where the data cannot decide between them.
 
 Different model families do the same. Among all fifteen models, the best two are QDA and an SVM:
 
@@ -71,11 +71,11 @@ MLP seed 0       0.678
 within 1 point of best: ['QDA', 'SVM'], disagree on 9.4%
 ```
 
-They differ by 0.002 in accuracy and disagree on 9.4% of rows. Forests trained with different seeds disagree less (5.3% at most) because averaging 300 trees damps the effect of the seed — the same averaging that stabilised episode 11's trees.
+They differ by 0.002 in accuracy and disagree on 9.4% of rows. Forests trained with different seeds disagree less (5.3% at most), presumably because averaging 300 trees damps the effect of the seed — the remedy episode 11 pointed to for a single tree's instability, though that episode did not measure it.
 
 ![A wide cloud of points around the diagonal, with many points in the off-diagonal quadrants where one network says above 0.5 and the other below.](ml120-f1-scatter.png)
 
-*The off-diagonal quadrants hold the 19.5% of rows on which the two disagree. Many rows the first network puts near 0.2 the second puts near 0.8.*
+*The off-diagonal quadrants hold the 19.5% of rows on which the two disagree. On 5.1% of all rows their probabilities differ by 0.5 or more.*
 
 ## When errors are rare
 
@@ -113,17 +113,17 @@ What does not work is picking one model by a tie-break on the test score, or by 
 
 **Ensembling reduces it.** Averaging the five networks would give one set of predictions that changes less with any one seed, as the forests show. It does not choose between the boundaries; it blurs them. On a disputed row the members' probabilities straddle 0.5, so their average is closer to 0.5 than the more confident of them, which is honest.
 
-**One hard task, simulated.** The networks are small, with light regularisation and at most 1,500 training iterations. Larger networks, more data or stronger regularisation all change the amount of disagreement; none removes the bound.
+**One hard task, simulated.** The networks are small, with light regularisation and at most 1,500 training iterations. Larger networks, more data or stronger regularisation would all be expected to change the amount of disagreement; none was tried here, and none can remove the bound, which is arithmetic.
 
 **Disagreement is not error.** On rows where two models disagree, one of them is right. The point is not that both are bad but that the test score cannot say which to trust on those rows, and the person affected cannot either.
 
-**The 1-point tolerance is a choice.** With a tolerance of zero, no two models qualify; with five points, many more do and the disagreement grows. One point is roughly the noise in an accuracy measured on 5,000 rows.
+**The 1-point tolerance is a choice.** With a tolerance of zero, no two models qualify; with five points, more would, and the largest disagreement among them could only grow or stay the same. One point is roughly the noise in an accuracy measured on 5,000 rows.
 
 ## What to keep
 
 1. Accuracy says how many rows a model gets right, not which. Two models can disagree on as many rows as the sum of their error rates.
 
-2. On a task with Bayes error 0.28, five networks differing only in seed spanned 0.010 in accuracy and disagreed on up to 22.5% of rows; 43% of rows got both labels from some seed.
+2. On a task where the best possible rule errs on about 28% of test rows, five networks differing only in seed spanned 0.010 in accuracy and disagreed on up to 22.5% of rows; 43% of rows got both labels from some seed.
 
 3. The two best model families, 0.002 apart in accuracy, disagreed on 9.4%.
 
@@ -145,7 +145,7 @@ Arc IV ends here. Importance, effects, attributions, shortcuts and the multiplic
 
 ### Data
 
-- Simulated: episode 4's two-class Gaussian task in 10 dimensions with unequal covariances, Bayes error computed from the true densities; 2,000 training rows, 5,000 test rows.
+- Simulated: episode 4's two-class Gaussian task in 10 dimensions with unequal covariances; 2,000 training rows, 5,000 test rows. The Bayes rule, from the true densities, errs on 27.6% of these test rows (26.8% on episode 4's 20,000).
 - Breast Cancer Wisconsin (Diagnostic), as bundled with scikit-learn, CC BY 4.0; one stratified half split.
 - Machinery: `standarderror/ml/reading.py`, tested in `tests/test_ml.py`; scikit-learn's logistic regression, QDA, SVC, HistGradientBoosting, 25-nearest neighbours, random forests and MLPClassifier (one hidden layer of 64, five seeds each for forests and networks).
 - Where this stops: Breiman, "Statistical modeling: the two cultures", *Statistical Science* (2001); Marx, Calmon and Ustun, "Predictive multiplicity in classification", *ICML* (2020); D'Amour et al., "Underspecification presents challenges for credibility in modern machine learning", *JMLR* (2022).

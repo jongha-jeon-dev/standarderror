@@ -2,8 +2,9 @@
 
 The twentieth episode of *Machine Learning, Taught Through What Breaks*,
 closing Arc IV. "Two models with the same accuracy make the same
-predictions." Measured on a hard simulated task (Bayes error 0.276) and on
-the breast-cancer data:
+predictions." Measured on a hard simulated task (the Bayes rule errs on
+27.6% of its 5,000 test rows; 26.8% on episode 4's 20,000) and on the
+breast-cancer data:
 
 * Five neural networks differing only in their random seed score between
   0.670 and 0.680 on 5,000 test rows. Two of them disagree on 22.5% of the
@@ -49,7 +50,7 @@ def compute() -> dict:
 def _groups(res: dict) -> list[dict]:
     g, bc = res["g"], res["bc"]
     out = []
-    for task, r, tag in (("hard task", g, "Bayes error 0.28"),
+    for task, r, tag in (("hard task", g, "Bayes-rule error 0.28"),
                          ("breast cancer", bc, "error about 0.02")):
         for name, st in (("network seeds", r["families"]["MLP seed"]),
                          ("forest seeds", r["families"]["forest seed"]),
@@ -119,6 +120,7 @@ def figures(res: dict) -> dict:
     acc = res["g"]["accuracy"]
     a0, a1 = acc["MLP seed 0"], acc["MLP seed 1"]
     dis = float(np.mean((q0 > 0.5) != (q1 > 0.5)))
+    big = float(np.mean(np.abs(q0 - q1) >= 0.5))
     out["f1"] = charts.diagram(
         scatter,
         title="Two seeds, one architecture, two risk scores",
@@ -134,8 +136,8 @@ def figures(res: dict) -> dict:
              "in the off-diagonal quadrants where one network says above "
              "0.5 and the other below."),
         caption=(f"The off-diagonal quadrants hold the {dis:.1%} of rows on "
-                 f"which the two disagree. Many rows the first network puts "
-                 f"near 0.2 the second puts near 0.8."),
+                 f"which the two disagree. On {big:.1%} of all rows their "
+                 f"probabilities differ by 0.5 or more."),
         path=str(IMG / f"ml120-f1-scatter.{EXT}"))[0]
 
     rows = []
@@ -242,8 +244,19 @@ def build() -> Post:
     G = _groups(res)
     mlp, rf, good, bmlp, brf, bgood = G
     g = res["g"]
+    q0, q1 = g["q_pair"]
+    big = float(np.mean(np.abs(q0 - q1) >= 0.5))
+    pair_lo = min(p[2] for p in res["g"]["families"]["MLP seed"]["pairs"])
+    # Episode 4 quotes this task's Bayes error on its own 20,000-row test set;
+    # here the Bayes rule is scored on the 5,000 test rows actually used.
+    from standarderror.ml import curves as cu
+    b4 = cu.GaussianTask().bayes
 
     # The spine, asserted rather than trusted.
+    assert abs(b4 - 0.268) < 0.002 and g["test_rows"] == 5000
+    assert abs(g["bayes"] - b4) < 0.02 and round(g["bayes"], 3) != round(b4, 3)
+    assert 0.02 < big < 0.1
+    assert pair_lo > 0.18                      # every pair: about a fifth
     assert mlp["acc_hi"] - mlp["acc_lo"] < 0.015
     assert mlp["max_pair"] > 10 * (mlp["acc_hi"] - mlp["acc_lo"])
     assert mlp["max_pair"] > 0.15 and mlp["ambiguity"] > 0.35
@@ -269,7 +282,8 @@ def build() -> Post:
                   "differ only in their seed give different answers on a "
                   "fifth of the rows."),
         summary=(
-            f"On a simulated task with Bayes error {g['bayes']:.3f}, five "
+            f"On a simulated task where the best possible rule errs on "
+            f"{g['bayes']:.1%} of the 5,000 test rows, five "
             f"neural networks that differ only in their random seed score "
             f"between {mlp['acc_lo']:.3f} and {mlp['acc_hi']:.3f} on 5,000 "
             f"test rows. Two of them disagree on {mlp['max_pair']:.1%} of "
@@ -285,9 +299,11 @@ def build() -> Post:
         author=se.SETTINGS.author,
         code_url=se.SETTINGS.code_repo_url,
         data_sources=[
-            "Simulated: episode 4's two-class Gaussian task in 10 "
-            "dimensions with unequal covariances, Bayes error computed from "
-            "the true densities; 2,000 training rows, 5,000 test rows.",
+            f"Simulated: episode 4's two-class Gaussian task in 10 "
+            f"dimensions with unequal covariances; 2,000 training rows, "
+            f"5,000 test rows. The Bayes rule, from the true densities, errs "
+            f"on {g['bayes']:.1%} of these test rows ({b4:.1%} on episode "
+            f"4's 20,000).",
             "Breast Cancer Wisconsin (Diagnostic), as bundled with "
             "scikit-learn, CC BY 4.0; one stratified half split.",
             "Machinery: `standarderror/ml/reading.py`, tested in "
@@ -321,7 +337,7 @@ def build() -> Post:
 
 Breiman called the phenomenon the *Rashomon effect*: many different models fit the same data equally well. Episode 11 met it in a single tree's structure. Here it is measured where it matters most, in the predictions.
 
-The task is episode 4's: two overlapping Gaussian classes in ten dimensions, Bayes error {g['bayes']:.3f}, so even the best possible classifier is wrong on more than a quarter of rows. Train the same small neural network five times, changing nothing but the random seed:
+The task is episode 4's: two overlapping Gaussian classes in ten dimensions, so even the best possible classifier is wrong on more than a quarter of rows. The Bayes rule, computed from the true densities, errs on {g['bayes']:.1%} of the 5,000 test rows used here; episode 4 quotes {b4:.3f}, its error on that episode's larger 20,000-row test set, and the two differ only by sampling. Train the same small neural network five times, changing nothing but the random seed:
 
 {snip['hard'].markdown()}
 
@@ -332,13 +348,13 @@ The accuracies span **{mlp['acc_hi'] - mlp['acc_lo']:.3f}** — a single point. 
         "Why accuracy cannot see it",
         f"""Accuracy counts how many rows a model gets right, not which. Two models with error rates e₁ and e₂ can disagree on as few rows as |e₁ − e₂| — when one's mistakes are a subset of the other's — and on as many as e₁ + e₂, when their mistakes never overlap. Equal accuracy pins down only the first bound. The second is set by how often the models are wrong.
 
-Here each network is wrong on about a third of the rows, so two of them could in principle disagree on two-thirds. They use a third of that room. The probabilities show how differently they see the same row. The scatter plot below puts one seed's predicted probability against another's. A row the first network calls 0.2 the second may call 0.8. Both are equally accurate; they have simply drawn different boundaries through a region where the data cannot decide between them.
+Here each network is wrong on about a third of the rows, so two of them could in principle disagree on two-thirds. They use a third of that room. The probabilities show how differently they see the same row. The scatter plot below puts one seed's predicted probability against another's. On {big:.1%} of rows their probabilities differ by 0.5 or more — one network near 0.2 where the other is near 0.7 or higher. Both are equally accurate; they have simply drawn different boundaries through a region where the data cannot decide between them.
 
 Different model families do the same. Among all fifteen models, the best two are QDA and an SVM:
 
 {snip['zoo'].markdown()}
 
-They differ by {good['acc_hi'] - good['acc_lo']:.3f} in accuracy and disagree on {good['max_pair']:.1%} of rows. Forests trained with different seeds disagree less ({rf['max_pair']:.1%} at most) because averaging 300 trees damps the effect of the seed — the same averaging that stabilised episode 11's trees.""",
+They differ by {good['acc_hi'] - good['acc_lo']:.3f} in accuracy and disagree on {good['max_pair']:.1%} of rows. Forests trained with different seeds disagree less ({rf['max_pair']:.1%} at most), presumably because averaging 300 trees damps the effect of the seed — the remedy episode 11 pointed to for a single tree's instability, though that episode did not measure it.""",
         figures=[figs["f1"]])
 
     post.add(
@@ -364,17 +380,17 @@ What does not work is picking one model by a tie-break on the test score, or by 
         "Where this breaks",
         """**Ensembling reduces it.** Averaging the five networks would give one set of predictions that changes less with any one seed, as the forests show. It does not choose between the boundaries; it blurs them. On a disputed row the members' probabilities straddle 0.5, so their average is closer to 0.5 than the more confident of them, which is honest.
 
-**One hard task, simulated.** The networks are small, with light regularisation and at most 1,500 training iterations. Larger networks, more data or stronger regularisation all change the amount of disagreement; none removes the bound.
+**One hard task, simulated.** The networks are small, with light regularisation and at most 1,500 training iterations. Larger networks, more data or stronger regularisation would all be expected to change the amount of disagreement; none was tried here, and none can remove the bound, which is arithmetic.
 
 **Disagreement is not error.** On rows where two models disagree, one of them is right. The point is not that both are bad but that the test score cannot say which to trust on those rows, and the person affected cannot either.
 
-**The 1-point tolerance is a choice.** With a tolerance of zero, no two models qualify; with five points, many more do and the disagreement grows. One point is roughly the noise in an accuracy measured on 5,000 rows.""")
+**The 1-point tolerance is a choice.** With a tolerance of zero, no two models qualify; with five points, more would, and the largest disagreement among them could only grow or stay the same. One point is roughly the noise in an accuracy measured on 5,000 rows.""")
 
     post.add(
         "What to keep",
         f"""1. Accuracy says how many rows a model gets right, not which. Two models can disagree on as many rows as the sum of their error rates.
 
-2. On a task with Bayes error {g['bayes']:.2f}, five networks differing only in seed spanned {mlp['acc_hi'] - mlp['acc_lo']:.3f} in accuracy and disagreed on up to {mlp['max_pair']:.1%} of rows; {mlp['ambiguity']:.0%} of rows got both labels from some seed.
+2. On a task where the best possible rule errs on about {g['bayes']:.0%} of test rows, five networks differing only in seed spanned {mlp['acc_hi'] - mlp['acc_lo']:.3f} in accuracy and disagreed on up to {mlp['max_pair']:.1%} of rows; {mlp['ambiguity']:.0%} of rows got both labels from some seed.
 
 3. The two best model families, {good['acc_hi'] - good['acc_lo']:.3f} apart in accuracy, disagreed on {good['max_pair']:.1%}.
 

@@ -10,8 +10,9 @@ exactly on a simulated regression, where every term can be computed:
   at k = 8.
 * For a random forest, adding trees has no U. Bias stays where one tree put
   it, variance falls monotonically, and it levels off at a floor set by the
-  correlation between trees (about 0.46 here), as Breiman's formula
-  predicts. More trees never hurt.
+  correlation between trees (about 0.46 here), as the formula for an
+  average of correlated predictors predicts (ESL eq. 15.1). More trees
+  never hurt.
 * "Complexity" is not one axis. A knob that trades bias for variance draws
   a U; a knob that only averages draws a descending curve with a floor.
 
@@ -150,8 +151,9 @@ def figures(res: dict) -> dict:
              "sum and the measured test error, for six values of k and five "
              "forest sizes."),
         caption=("The sum column and the measured column agree row by row: "
-                 "the decomposition is an identity, not an approximation. "
-                 "What differs between the two knobs is which terms move."),
+                 "the decomposition is an identity in expectation, and the "
+                 "small gaps are simulation error. What differs between the "
+                 "two knobs is which terms move."),
         bold_cells=bold,
         align="lrrrrr",
         path=str(IMG / f"ml109-f2-table.{EXT}"))[0]
@@ -232,6 +234,7 @@ def build() -> Post:
     f1, f100 = forest[0], forest[-1]
     floor = rho * f1["variance"]
     gap = max(abs(r["total"] - r["mse"]) for r in knn + forest)
+    knn_gap = max(abs(r["total"] - r["mse"]) for r in knn)
 
     # The spine, asserted rather than trusted.
     assert gap < 0.01
@@ -290,9 +293,11 @@ def build() -> Post:
             "Where this stops: Geman, Bienenstock and Doursat, \"Neural "
             "networks and the bias/variance dilemma\", *Neural Computation* "
             "(1992); Breiman, \"Random forests\", *Machine Learning* (2001), "
-            "for the variance of an average of correlated trees; Hastie, "
+            "whose bound on a forest's error by the mean correlation between "
+            "its trees is the infinite-forest form of the same idea; Hastie, "
             "Tibshirani and Friedman, *The Elements of Statistical "
-            "Learning* (2009), sections 7.3 and 15.2.",
+            "Learning* (2009), sections 7.3 and 15.2, for the decomposition "
+            "and the variance of an average of correlated trees.",
         ],
         reproducibility={
             "environment": (f"standarderror={se.__version__}, "
@@ -317,7 +322,7 @@ The target here is sin(2πx) + x/2 on [0, 1] with noise of standard deviation 0.
 
 {snip['knn'].markdown()}
 
-This is the textbook. At k = 1 the model copies the nearest training label, noise and all: variance {k1['variance']:.3f}, bias almost nothing. At k = 32 it averages over half the data: variance {k32['variance']:.3f}, bias squared {k32['bias2']:.3f}. The sum tracks the measured error to the third decimal, and the error has a clean U with its bottom at **k = {best['k']}**, where it is {best['mse']:.3f} against the noise floor of {best['noise']:.2f}.""",
+This is the textbook. At k = 1 the model copies the nearest training label, noise and all: variance {k1['variance']:.3f}, bias almost nothing. At k = 32 it averages over half the data: variance {k32['variance']:.3f}, bias squared {k32['bias2']:.3f}. The sum tracks the measured error to within {knn_gap:.3f}, and the error has a clean U with its bottom at **k = {best['k']}**, where it is {best['mse']:.3f} against the noise floor of {best['noise']:.2f}.""",
         figures=[figs["f0"]])
 
     post.add(
@@ -328,9 +333,9 @@ This is the textbook. At k = 1 the model copies the nearest training label, nois
 
 It does not. Bias squared is below {max(r['bias2'] for r in forest):.4f} at every size; its slight fall from one tree to a hundred is about the size of the simulation's own error in estimating it, which is the variance divided by the number of training sets ({f1['variance'] / 100:.4f} for one tree). Variance falls at every step, from {f1['variance']:.3f} with one tree to {f100['variance']:.3f} with a hundred, and the measured error falls with it. More trees never hurt.
 
-The variance does not fall to zero either. Breiman (2001) gave the reason: the average of T trees, each with variance σ² and pairwise correlation ρ, has variance ρσ² + (1 − ρ)σ²/T. Averaging removes the part the trees do not share and leaves the part they do. Fitting ρ from one tree and from a hundred gives **ρ = {rho:.2f}**: whatever the number of trees, this forest's variance cannot go below {floor:.3f}. The dotted curve in the figure is that formula, and the intermediate forest sizes sit on it.
+The variance does not fall to zero either. The textbook formula for an average of correlated predictors gives the reason (Hastie, Tibshirani and Friedman, section 15.2; Breiman's 2001 bound for an infinite forest has the same shape): the average of T trees, each with variance σ² and pairwise correlation ρ, has variance ρσ² + (1 − ρ)σ²/T. Averaging removes the part the trees do not share and leaves the part they do. Fitting ρ from one tree and from a hundred gives **ρ = {rho:.2f}**: whatever the number of trees, this forest's variance cannot go below {floor:.3f}. The dotted curve in the figure is that formula, and the intermediate forest sizes sit on it.
 
-None of this makes the forest a good model of this target. At a hundred trees its test error is {f100['mse']:.3f}, worse than k-NN at its best ({best['mse']:.3f}). Fully grown trees on one input copy their training labels almost as k = 1 does, and averaging a hundred of them removes only the unshared half of that variance. What would help is a knob on each tree — a minimum number of points per leaf, a maximum depth — and that knob, like k, trades bias for variance and draws a U.
+None of this makes the forest a good model of this target. At a hundred trees its test error is {f100['mse']:.3f}, worse than k-NN at its best ({best['mse']:.3f}). Fully grown trees on one input copy their training labels almost as k = 1 does, and averaging a hundred of them removes only the unshared half of that variance. What would help is a knob on each tree — a minimum number of points per leaf, a maximum depth — which, like k, should trade bias for variance and draw a U; that was not measured here.
 
 To lower the floor one must make the trees *less alike* — fewer features per split, smaller bootstrap samples — and that is a knob that does trade bias for variance, because decorrelated trees are individually worse.""",
         figures=[figs["f1"]])
@@ -339,18 +344,18 @@ To lower the floor one must make the trees *less alike* — fewer features per s
         "What the U is about",
         """The two sweeps disagree because their knobs do different things. The number of neighbours changes *what each prediction is*: a wider average is smoother and less faithful to the target. That is a trade, and a trade has an optimum. The number of trees changes only *how many independent-ish copies of the same kind of prediction are averaged*. Averaging cannot add bias, so there is nothing to trade.
 
-So "test error is U-shaped in complexity" is a claim about a particular knob, not about complexity as such. Depth of a single tree, the penalty of a ridge regression, the degree of a polynomial and k in k-NN all trade bias for variance, and each draws a U. Ensemble size, the number of bootstrap draws and the number of random restarts averaged do not. In practice the U is found by cross-validation, which estimates the sum and never its parts; the decomposition explains the shape of the curve but is not how anyone tunes a model on real data. The next episode adds a third kind: the number of features in a model that interpolates its training data, where the curve goes up, then down again.""",
+So "test error is U-shaped in complexity" is a claim about a particular knob, not about complexity as such. Depth of a single tree, the penalty of a ridge regression, the degree of a polynomial and k in k-NN all trade bias for variance, and below the point where the model interpolates its training data each typically draws a U; only k was measured here. Ensemble size, the number of bootstrap draws and the number of random restarts averaged do not. In practice the U is found by cross-validation, which estimates the sum and never its parts; the decomposition explains the shape of the curve but is not how anyone tunes a model on real data. The next episode adds a third kind: the number of features in a model that interpolates its training data, where the curve goes up, then down again.""",
         figures=[figs["f2"]])
 
     post.add(
         "Where this breaks",
         """**Squared error only.** The clean additive split into bias, variance and noise belongs to squared error. For 0-1 loss there are several competing decompositions, and in none of them does variance simply add.
 
-**One target, one sample size.** With more training points the k-NN U moves to larger k and gets shallower; with a rougher target it moves to smaller k. The forest's floor depends on the target too. The shapes, not the numbers, are the finding.
+**One target, one sample size.** Theory says that with more training points the k-NN U should move to larger k, and with a rougher target to smaller k; neither was measured here. The forest's floor depends on the target too. The shapes, not the numbers, are the finding.
 
 **The decomposition needs many training sets.** On real data there is one. The bootstrap gives a rough stand-in, but it estimates variance from resamples that overlap heavily, and bias cannot be computed at all without the true function.
 
-**Not the whole story past interpolation.** A 1-nearest-neighbour fit and a fully grown tree both reproduce their training labels exactly, and both sit at the high-variance end here. Episode 10 shows a family of interpolating models whose error falls again as they grow, which the U has no room for.
+**Not the whole story past interpolation.** A 1-nearest-neighbour fit reproduces its training labels exactly, a fully grown tree those of its bootstrap sample, and both sit at the high-variance end here. Episode 10 shows a family of interpolating models whose error falls again as they grow, which the U has no room for.
 
 **Forest defaults.** scikit-learn's regression forest considers every feature at each split by default. With one input feature here that makes no difference, but on wide data the setting changes ρ, and with it the floor.""")
 

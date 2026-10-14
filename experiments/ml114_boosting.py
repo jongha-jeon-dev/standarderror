@@ -4,14 +4,16 @@ The fourteenth episode of *Machine Learning, Taught Through What Breaks*.
 "Boosting overfits if you run it long enough." Measured on the breast-cancer
 data over ten half splits, to 2,000 rounds:
 
-* With clean labels the test error never turns up: at a learning rate of
-  0.1 it falls to 0.046 and stays there.
-* The test log loss turns early. It is lowest after about 46 rounds (0.161)
-  and 2.6 times worse at 2,000. The model keeps getting the same answers
-  right while growing ever more certain about the ones it gets wrong.
+* With clean labels the test error does not turn up after round 30: at a
+  learning rate of 0.1 it falls to 0.046 and stays there.
+* The test log loss turns early. It is lowest at the 30-round checkpoint
+  (0.161; median best round per split 46) and 2.6 times worse at 2,000.
+  The model keeps getting the same answers right while growing ever more
+  certain about the ones it gets wrong.
 * Shrinkage does not prevent this; it slows it. Each tenfold cut in the
-  learning rate moves the best round about tenfold later and leaves the
-  best log loss where it was.
+  learning rate moves the best round about tenfold later. The cut from 1 to
+  0.1 lowered the best log loss (0.203 to 0.161); the cut from 0.1 to 0.01
+  left it where it was (0.162).
 * With 10% of training labels flipped, the error turns too, but by less than
   two points; the log loss more than triples.
 
@@ -87,11 +89,13 @@ def figures(res: dict) -> dict:
         source="Breast Cancer Wisconsin (scikit-learn); "
                "standarderror/ml/trees.py.",
         alt=("Three U-shaped curves, shifted right as the learning rate "
-             "falls, each reaching about the same minimum before rising."),
+             "falls; the two smaller rates bottom out at about the same "
+             "level, the largest rate higher."),
         caption=(f"At learning rate 0.1 the log loss bottoms at "
                  f"{c1['log_loss'][i1]:.3f} after {rounds[i1]} rounds and "
-                 f"reaches **{c1['log_loss'][-1]:.3f}** by 2,000. A smaller "
-                 f"rate reaches the same bottom later; it does not lower it."),
+                 f"reaches **{c1['log_loss'][-1]:.3f}** by 2,000. Cutting "
+                 f"the rate from 1 to 0.1 lowered the bottom; cutting it again "
+                 f"to 0.01 only reached the same bottom later."),
         path=str(IMG / f"ml114-f0-logloss.{EXT}"))[0]
 
     def err(ax, m):
@@ -181,12 +185,12 @@ def _hero(res: dict, rounds):
         panels=[(ll, f"{c['log_loss'][-1] / c['log_loss'].min():.1f}x",
                  "log loss, best to 2,000"),
                 (er, f"{c['error'][-1]:.3f}", "error at 2,000 rounds"),
-                (shift, "10x later", "per 10x less shrinkage")],
-        note=("Run gradient boosting for 2,000 rounds on clean labels and "
-              "its test error never turns up. Its test log loss turns after "
-              "a few dozen. Shrinkage postpones the turn without lowering "
-              "the bottom: early stopping has to watch the metric that "
-              "matters."),
+                (shift, "10x later", "per 10x lower rate")],
+        note=("Run gradient boosting for 2,000 rounds on clean labels and, "
+              "after the first few dozen, its test error never turns up. Its "
+              "test log loss turns after a few dozen. Below a learning rate "
+              "of 0.1, shrinkage postpones the turn without lowering the "
+              "bottom: early stopping has to watch the metric that matters."),
         alt=("Three hand-drawn frames: a U-shaped curve; a curve falling and "
              "flattening; three bars rising in steps."),
         path=str(IMG / f"ml114-hero.{EXT}"))[0]
@@ -226,19 +230,27 @@ def build() -> Post:
     n = {lr: res[(0.1, lr)] for lr in RATES}
     c1 = c[0.1]
     best = {lr: c[lr]["log_loss"].min() for lr in RATES}
+    ib = int(np.argmin(c1["log_loss"]))       # best checkpoint at rate 0.1
     br = {lr: c[lr]["best_round_median"] for lr in RATES}
     worse = c1["log_loss"][-1] / best[0.1]
+    e1 = c1["error"]
+    tick = e1[rounds.index(30)] - e1[rounds.index(10)]
 
     # The spine, asserted rather than trusted.
     for lr in (0.1, 0.01):
         e = c[lr]["error"]
         assert e[-1] <= e[3:].min() + 0.003          # error never turns up
         assert c[lr]["log_loss"][-1] > 1.3 * best[lr]
+    # at rate 0.1, from round 30 on, the error never rises at a checkpoint
+    assert all(a >= b - 1e-12 for a, b in zip(e1[3:], e1[4:]))
+    assert 0 < tick < 0.001                        # the one tick up, 10 -> 30
     assert worse > 2.0
-    assert c1["error"][rounds.index(30)] > c1["error"][-1]
+    assert c1["error"][ib] > c1["error"][-1]
+    assert c1["log_loss"][-1] >= c1["log_loss"][ib:].max() - 0.005
     assert br[1.0] < br[0.1] < br[0.01]
     assert 4 < br[0.1] / br[1.0] and 4 < br[0.01] / br[0.1] < 25
-    assert abs(best[0.1] - best[0.01]) < 0.01 and best[1.0] > best[0.1]
+    # 1 -> 0.1 lowers the best log loss; 0.1 -> 0.01 does not
+    assert abs(best[0.1] - best[0.01]) < 0.01 and best[1.0] > best[0.1] + 0.03
     nn = n[0.1]
     assert nn["error"][-1] - nn["error"].min() < 0.02
     assert nn["log_loss"][-1] > 3 * nn["log_loss"].min()
@@ -255,18 +267,23 @@ def build() -> Post:
         date=POST_DATE,
         requires_baseline=False,
         subtitle=("Whether boosting overfits depends on what you measure. "
-                  "Over 2,000 rounds its test error never turns up; its test "
-                  "log loss turns after a few dozen, and shrinkage only "
+                  "Over 2,000 rounds its test error never turns up after the "
+                  "first few dozen; its test log loss turns after a few "
+                  "dozen, and below a learning rate of 0.1 shrinkage only "
                   "postpones the turn."),
         summary=(
             f"Gradient-boosted trees on the breast-cancer data, ten half "
             f"splits, 2,000 rounds. With clean labels and a learning rate of "
-            f"0.1 the test error falls to {c1['error'][-1]:.3f} and never "
-            f"rises. The test log loss is lowest after about {br[0.1]:g} "
-            f"rounds ({best[0.1]:.3f}) and {worse:.1f} times worse at 2,000. "
-            f"Each tenfold cut in the learning rate moves the best round "
-            f"roughly tenfold later ({br[1.0]:g}, {br[0.1]:g}, {br[0.01]:g}) "
-            f"without lowering the best log loss. With 10% of training labels "
+            f"0.1 the test error falls to {c1['error'][-1]:.3f} and, from "
+            f"round 30 on, never rises. The test log loss is lowest at the "
+            f"{rounds[ib]}-round checkpoint ({best[0.1]:.3f}; the median "
+            f"best round per split is {br[0.1]:g}) and {worse:.1f} times "
+            f"worse at 2,000. Each tenfold cut in the learning rate moves "
+            f"the best round roughly tenfold later ({br[1.0]:g}, "
+            f"{br[0.1]:g}, {br[0.01]:g}). The first cut, from 1 to 0.1, "
+            f"lowered the best log loss from {best[1.0]:.3f} to "
+            f"{best[0.1]:.3f}; the second, to 0.01, did not "
+            f"({best[0.01]:.3f}). With 10% of training labels "
             f"flipped the error rises by {nn['error'][-1] - nn['error'].min():.3f}"
             f" and the log loss {nn['log_loss'][-1] / nn['log_loss'].min():.1f}"
             f"-fold."),
@@ -311,9 +328,9 @@ Whether it overfits depends on what "fits" means. A classifier makes two kinds o
 
 {snip['clean'].markdown()}
 
-By the error rate there is nothing to stop: it falls to {c1['error'][-1]:.3f} and is still at its lowest after 2,000 rounds. By log loss the model peaked long ago. The log loss is lowest at about **{br[0.1]:g} rounds ({best[0.1]:.3f})** and is {c1['log_loss'][-1]:.3f} by the end — {worse:.1f} times worse.
+By the error rate there is nothing to stop: it falls to {c1['error'][-1]:.3f} and is still at its lowest after 2,000 rounds. Apart from a tick of {tick:.4f} between rounds 10 and 30 — under a third of a tumour per split — it never rises at any checkpoint. By log loss the model peaked long ago. Of the checkpoints, the log loss is lowest at **{rounds[ib]} rounds ({best[0.1]:.3f})**; computed round by round, the best round has a median of {br[0.1]:g} across the ten splits. By the end it is {c1['log_loss'][-1]:.3f} — {worse:.1f} times worse.
 
-The two numbers disagree because they look at different things. The error counts which side of 0.5 each prediction falls. Log loss charges for confidence: a tumour predicted at 0.999 benign that turns out malignant costs almost seven nats. As the rounds go on, the model pushes every training probability towards 0 or 1. On test tumours it mostly keeps the same answers, so the error stands still, but the few it gets wrong it now gets wrong with near certainty.""",
+The two numbers disagree because they look at different things. The error counts which side of 0.5 each prediction falls. Log loss charges for confidence: a tumour predicted at 0.999 benign that turns out malignant costs almost seven nats. As the rounds go on, the model presumably pushes its training probabilities towards 0 or 1 — the training loss was not tracked here. On test tumours it mostly keeps the same answers, so the error stands still, but the few it gets wrong it gets wrong more and more confidently, which is what the rising log loss records.""",
         figures=[figs["f0"]])
 
     post.add(
@@ -324,18 +341,18 @@ The two numbers disagree because they look at different things. The error counts
 - learning rate 0.1: best {best[0.1]:.3f}, after about {br[0.1]:g};
 - learning rate 0.01: best {best[0.01]:.3f}, after about {br[0.01]:g}.
 
-Each tenfold cut in the learning rate moves the best round about tenfold later, and below 1 it does not lower the best log loss at all: {best[0.1]:.3f} against {best[0.01]:.3f}. A smaller learning rate buys a wider window in which stopping is safe and costs proportionally more trees. It does not make running forever safe. At 2,000 rounds the learning-rate-0.01 model is already past its best, at {c[0.01]['log_loss'][-1]:.3f}.
+Each tenfold cut in the learning rate moves the best round about tenfold later. The two cuts differ in what else they do. The first, from 1 to 0.1, lowered the best log loss, from {best[1.0]:.3f} to {best[0.1]:.3f} — plausibly because at a rate of 1 each tree takes a full step, and the curve is past its bottom within a handful of rounds. The second, from 0.1 to 0.01, did not lower it at all: {best[0.1]:.3f} against {best[0.01]:.3f}. Below 0.1, a smaller learning rate buys a wider window in which stopping is safe and costs proportionally more trees. It does not make running forever safe. At 2,000 rounds the learning-rate-0.01 model is already past its best, at {c[0.01]['log_loss'][-1]:.3f}.
 
 That is why early stopping is part of every serious boosting library, and why what it monitors matters. A validation set scored by accuracy, here, would never trigger it, and the model shipped would be the one with the worst probabilities of any checkpoint after the first few dozen.""",
         figures=[figs["f1"]])
 
     post.add(
         "What a stopping rule picks",
-        f"""Early stopping takes the round at which a validation metric is best. Which metric it watches decides which model you ship. On the clean runs at learning rate 0.1, watching the error rate picks the last checkpoint, 2,000 rounds, because the error is still at its lowest there. That model's test log loss is {c1['log_loss'][-1]:.3f}. Watching log loss picks a model from around round {br[0.1]:g}, with test log loss {best[0.1]:.3f} and a test error of {c1['error'][rounds.index(30)]:.3f} at the nearby checkpoint of 30 rounds — {c1['error'][rounds.index(30)] - c1['error'][-1]:.3f} worse than the long run.
+        f"""Early stopping takes the round at which a validation metric is best. Which metric it watches decides which model you ship. On the clean runs at learning rate 0.1, watching the error rate picks the last checkpoint, 2,000 rounds, because the error is still at its lowest there. That model's test log loss is {c1['log_loss'][-1]:.3f}. Watching log loss picks a model near the {rounds[ib]}-round checkpoint (round {br[0.1]:g} in the median split), with test log loss {best[0.1]:.3f} and a test error of {c1['error'][ib]:.3f} — {c1['error'][ib] - c1['error'][-1]:.3f} worse than the long run.
 
-So the trade is real but lopsided: about a point of accuracy against a {worse:.1f}-fold difference in the quality of the probabilities. If the output is a decision at a fixed threshold, the long run is the better model. If the output is a probability — and most deployed classifiers are read as risks, ranked, or combined with costs — the short run is better by a wide margin, and only a stopping rule on log loss will find it.
+So the trade is real but lopsided: about a point of accuracy against a {worse:.1f}-fold difference in the quality of the probabilities. If the output is a decision at a fixed threshold, the long run is the better model here, though a point on about 285 test tumours per split is close to the noise. If the output is a probability — and most deployed classifiers are read as risks, ranked, or combined with costs — the short run is better by a wide margin, and only a stopping rule on log loss will find it.
 
-Why does the error keep improving while confidence runs away? Schapire and colleagues' margin explanation is the usual answer: later rounds mostly push correctly classified training points further from the boundary, which changes probabilities a great deal and decisions very little. On test points near the boundary the boundary itself barely moves; on test points the model gets wrong, the pushed-out probabilities make each mistake more expensive.""")
+Why does the error keep improving while confidence runs away? Schapire and colleagues' margin explanation is the usual answer, developed for AdaBoost and not tested here: later rounds mostly push correctly classified training points further from the boundary, which changes probabilities a great deal and decisions very little. On that account the boundary itself barely moves near the test points that sit on it, while on test points the model gets wrong, the pushed-out probabilities make each mistake more expensive.""")
 
     post.add(
         "Noisy labels",
@@ -350,21 +367,21 @@ Mease and Wyner made the accuracy half of this point in 2008: boosted classifier
 
     post.add(
         "Where this breaks",
-        """**One dataset.** Breast cancer is easy, with a test error under 5%. On harder data, where many test rows sit near the boundary, error turns up sooner and further; the ordering — log loss first, error later — is what generalises.
+        f"""**One dataset.** Breast cancer is easy, with a test error under 5%. On harder data, where many test rows sit near the boundary, the error can be expected to turn up sooner and further, as it did here once labels were flipped; that the ordering — log loss first, error later — carries over to other data is a reasonable expectation, not something measured here.
 
-**Probabilities can be repaired afterwards.** Calibrating an overfit booster on held-out data (Platt scaling, isotonic regression) recovers much of the lost log loss, as Niculescu-Mizil and Caruana showed. It needs a held-out set, and it repairs the symptom, not the training.
+**Probabilities can be repaired afterwards.** Calibrating a booster on held-out data (Platt scaling, isotonic regression) improved its log loss substantially in Niculescu-Mizil and Caruana's comparison — though the boosting they studied distorted probabilities towards the middle rather than towards 0 and 1, and recalibration was not run here. It needs a held-out set, and it repairs the symptom, not the training.
 
-**Checkpoints, not every round.** The curves are sampled at eight round counts. The best round quoted is computed from every round, per split, and its median is reported.
+**Checkpoints, not every round.** The curves are sampled at eight round counts, and the best log loss quoted is the lowest of those checkpoints on the curve averaged over splits. The best round is computed from every round, per split, and its median is reported. The two need not coincide: at a learning rate of 0.1 the best checkpoint is {rounds[ib]} rounds and the median best round {br[0.1]:g}.
 
-**Other boosters regularise more by default.** Libraries with leaf-weight penalties, row subsampling and minimum leaf sizes reach the same place more slowly. scikit-learn's classic implementation, with its defaults, is the plainest version of the algorithm.""")
+**Other boosters regularise more by default.** Libraries with leaf-weight penalties, row subsampling and minimum leaf sizes would be expected to reach the same place more slowly; none was run here. scikit-learn's classic implementation, with its defaults, is the plainest version of the algorithm.""")
 
     post.add(
         "What to keep",
-        f"""1. With clean labels, test error of gradient boosting never turned up in 2,000 rounds: {c1['error'][-1]:.3f} at the end.
+        f"""1. With clean labels, test error of gradient boosting never turned up from round 30 to round 2,000: {c1['error'][-1]:.3f} at the end.
 
-2. Test log loss was lowest after about {br[0.1]:g} rounds and {worse:.1f} times worse at 2,000. The model's decisions held; its confidence ran away.
+2. Test log loss was lowest within the first few dozen rounds and {worse:.1f} times worse at 2,000. The model's decisions held; its confidence ran away.
 
-3. Each tenfold cut in the learning rate moved the best round about tenfold later and left the best log loss where it was. Shrinkage widens the window; it does not remove the need to stop.
+3. Each tenfold cut in the learning rate moved the best round about tenfold later. Cutting it from 1 to 0.1 lowered the best log loss; cutting it from 0.1 to 0.01 left it where it was. Shrinkage widens the window; it does not remove the need to stop.
 
 4. With 10% label noise the error rose by under two points and the log loss more than tripled.
 

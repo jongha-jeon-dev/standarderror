@@ -3,7 +3,8 @@
 The first episode of *Machine Learning, Taught Through What Breaks*. A test
 accuracy is an estimate from a finite sample and carries a standard error;
 on the 360 test images of a 20% split of the UCI digits that error is about
-0.7 points, the same size as the gaps between three ordinary classifiers.
+0.7 points, so its 95% interval is wider than the gap between the top two
+of three ordinary classifiers.
 
 Measured:
 
@@ -283,6 +284,7 @@ def build() -> Post:
     assert 0.05 < p["p_value"] < 0.2 and p["difference"] > 0
     assert need > pool
     assert pl["p_value"] < 0.001
+    assert 1.96 * b["RBF SVM"] > abs(gap0)
     assert 0.05 < flip < 0.4
     assert p["paired_se"] < p["unpaired_se"]
 
@@ -297,9 +299,10 @@ def build() -> Post:
         date=POST_DATE,
         requires_baseline=False,
         subtitle=("A test accuracy is a proportion measured on a finite "
-                  "sample. On 360 test digits its error bar is as wide as "
-                  "the gaps between three good classifiers, and repeating "
-                  "the split does not measure what it seems to."),
+                  "sample. On 360 test digits its error bar is wider than "
+                  "the gap between the top two of three good classifiers, "
+                  "and repeating the split does not measure what it seems "
+                  "to."),
         summary=(
             f"On a 20% test split of the UCI digits, {n} images, logistic "
             f"regression, an RBF SVM and 3-NN score "
@@ -345,7 +348,7 @@ def build() -> Post:
 
     post.add(
         "One split, three models",
-        f"""This series takes one sentence from the standard machine-learning curriculum per episode and measures where it stops being true. Thirty of them, from evaluation through linear models, trees, explanation, training networks and what generalisation looks like in them. The first sentence is the one every other episode leans on: *the model with the higher test score is the better model.*
+        f"""This series takes one sentence from the standard machine-learning curriculum per episode and measures where it stops being true. Fifty of them, from evaluation through linear models, trees, explanation, training networks and what generalisation looks like in them, to the routine steps around a model and what happens when its predictions become decisions. The first sentence is the one every other episode leans on: *the model with the higher test score is the better model.*
 
 The rules are the same throughout. Every number is measured by code in the repository and pinned by a test, so a claim that drifts fails the build. The data is either bundled with scikit-learn or simulated with a known answer, so anyone can rebuild it offline. And when a measurement contradicts the sentence I set out to illustrate — it happened twice in the last series — the episode says so rather than quietly changing the question.
 

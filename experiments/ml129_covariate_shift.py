@@ -5,12 +5,12 @@ The twenty-ninth episode of *Machine Learning, Taught Through What Breaks*.
 where only the inputs move and P(y | x) stays fixed, so the best possible
 accuracy hardly changes:
 
-* A flexible model (logistic regression on cubic splines) stays within about
-  a point of the Bayes rule until the test inputs sit two standard deviations
-  away, where it loses under three.
+* A flexible model (logistic regression on cubic splines) stays within two
+  points of the Bayes rule up to a shift of 1.5 standard deviations, and
+  loses under three at 2.
 * A linear logistic model, misspecified, falls from 0.816 to 0.536.
-* Importance weighting moves the linear model to the best linear model for
-  the test inputs, which is what it promises. That model has lower log loss
+* Importance weighting moves the linear model towards the best linear model
+  for the test inputs, which is what it promises. It has lower log loss
   but not always higher accuracy, and at a shift of 2 the weights leave about
   6% of the training rows' worth of information.
 
@@ -42,7 +42,12 @@ SERIES_TAG = "ML"
 
 def compute() -> dict:
     rows = nets.covariate_shift()
-    return {"rows": rows, "by": {r["shift"]: r for r in rows}}
+    # how close the weighted line gets to the best linear model for the test
+    # inputs: the largest gaps over the shifts
+    acc_gap = max(abs(r["acc_linear_iw"] - r["oracle"]["acc"]) for r in rows)
+    nll_gap = max(r["nll_linear_iw"] - r["oracle"]["nll"] for r in rows)
+    return {"rows": rows, "by": {r["shift"]: r for r in rows},
+            "acc_gap": acc_gap, "nll_gap": nll_gap}
 
 
 def _sig(z):
@@ -149,12 +154,14 @@ def figures(res: dict) -> dict:
                   "aim at. Effective n is (Σw)² / Σw² as a share of 500."),
         source="Simulated; standarderror/ml/nets.py.",
         alt=("A five-row table: weighted log loss is below unweighted at "
-             "every shift; weighted accuracy is below unweighted at shifts "
-             "0.5 and 1 and above it at 1.5 and 2; effective n falls to a "
-             "few percent."),
-        caption=("The weighted model tracks the best linear model in both "
-                 "accuracy and log loss. The best linear model at a shift of 1 "
-                 "is a worse classifier than the unweighted one."),
+             "every non-zero shift and equal at zero; weighted accuracy is "
+             "below unweighted at shifts 0.5 and 1 and above it at 1.5 and "
+             "2; effective n falls to a few percent."),
+        caption=(f"The weighted model moves towards the best linear model, "
+                 f"coming within {res['acc_gap']:.3f} of its accuracy and "
+                 f"{res['nll_gap']:.3f} of its log loss at every shift. The "
+                 f"best linear model at a shift of 1 is a worse classifier "
+                 f"than the unweighted one."),
         bold_cells={(2, 4), (2, 5), (4, 9)},
         align="rrrrrrrrrr",
         path=str(IMG / f"ml129-f2-table.{EXT}"))[0]
@@ -249,6 +256,15 @@ def build() -> Post:
     assert r2["acc_flex_iw"] > r2["acc_flex"]
     assert r2["sd_flex_iw"] < r2["sd_flex"] / 2
     assert r2["ece_linear"] > 0.4 and r2["ece_flex"] < 0.1
+    # At shift 0 the weights are all 1, so weighting changes nothing; the
+    # weighted line approaches the best linear model without reaching it.
+    assert abs(r0["nll_linear_iw"] - r0["nll_linear"]) < 1e-4
+    assert 0.03 < res["acc_gap"] < 0.05 and res["nll_gap"] < 0.04
+    assert all(a["ess"] > b["ess"] for a, b in zip(rows, rows[1:]))
+    gap = {r["shift"]: abs(r["acc_linear_iw"] - r["oracle"]["acc"])
+           for r in rows}
+    assert max(v for s, v in gap.items() if s <= 1) < \
+        min(v for s, v in gap.items() if s >= 1.5)
 
     post = Post(
         title=f"{SERIES_TAG} 29: Covariate Shift Charges for Misspecification",
@@ -269,9 +285,10 @@ def build() -> Post:
             f"logistic model stays within {flex_gap:.3f} of it up to a shift "
             f"of 1.5 and loses {r2['bayes'] - r2['acc_flex']:.3f} at 2. A "
             f"linear logistic model falls from {r0['acc_linear']:.3f} to "
-            f"{r2['acc_linear']:.3f}. Importance weighting recovers the best "
-            f"linear model for the test inputs: lower log loss at every "
-            f"shift, but lower accuracy at a shift of 1 "
+            f"{r2['acc_linear']:.3f}. Importance weighting moves the line "
+            f"towards the best linear model for the test inputs (within "
+            f"{res['acc_gap']:.3f} of its accuracy): lower log loss at every "
+            f"non-zero shift, but lower accuracy at a shift of 1 "
             f"({r1['acc_linear_iw']:.3f} against {r1['acc_linear']:.3f}), and "
             f"at a shift of 2 the weights keep an effective "
             f"{r2['ess']:.0%} of the sample."),
@@ -327,7 +344,7 @@ The Bayes accuracy stays between **{bayes_lo:.3f}** and **{bayes_hi:.3f}** at ev
 
 Nothing about the line was wrong *for the training distribution*. It was the best linear approximation to the wave over N(0, 1), and the best linear approximation depends on where the inputs are. When the inputs move, the best line moves, and the fitted one does not. That is the whole mechanism: covariate shift hurts a model by exposing the places where it was approximating, and a misspecified model approximates everywhere.
 
-The spline model follows the wave where it has data, so its errors in the test region are mostly the irreducible ones. It does lose something at the largest shift, {r2['bayes'] - r2['acc_flex']:.3f} of accuracy at s = 2, because the right tail of the test distribution reaches x = 4 and beyond, where the training data have almost no points and the spline extrapolates linearly. Shift far enough and every model is extrapolating. The difference is how early the cost starts. For the line it starts at the first step.
+The spline model follows the wave where it has data, so its errors in the test region are mostly the irreducible ones. It does lose something at the largest shift, {r2['bayes'] - r2['acc_flex']:.3f} of accuracy at s = 2, plausibly because the right tail of the test distribution reaches x = 4 and beyond, where the training data have almost no points and the spline extrapolates linearly; the mechanism was not isolated. Shift far enough and every model is extrapolating. The difference is how early the cost starts. For the line it starts at the first step.
 
 Calibration says the same thing more loudly. The linear model's expected calibration error at s = 2 is {r2['ece_linear']:.2f}: its probabilities are confidently pointed the wrong way. The spline's is {r2['ece_flex']:.2f}.""",
         figures=[figs["f1"]])
@@ -338,7 +355,7 @@ Calibration says the same thing more loudly. The linear model's expected calibra
 
 {snip['iw'].markdown()}
 
-The weighted log loss is lower than the unweighted at every shift, and the table below shows it tracks a linear model fitted to 200,000 rows drawn from the test distribution itself, the target the weights aim at. At s = 2 the weights turn the line around, and accuracy goes from {r2['acc_linear']:.3f} to {r2['acc_linear_iw']:.3f}.
+The weighted log loss is lower than the unweighted at every non-zero shift (at zero the weights are all 1 and change nothing), and the table below shows it moving towards a linear model fitted to 200,000 rows drawn from the test distribution itself, the target the weights aim at: within {res['acc_gap']:.3f} of its accuracy and {res['nll_gap']:.3f} of its log loss, closer at small shifts than at large ones. At s = 2 the weights turn the line around, and accuracy goes from {r2['acc_linear']:.3f} to {r2['acc_linear_iw']:.3f}.
 
 At s = 1 accuracy goes the other way, from {r1['acc_linear']:.3f} to {r1['acc_linear_iw']:.3f}. This is not the weights failing. The best linear model for N(1, 1) inputs, by log loss, is a nearly flat line (it scores {r1['oracle']['acc']:.3f} itself), because over that range the wave rises and falls about equally. Log loss rewards a line that hedges near 0.5; accuracy rewards one that commits. Importance weighting fixes the loss it is given, and when the model is misspecified, the loss-optimal and the accuracy-optimal models are different models.""",
         figures=[figs["f2"]])
@@ -347,7 +364,7 @@ At s = 1 accuracy goes the other way, from {r1['acc_linear']:.3f} to {r1['acc_li
         "The price of the weights",
         f"""Weights are not free. A weighted sample of 500 rows carries less information than 500 rows, and Kong's effective sample size, (Σw)² / Σw², measures how much less. At a shift of 1 it is {r1['ess']:.0%} of the sample. At 1.5 it is {r15['ess']:.0%}, and at 2 it is **{r2['ess']:.0%}**: a few rows in the training set's right tail carry most of the weight, and the fit is effectively made from about {r2['ess'] * 500:.0f} of them.
 
-That is why the weighted linear model's accuracy varies more from one training set to the next: its standard deviation over the twenty repetitions is {r2['sd_linear_iw']:.3f} at s = 2 against {r2['sd_linear']:.3f} unweighted. The weights buy a smaller bias with a larger variance, and the trade gets worse the further the shift goes. When the test inputs lie where the training data have none, there is nothing to reweight.
+That is why the weighted linear model's accuracy varies more from one training set to the next: its standard deviation over the twenty repetitions is {r2['sd_linear_iw']:.3f} at s = 2 against {r2['sd_linear']:.3f} unweighted. The weights buy a smaller bias with a larger variance, and the effective sample paying for it shrinks at every step of the shift. When the test inputs lie where the training data have none, there is nothing to reweight.
 
 For the flexible model the weights make little difference in the region it can already follow, and a small one at s = 2: {r2['acc_flex']:.3f} unweighted, {r2['acc_flex_iw']:.3f} weighted, with the spread across repetitions falling from {r2['sd_flex']:.3f} to {r2['sd_flex_iw']:.3f}. That is the extrapolating tail again: weighting puts more of the fit's attention on the few rows near the test region, which plausibly steadies what the splines do just beyond them. The mechanism was not isolated here.""")
 
@@ -367,7 +384,7 @@ For the flexible model the weights make little difference in the region it can a
 
 2. What the shift costs is the model's misspecification, exposed. A flexible model stayed within {flex_gap:.3f} of Bayes up to a shift of 1.5; a linear one fell from {r0['acc_linear']:.3f} to {r2['acc_linear']:.3f}.
 
-3. Importance weighting refits the model for the test inputs. It lowered log loss at every shift and tracked the best linear model for the test distribution, which at a shift of 1 was a worse classifier ({r1['acc_linear_iw']:.3f} against {r1['acc_linear']:.3f}).
+3. Importance weighting refits the model for the test inputs. It lowered log loss at every non-zero shift and moved towards the best linear model for the test distribution (within {res['acc_gap']:.3f} of its accuracy), which at a shift of 1 was a worse classifier ({r1['acc_linear_iw']:.3f} against {r1['acc_linear']:.3f}).
 
 4. The weights shrink the sample: at a shift of 2 the effective sample was {r2['ess']:.0%} of 500 rows.
 
@@ -381,7 +398,7 @@ Compute the effective sample size of those weights. If it is a few percent, the 
 
     post.add(
         "Next",
-        """One episode remains. Every network in this arc was small enough to train many times, which is what let each claim be measured across runs. The last episode climbs a ladder of model sizes and tests the sentence that justifies training very large ones: that loss falls as a power law of model size, so small models predict what large ones will do.""")
+        """One episode of this arc remains. Every network in this arc was small enough to train many times, which is what let each claim be measured across runs. The last episode of Arc VI climbs a ladder of model sizes and tests the sentence that justifies training very large ones: that loss falls as a power law of model size, so small models predict what large ones will do.""")
 
     return post
 

@@ -14,9 +14,9 @@ over an RBF SVM does not clear p = 0.05.
 **Episode 2.** Cross-validation is usually described as estimating the error
 of the model you fit. On simulated linear regression, where that error can be
 computed exactly, the correlation between the CV estimate and the error of
-the model fitted to the same data is 0.01 over 2,000 datasets. CV estimates
+the model fitted to the same data is -0.01 over 2,000 datasets. CV estimates
 the *average* error over training sets of that size, and the naive interval
-around it covers the fitted model's error 81% of the time at a nominal 90%. A
+around it covers the fitted model's error 80% of the time at a nominal 90%. A
 held-out test set answers the conditional question; CV answers the average
 one. Bates, Hastie and Tibshirani, "Cross-validation: what does it estimate
 and how well does it do it?", *JASA* (2023), is the reference result.

@@ -332,12 +332,12 @@ With a fifth of the labels randomised the network reaches **{r2['peak_test']:.3f
 
 {snip['split'].markdown()}
 
-By step 20 the network is right on {c2[20][3]:.1%} of the unchanged rows and on {c2[20][4]:.1%} of the changed ones, *fewer than chance*: it is predicting their true class, not the random label it is being trained on. It has learned the digits from the 80% of the data that teach them, and it is overruling the noise. Only after that does it start to memorise the changed rows, one by one, and every one it memorises costs a little test accuracy, because a memorised random label is a small wrong rule about what that digit looks like. By step 100 it fits {c2[100][4]:.1%} of the changed rows.""",
+By step 20 the network is right on {c2[20][3]:.1%} of the unchanged rows and on {c2[20][4]:.1%} of the changed ones, *fewer than chance*: the natural reading is that it is predicting their true class, not the random label it is being trained on (the curve records accuracy only against the labels it trains on). It has learned the digits from the 80% of the data that teach them, and it is overruling the noise. Only after that does it start to memorise the changed rows, one by one, and test accuracy falls as it does, plausibly because each memorised random label is a small wrong rule about what that digit looks like. By step 100 it fits {c2[100][4]:.1%} of the changed rows.""",
         figures=[figs["f1"], figs["f2"]])
 
     post.add(
         "What this means for early stopping",
-        f"""Arpit and colleagues documented the same ordering on larger networks: real patterns are fitted before noise, and the switch can be seen in the training curves. It is the practical reason early stopping works. A network stopped at the peak is the one that has learned the shared structure and not yet the exceptions.
+        f"""Arpit and colleagues documented the same ordering on larger networks: real patterns are fitted before noise, and the switch can be seen in held-out accuracy, or in training accuracy split into clean and noisy examples. It is one practical reason early stopping works. A network stopped at the peak is the one that has learned the shared structure and not yet the exceptions.
 
 It also says what early stopping needs. The peak was at step {r2['peak_step']} for the 20% run and step {r5['peak_step']} for the 50% run, and the drop after it was {r2['peak_test'] - r2['test_acc']:.3f} and {r5['peak_test'] - r5['test_acc']:.3f}. Training accuracy gave no sign of either: it was still climbing steadily through the peak. Only a held-out set could see it. With noisy labels, which most real data sets have in some proportion, a validation set is not a formality for reporting; it is the only instrument that can tell when the network has stopped learning the problem and started learning the noise.
 
@@ -349,9 +349,9 @@ The ordering also explains why a network trained on clean labels does not suffer
 
 **Uniform random labels.** Real label noise is rarely uniform. Annotators confuse a 4 with a 9 more often than with a 0, and structured noise of that kind can look like signal to the network and be fitted early.
 
-**No regularisation.** No weight decay, dropout or augmentation was used. Each would slow the memorisation of noise and move or flatten the peak; none would stop a network this size from fitting random labels if trained long enough.
+**No regularisation.** No weight decay, dropout or augmentation was used. Each would be expected to slow the memorisation of noise and move or flatten the peak; none was tried here. Zhang and colleagues found that such regularisers did not stop their networks fitting random labels.
 
-**Full-batch training.** One step per pass over the data keeps the comparison clean. With minibatches the same phases appear, measured in epochs rather than steps, with more noise.""")
+**Full-batch training.** One step per pass over the data keeps the comparison clean. With minibatches the same phases would be expected to appear, measured in epochs rather than steps, with more noise; that was not run here.""")
 
     post.add(
         "What to keep",
@@ -371,7 +371,7 @@ If it gets there, your model is large enough to memorise your data, and its test
 
     post.add(
         "Next",
-        """Here the network fitted the signal first and the noise later, and later was worse. Episode 27 runs the clock the other way: a network that memorises its training set first, reaches 100% training accuracy and chance on the test set, and is kept training long after there seems nothing left to learn.""")
+        """Here the network fitted the signal first and the noise later, and later was worse. Episode 27 runs the clock the other way: a network that memorises its training set first, reaches 100% training accuracy and nothing on the test set, and is kept training long after there seems nothing left to learn.""")
 
     return post
 

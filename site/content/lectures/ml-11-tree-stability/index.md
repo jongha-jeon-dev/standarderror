@@ -13,13 +13,13 @@ images: ["ml111-hero.png"]
 
 Disclosure: this post was written with the assistance of an AI system (Claude), which wrote the analysis code, ran the experiments and drafted the text. The topic, the constraints, the data choices and the final review are the author's.
 
-*Two hundred depth-3 trees fitted to bootstrap resamples of a breast-cancer training set score 0.914 on the same held-out tumours, with a standard deviation of 0.015. Their structure is another matter. The full-data tree's root feature, worst perimeter, is the root in 50% of resamples; four other features take the rest, and all five have best splits within 5% of each other. The set of features in the top three levels differs in 194 of 200 resamples, and 36% of test tumours get a different diagnosis from at least one tree.*
+*Two hundred depth-3 trees fitted to bootstrap resamples of a breast-cancer training set score 0.914 on the same held-out tumours, with a standard deviation of 0.015. Their structure is another matter. The full-data tree's root feature, worst perimeter, is the root in 50% of resamples; four other features take the rest, and all five have best splits within 5% of each other. The 200 resamples put 194 different sets of features in the top three levels, none of them the full-data tree's, and 36% of test tumours get a different diagnosis from at least one tree.*
 
 Episode 11 of *Machine Learning, Taught Through What Breaks*. The syllabus and the other episodes: https://jongha-jeon-dev.github.io/standarderror/lectures/
 
 ## The case for trees
 
-Arc II pushed linear models past their textbook conditions. Arc III does the same for trees and the ensembles built from them, and starts with the reason a single tree is chosen at all: it can be read. A depth-3 tree is at most eight rules a clinician could check by hand — *if the largest nuclei have a perimeter above about 107, call it suspicious and look further down the tree* — and that readability is often the whole argument for using one instead of something more accurate.
+Arc II pushed linear models past their textbook conditions. Arc III does the same for trees and the ensembles built from them, and starts with the reason a single tree is chosen at all: it can be read. A depth-3 tree is at most eight rules a clinician could check by hand — *if the largest nuclei have a perimeter above about 106, call it suspicious and look further down the tree* — and that readability is often the whole argument for using one instead of something more accurate.
 
 Reading a tree as an account of the data assumes the tree is a property of the data. A different sample from the same population should give roughly the same tree. That is checkable: draw bootstrap resamples of the training rows, refit, and compare.
 
@@ -70,23 +70,26 @@ worst concave points   best split gain 0.3325  (96.8% of the best)
 mean concave points    best split gain 0.3278  (95.4% of the best)
 ```
 
-All five are within 5% of the best. That is not a coincidence of this dataset; they measure overlapping things. Perimeter, radius and area of the largest nuclei are almost deterministic functions of one another, and concavity tracks size in malignant cells. A resample that shifts a handful of borderline tumours is enough to change which one edges ahead.
+All five are within 5% of the best. That is not a coincidence of this dataset; they measure overlapping things. Perimeter, radius and area of the largest nuclei are almost deterministic functions of one another — across all 569 tumours worst perimeter correlates with worst radius and worst area at 0.98 or more — and concavity goes with size, less tightly: worst perimeter and worst concave points correlate at 0.82. With contenders that close, a resample that shifts a handful of borderline tumours can plausibly change which one edges ahead.
 
 The instability then propagates. Every split below the root is chosen on the rows the root sent down, so a different root means different subsets and a different contest at every node beneath. The threshold moves too: even when the root feature matches, its cut point ranges from 104 to 115 between the 5th and 95th percentiles of resamples.
 
 ```python
 print(f"distinct top-3-level feature sets: {b['distinct_sets']} of 200")
+print(f"same set as the full-data tree: {b['full_set_same']} of 200")
 print(f"test rows where some tree disagrees: {b['any_disagree']:.1%}")
-print(f"two random trees disagree on: {b['pair_disagreement']:.1%}")
+print(f"two trees disagree on, averaged over pairs: "
+      f"{b['pair_disagreement']:.1%}")
 ```
 
 ```text
 distinct top-3-level feature sets: 194 of 200
+same set as the full-data tree: 0 of 200
 test rows where some tree disagrees: 36.3%
-two random trees disagree on: 7.6%
+two trees disagree on, averaged over pairs: 7.6%
 ```
 
-The features used in the first three levels come out as a different set in 194 of 200 resamples. A reader who took any one of these trees as *the* structure of the data would be reading one draw from a wide distribution.
+The 200 resamples put 194 different sets of features in the first three levels. The most common set turns up only 2 times, and the full-data tree's own set — the one a reader would be shown — turns up 0 times. A reader who took any one of these trees as *the* structure of the data would be reading one draw from a wide distribution.
 
 ![Dots sorted from 0 to 1: grey runs at each end where all trees agree and a coloured middle third where they do not.](ml111-f1-rows.png)
 
@@ -94,9 +97,9 @@ The features used in the first three levels come out as a different set in 194 o
 
 ## Different rules, different diagnoses
 
-Structure could move while predictions stayed put; two trees can encode the same decision with different rules. They do not. Any two of these trees disagree on 7.6% of test tumours, about the size of their own error rate (8.6%), and across all two hundred, **36% of tumours get a different diagnosis from at least one tree**.
+Structure could move while predictions stayed put; two trees can encode the same decision with different rules. They do not. Two of these trees disagree on 7.6% of test tumours on average (over every pair among the first sixty), about the size of their own error rate (8.6%), and across all two hundred, **36% of tumours get a different diagnosis from at least one tree**.
 
-Those tumours are not random. They are the ones near the boundary, where several rules of similar quality draw the line in slightly different places. That is also where a diagnosis matters most, and where a tree's printed path — "malignant because worst perimeter > 107" — is least an account of the data and most an account of the sample.
+Those tumours are not random. They are the ones near the boundary, where several rules of similar quality draw the line in slightly different places. That is also where a diagnosis matters most, and where a tree's printed path — "malignant because worst perimeter > 106" — is least an account of the data and most an account of the sample.
 
 The accuracy hides all this because it is an average over tumours, most of which are easy. It is the same lesson as episode 1's error bar, one level down: the number is stable because it averages over exactly the cases where the model is not.
 
@@ -106,7 +109,7 @@ The accuracy hides all this because it is an average over tumours, most of which
 
 ## What does survive
 
-Not everything moves. Every one of the 200 roots is one of 5 features, and all of them describe either the size or the concavity of the largest, most irregular nuclei. A statement at that level — *the first thing that separates these tumours is how large and how irregular the worst nuclei are* — holds in every resample. A statement at the level of the printed tree — *worst perimeter, cut at 107* — holds in about half.
+Not everything moves. Every one of the 200 roots is one of 5 features, and all of them measure either the size or the concavity of the nuclei: 4 describe the largest, most irregular nuclei, and the fifth, mean concave points, the concavity averaged over all of them. A statement at that level — *the first thing that separates these tumours is how large and how concave their nuclei are* — holds in every resample. A statement at the level of the printed tree — *worst perimeter, cut at 106* — holds in about half as far as the feature goes, and less often to the unit, since the cut itself ranges from 104 to 115.
 
 That suggests how to present a tree honestly. Report the set of features that compete for each of the top splits and how often each wins, not the single winner; quote thresholds as ranges across resamples; and say which statements about the data are stable and which are a property of one fit. It is more work than printing the tree, and it is what the tree's readability was supposed to buy in the first place: a claim about the data that a reader can check.
 
@@ -114,19 +117,19 @@ It also says what not to do. A tree is not evidence that its root feature is *th
 
 ## Where this breaks
 
-**Deeper trees are worse, not better.** Depth 3 is the readable case. Fully grown trees on this data have dozens of leaves, and every leaf below the top inherits the instability above it.
+**Deeper trees are unlikely to be better.** Depth 3 is the readable case. Grown without a depth limit, a tree on these 398 rows has 16 leaves and depth 6. Those were not refitted on the resamples here, but every split below the top is chosen on the rows the splits above it selected, so they can be expected to inherit the instability above them.
 
 **Some data have one dominant split.** When one feature separates the classes far better than any other, the root is stable and the instability starts further down. The size of the gap between the best and second-best split at the root is the thing to check, and on data with many correlated measurements it is usually small.
 
-**Bagging is the fix for prediction, not for reading.** Averaging these two hundred trees gives a forest whose predictions are stable, which was Breiman's point in 1996. It also gives up the single readable tree. Episodes 12 and 16 measure what is left of the reading once trees are averaged.
+**Bagging is the fix for prediction, not for reading.** Averaging many such trees should give predictions that move far less between resamples than any one tree's — Breiman's point in 1996, not measured here. It also gives up the single readable tree. Episodes 12 and 16 measure what is left of the reading once trees are averaged.
 
-**Unbiased split selection changes which features win, not how often.** Conditional inference trees choose the root by a significance test instead of a raw impurity decrease. That corrects a bias episode 12 measures, but with five near-equivalent candidates the resample still decides.
+**Unbiased split selection is unlikely to settle the contest.** Conditional inference trees choose the root by a significance test instead of a raw impurity decrease. That corrects a bias episode 12 measures, but with five candidates within 5% of one another the resample would still be expected to decide; conditional inference trees were not fitted here.
 
 ## What to keep
 
 1. Two hundred bootstrap refits of a depth-3 tree scored 0.914 ± 0.015: the accuracy is a property of the data.
 
-2. The root feature matched the full-data tree's in 50% of them, and the top three levels used a different feature set in 194 of 200: the structure is a property of the sample.
+2. The root feature matched the full-data tree's in 50% of them, and the top three levels came out as 194 different feature sets in 200 resamples, none of them the full-data tree's: the structure is a property of the sample.
 
 3. The root moves because the candidates are close. Here the best five splits were within 5% of one another.
 

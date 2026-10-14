@@ -3,7 +3,7 @@ title: "ML 17: Partial Dependence Asks the Model About Rows That Do Not Exist"
 date: 2026-10-12
 slug: "ml-17-pdp"
 draft: false
-description: "A partial dependence plot is read as a feature's effect. With correlated inputs it is an average over combinations that never occur, and on a simulation with a known effect it shows a third of it."
+description: "A partial dependence plot is read as a feature's effect. With correlated inputs it is an average over combinations that never occur, and on a simulation with a known effect a forest's shows about a third of it."
 author: "Jongha Jeon"
 tags: ["machine-learning", "data-science", "statistics", "interpretability", "partial-dependence", "lectures"]
 series: ["Machine Learning, Taught Through What Breaks"]
@@ -50,9 +50,9 @@ With independent inputs both methods find the line: slopes 0.98 and 1.02. As the
 
 ## Where the questions are asked
 
-The scatter of training rows is a narrow diagonal band: x2 is never far from x1. To compute the PDP at x1 = 0.1, every row has its x1 set to 0.1 and keeps its own x2, which ranges from 0 to 1. Most of those rows sit far off the band, in regions where the forest saw no data.
+The scatter of training rows is a narrow diagonal band: x2 is never far from x1. To compute the PDP at x1 = 0.1, every row has its x1 set to 0.1 and keeps its own x2, which ranges roughly from 0 to 1. Most of those rows sit far off the band, in regions where the forest saw no data.
 
-A forest's prediction in such a region is not a guess about the function; it is whatever the nearest leaves on the band say. For a row with x1 = 0.1 and x2 = 0.9, the splits on x2 dominate — they carry most of the signal, since 2x2² varies more than x1 — and send it to leaves trained on rows with both inputs near 0.9. Its prediction is close to what the forest predicts at x1 = 0.9. Averaging such rows flattens the PDP: the curve says x1 barely matters because most of the rows it averages over are answered by x2.
+A forest's prediction in such a region is not a guess about the function; it is whatever the nearest leaves on the band say. For a row with x1 = 0.1 and x2 = 0.9, the splits on x2 are likely to dominate — they carry most of the signal, since 2x2² varies more than x1 — and send it to leaves trained on rows with both inputs near 0.9. Its prediction should then be close to what the forest predicts at x1 = 0.9; individual predictions off the band were not inspected here, but the flattened slope is what that would produce. Averaging such rows flattens the PDP: the curve says x1 barely matters because most of the rows it averages over are answered by x2.
 
 ALE avoids this by never leaving the band. It splits x1 into narrow bins, and within each bin it moves only the rows that are actually there from the bin's lower edge to its upper edge, recording the average change in prediction. Those rows stay close to the data. Accumulating the changes across bins traces the effect:
 
@@ -78,7 +78,7 @@ print(f"x1 rises {edges[-1] - edges[0]:.2f}; ALE says the prediction "
 x1 rises 1.00; ALE says the prediction rises 0.88
 ```
 
-The truth is a rise equal to x1's, and ALE recovers most of it; the shortfall comes from the end bins, where a forest's predictions flatten for want of data beyond them. The result describes the model where it was trained, and on this simulation that is close to the truth.
+The truth is a rise equal to x1's, and ALE recovers most of it. Where the shortfall comes from was not broken down here; a likely source is the end bins, where a forest's predictions flatten for want of data beyond them. The result describes the model where it was trained, and on this simulation that is close to the truth.
 
 ![A narrow diagonal band of training points, and two vertical lines of evaluated points at x1 = 0.1 and 0.9 that run far outside the band.](ml117-f1-support.png)
 
@@ -100,7 +100,7 @@ ALE has a cost too. It needs enough rows per bin to estimate a local difference,
 
 Whether a PDP can be trusted is visible before drawing it. Take the feature and the one it is most correlated with, scatter them, and draw the vertical lines of rows the PDP will build at the lowest and highest grid values. The share of those rows inside the cloud is the share of the curve that describes the data; the rest describes the model somewhere else.
 
-In the simulation at a correlation of 0.985, most of the rows built at x1 = 0.1 are far above the band, and most of those built at x1 = 0.9 far below it. Most of the PDP is computed off the data, which is why its slope is 0.30. At a correlation of 0.69 the band is wide enough to hold a good share of them, and the PDP's slope, 0.78, is correspondingly closer to the truth. The check costs one plot, and it says in advance which of the two curves to believe.
+In the simulation at a correlation of 0.985, counting a built row as on the data when its x2 is within two noise standard deviations of x1, only 17% of the rows built at x1 = 0.1 and 0.9 are on the data; the rest lie far above the band at 0.1 and far below it at 0.9. Most of the PDP is computed off the data, and its slope is 0.30. At a correlation of 0.69 the band is wide enough to hold 66% of them, and the PDP's slope, 0.78, is correspondingly closer to the truth. The check costs one plot, and it says in advance which of the two curves to believe.
 
 ## Where this breaks
 

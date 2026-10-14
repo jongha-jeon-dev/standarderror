@@ -23,7 +23,7 @@ The first three episodes were about reading a score you already have. This one i
 
 The standard tool is the learning curve — test error against training-set size — and the standard way to read it forward is a power law. Error falls as a n^-b on a log-log plot as a straight line; fit the line to the pilot sizes, extend it, read off the error at the size you could afford. It is the same move as the scaling laws used to plan large training runs, made at the scale of a spreadsheet.
 
-Whether it works can be checked only where the curve can be followed much further than the fit. So here is a task built for that: two classes in ten dimensions whose covariances differ, so the best possible boundary is quadratic, training sets grown from 50 rows to 25,600, and a 20,000-point test set on which the Bayes error — the error of the true decision rule, which nothing can beat — is computed exactly from the densities.
+Whether it works can be checked only where the curve can be followed much further than the fit. So here is a task built for that: two classes in ten dimensions whose covariances differ, so the best possible boundary is quadratic, training sets grown from 50 rows to 25,600, and a 20,000-point test set on which the Bayes error — the error of the true decision rule, which nothing can beat — is computed from the true densities, as that rule's error on those same test points.
 
 ```python
 from standarderror.ml import curves as cu
@@ -80,7 +80,7 @@ logistic      local log-log slope  -0.048  -0.045  -0.002
 boosted trees local log-log slope  -0.119  -0.096  -0.051
 ```
 
-Every slope shrinks towards zero as the curve approaches a floor it cannot go through. A straight line fitted to the early, steep part of the curve carries that steepness forward and overshoots.
+The printout shows every third slope. In full the slopes are noisy and do not shrink at every step: the boosted trees' stays between -0.096 and -0.063 from 100 to 1,600 rows, as straight as a power law over the whole pilot range. But every curve ends far flatter than it starts — the boosted trees at -0.015 between 12,800 and 25,600 rows — as it approaches a floor it cannot go through, and for the boosted trees that bend comes after the pilot stops. A straight line fitted to the early, steep part of the curve carries that steepness forward and overshoots.
 
 ![Three falling learning curves that flatten; two dashed fitted curves that keep falling and cross a dotted Bayes-error line the real curves stay above.](ml104-f0-curves.png)
 
@@ -88,11 +88,13 @@ Every slope shrinks towards zero as the curve approaches a floor it cannot go th
 
 ## Adding a floor, and where that fails
 
-The textbook fix is a third parameter: a n^-b + c, where c is the error the model would reach with unlimited data. For logistic regression it works. Its curve has already flattened by a few hundred rows, so the fit can see the floor, and from 6,400 rows it predicts 0.3672 against 0.3672 actual. Its fitted floor, 0.365, is far above the Bayes error, and correctly so: a linear boundary on a quadratic problem has its own limit.
+The textbook fix is a third parameter: a n^-b + c, where c is the error the model would reach with unlimited data. For logistic regression it works. Its curve has flattened by about a thousand rows — its local slope is -0.045 between 400 and 800 rows and within ±0.011 from 800 on — so the fit can see the floor, and from 6,400 rows it predicts 0.3672 against 0.3672 actual. Its fitted floor, 0.365, is far above the Bayes error, and correctly so: a linear boundary on a quadratic problem has its own limit.
 
 For the boosted trees, which are still improving at every size measured, the floor is not something the fit can see, so it guesses. Fitted to 400 rows the floor is 0.330, above the 0.289 the trees actually reach — the fit concludes that more data will barely help, and predicts 0.333 at 25,600 rows when the trees in fact get to 0.289. Fitted to 1,600 or 6,400 rows the floor is 0.219 and 0.214, below the Bayes error. The predictions at 25,600 rows are closer — 0.278 and 0.277 against 0.289 — but the parameter that is supposed to say how far the model can go has no meaning.
 
-So the floor helps exactly when it is least needed. A curve that has visibly bent tells you more data will not help much, with or without a fit. A curve that is still falling is the case where the decision matters, and there the third parameter is set by noise in the last few points.
+15-NN sits in between. It is still falling at every size measured, yet its floored fits from 1,600 and 6,400 rows miss by only -1.4% and -0.4%, with floors of 0.288 and 0.295, above the Bayes error. A floor can work on a curve that is still falling; what the fit cannot tell you is whether it has.
+
+So the floor is least reliable where it is most needed. A curve that has visibly bent tells you more data will not help much, with or without a fit. A curve still falling fast is the case where the decision matters, and there the third parameter is poorly determined: for the boosted trees it moved from 0.330 to 0.219 when the fit range grew from 400 to 1,600 rows.
 
 ![Three lines of fitted floors; the boosted-trees line starts above its dashed actual error and drops below the dotted Bayes-error line.](ml104-f1-floors.png)
 
@@ -100,7 +102,7 @@ So the floor helps exactly when it is least needed. A curve that has visibly ben
 
 ![A nine-row table: the two-parameter predictions are all too low; the three-parameter ones are close for logistic regression and miss in both directions for boosted trees.](ml104-f2-table.png)
 
-*Every two-parameter prediction is too low. The floor helps the model that has stopped improving and misleads about the one that has not.*
+*Every two-parameter prediction is too low. The floor helps logistic regression, and 15-NN from 1,600 rows, and misleads about the boosted trees.*
 
 ## On the digits, and the ranking that turns over
 
@@ -132,7 +134,7 @@ The table also shows the second way a pilot study misleads. Logistic regression 
 
 **The task was chosen to have a known floor.** Real problems have one too, but nobody computes it, which is the point: the only check on a fitted floor is the Bayes error, and in practice it is unavailable.
 
-**Single training sets at the largest sizes.** The 25,600-row errors average three training sets, the digits' 1,200 is one. Their noise is small next to the gaps quoted, but not zero.
+**Few training sets at the largest sizes.** The 25,600-row errors average three training sets, the digits' 1,200 is one. Their noise is small next to the gaps quoted, but not zero.
 
 ## What to keep
 
@@ -140,9 +142,9 @@ The table also shows the second way a pilot study misleads. Logistic regression 
 
 2. On a task with a known Bayes error of 0.268, 4 of 9 such predictions were below it — errors no classifier can reach.
 
-3. Learning curves flatten towards a floor; the local log-log slope shrinks, so a straight line fitted early overshoots.
+3. Learning curves flatten towards a floor; the local log-log slope shrinks overall, if not at every step, so a straight line fitted early overshoots.
 
-4. The floored form a n^-b + c works for curves that have already bent and fails for those still falling: the boosted trees' fitted floor went from 0.330 (above what they reach) to 0.219 (below Bayes) with the fit range.
+4. The floored form a n^-b + c worked for logistic regression and, from 1,600 rows, for 15-NN, and failed for the boosted trees, still falling fastest: their fitted floor went from 0.330 (above what they reach) to 0.219 (below Bayes) with the fit range.
 
 5. The best model at pilot size need not be the best at full size. On digits, logistic regression went from best at 50 images to worst at 1,200.
 

@@ -1,4 +1,4 @@
-"""ML 5: Resampling Moves the Threshold and Breaks the Probabilities.
+"""ML 5: Resampling Moves the Threshold and Breaks a Logistic Model's Probabilities.
 
 The fifth episode of *Machine Learning, Taught Through What Breaks*, closing
 the first arc. "Resample until the classes are balanced" is the first fix
@@ -8,14 +8,16 @@ weights and against moving the plain model's threshold:
 * Logistic regression: oversampling, SMOTE and class weights leave the
   ranking where it was (AUC within 0.002, slightly *lower*, consistently);
   undersampling costs a little more.
-* They inflate the probabilities tenfold and log loss fivefold; the prior
-  correction undoes it.
+* They inflate the logistic model's probabilities tenfold and its log loss
+  fivefold; the prior correction undoes it.
 * What they do to the decisions -- recall at the 0.5 cut from 0.19 to 0.83
   -- the plain model does with a threshold of about 0.02, at the same
   precision.
 * Boosted trees: resampling and weights lower the AUC by about 0.01 and
   SMOTE loses a seventh of the average precision; the plain model with a
-  moved threshold beats every resampled one at its own recall.
+  moved threshold beats the SMOTE model at its own recall. The plain trees'
+  probabilities are too low, and oversampling and class weights move them
+  closer to the prevalence and lower the log loss.
 
 Run: `standarderror run ml105_imbalance --publish`
 """
@@ -149,7 +151,8 @@ def figures(res: dict) -> dict:
         source="Simulated; standarderror/ml/imbalance.py.",
         alt=("A plain-model line on the diagonal, an oversampled line far "
              "below it, and a corrected line back on the diagonal."),
-        caption=(f"Oversampled, a predicted probability is about ten times "
+        caption=(f"Oversampled, a logistic model's predicted probability is "
+                 f"about ten times "
                  f"the real rate: mean prediction {s['oversample']['mean_p']:.3f} "
                  f"against a prevalence of {lo['prevalence']:.2f}. "
                  f"**One line of algebra** puts it back."),
@@ -214,16 +217,18 @@ def _hero(res: dict):
     ratio = lo["summary"]["oversample"]["mean_p"] / lo["prevalence"]
     return charts.lecture_hero(
         series=SERIES_TAG, episode=5,
-        headline="Resampling moves the threshold and breaks the probabilities",
+        headline=("Resampling moves the threshold and breaks logistic "
+                  "probabilities"),
         panels=[(same, f"t = {t:.3f}", "a threshold does it"),
-                (calib, f"{ratio:.0f}x", "inflated probabilities"),
+                (calib, f"{ratio:.0f}x", "logistic probs inflated"),
                 (trees, f"{bo['paired']['SMOTE']['auc']['mean']:+.3f}",
                  "AUC, SMOTE on trees")],
         note=("At 2% prevalence, oversampling, SMOTE and class weights leave "
               "a logistic model's ranking unchanged, multiply its "
               "probabilities tenfold, and change its decisions only as much "
               "as moving the threshold would. On boosted trees they make the "
-              "ranking worse."),
+              "ranking worse, while oversampling and class weights lift the "
+              "trees' too-low probabilities towards the prevalence."),
         alt=("Three hand-drawn frames: two curves on top of each other; a "
              "diagonal and a curve sagging below it; and five bars of which "
              "the first is tallest."),
@@ -281,6 +286,7 @@ def build() -> Post:
     lo, bo, dg = res["lo"], res["bo"], res["dg"]
     s, pr_, mt, c = lo["summary"], lo["paired"], lo["matched"], lo["corrected"]
     bp, bm = bo["paired"], bo["matched"]
+    bs = bo["summary"]
     ds = dg["summary"]
     prev = lo["prevalence"]
     ratio = s["oversample"]["mean_p"] / prev
@@ -305,10 +311,20 @@ def build() -> Post:
     assert bp["undersample"]["ap"]["mean"] < -0.03
     assert all(ds[m]["precision_r80"] < ds["plain"]["precision_r80"]
                for m in im.METHODS if m != "plain")
+    # Boosted trees: the plain model's probabilities are too low, and
+    # oversampling and class weights move them towards the prevalence (not
+    # past it) and lower the log loss; SMOTE and undersampling raise it.
+    assert bs["plain"]["mean_p"] < prev / 2
+    assert bs["plain"]["log_loss"] > s["plain"]["log_loss"]
+    for m in ("oversample", "class weights"):
+        assert bs[m]["log_loss"] < bs["plain"]["log_loss"]
+        assert bs["plain"]["mean_p"] < bs[m]["mean_p"] < prev
+    for m in ("SMOTE", "undersample"):
+        assert bs[m]["log_loss"] > bs["plain"]["log_loss"]
 
     post = Post(
         title=(f"{SERIES_TAG} 5: Resampling Moves the Threshold and Breaks "
-               f"the Probabilities"),
+               f"a Logistic Model's Probabilities"),
         slug="ml-5-imbalance",
         section="lectures",
         series=SERIES,
@@ -318,9 +334,10 @@ def build() -> Post:
         requires_baseline=False,
         subtitle=("'Balance the classes before training' is the first fix "
                   "taught for a rare positive class. Measured, it never "
-                  "improved the ranking, multiplied the probabilities "
-                  "tenfold, and did nothing to the decisions that a "
-                  "threshold does not."),
+                  "improved the ranking, multiplied a logistic model's "
+                  "probabilities tenfold, and did nothing to its decisions "
+                  "that a threshold does not. Boosted trees lost ranking "
+                  "and, with some methods, gained calibration."),
         summary=(
             f"At {prev:.0%} prevalence, logistic regression trained on an "
             f"oversampled, SMOTE-augmented or class-weighted copy of the "
@@ -336,8 +353,13 @@ def build() -> Post:
             f"at {mt['oversample']['plain_precision']:.3f} precision against "
             f"{mt['oversample']['method_precision']:.3f}. On boosted trees "
             f"the corrections lower the AUC by about 0.01, and SMOTE costs "
-            f"{-bp['SMOTE']['ap']['mean']:.3f} of average precision. The "
-            f"digits agree."),
+            f"{-bp['SMOTE']['ap']['mean']:.3f} of average precision, but "
+            f"the plain trees' probabilities are too low (mean "
+            f"{bs['plain']['mean_p']:.3f}) and oversampling moves them to "
+            f"{bs['oversample']['mean_p']:.3f}, cutting log loss from "
+            f"{bs['plain']['log_loss']:.3f} to "
+            f"{bs['oversample']['log_loss']:.3f}. The digits agree on "
+            f"the ranking."),
         tags=["machine-learning", "data-science", "statistics",
               "class-imbalance", "calibration", "lectures"],
         author=se.SETTINGS.author,
@@ -410,7 +432,7 @@ That is the real content of "fixing" imbalance: choosing a different trade-off b
 
     post.add(
         "The probabilities: what resampling breaks",
-        f"""The cost of doing it by resampling shows up in the probabilities. The plain model's mean prediction is {s['plain']['mean_p']:.3f} against a true rate of {prev:.2f}: it is calibrated. The oversampled model's is {s['oversample']['mean_p']:.3f}, about {ratio:.0f} times too high, and its log loss is {ll:.1f} times worse. It was trained on a world where positives are as common as negatives, and it reports probabilities for that world.
+        f"""For logistic regression, the cost of doing it by resampling shows up in the probabilities. The plain model's mean prediction is {s['plain']['mean_p']:.3f} against a true rate of {prev:.2f}: it is calibrated. The oversampled model's is {s['oversample']['mean_p']:.3f}, about {ratio:.0f} times too high, and its log loss is {ll:.1f} times worse. It was trained on a world where positives are as common as negatives, and it reports probabilities for that world.
 
 Anyone who reads those numbers as probabilities — to rank by expected cost, to set a threshold by a business rule, to combine with another model, to tell a patient a risk — is reading the wrong world. Van den Goorbergh and colleagues found exactly this in clinical risk models: imbalance corrections improved no discrimination measure and produced strongly overestimated risks.
 
@@ -427,9 +449,11 @@ Mean prediction and log loss are back to the plain model's. Which is a long way 
 
 {snip['trees'].markdown()}
 
-Oversampling, SMOTE and class weights each lower the AUC by about 0.01, well outside their standard errors, and SMOTE loses {-bp['SMOTE']['ap']['mean']:.3f} of average precision. Undersampling barely moves the AUC ({bp['undersample']['auc']['mean']:+.4f}, inside its standard error) but loses {-bp['undersample']['ap']['mean']:.3f} of average precision, which is where a rare-class problem is decided. Duplicated positives are fitted exactly; SMOTE's synthetic positives fill in the space *between* real ones, which is not where positives are, and the trees learn that geometry. At its own operating point the SMOTE model reaches {bm['SMOTE']['method_precision']:.3f} precision; the plain model with its threshold moved to the same recall reaches {bm['SMOTE']['plain_precision']:.3f}.
+Oversampling, SMOTE and class weights each lower the AUC by about 0.01, well outside their standard errors, and SMOTE loses {-bp['SMOTE']['ap']['mean']:.3f} of average precision. Undersampling barely moves the AUC ({bp['undersample']['auc']['mean']:+.4f}, inside its standard error) but loses {-bp['undersample']['ap']['mean']:.3f} of average precision, which is where a rare-class problem is decided. Why the trees lose ranking was not measured here; a likely part of it is that a flexible model can fit the duplicated or synthetic positives themselves rather than the region they came from. At its own operating point the SMOTE model reaches {bm['SMOTE']['method_precision']:.3f} precision; the plain model with its threshold moved to the same recall reaches {bm['SMOTE']['plain_precision']:.3f}.
 
-The prior correction does not rescue the trees either: their probabilities were not inflated by a clean intercept shift but distorted by memorising the duplicated rows, and the correction applied to them makes the log loss worse, not better.
+The probabilities tell a different story from logistic regression's. The plain trees are *under*-confident about positives: their mean prediction is {bs['plain']['mean_p']:.3f} against a prevalence of {prev:.2f}, and their log loss, {bs['plain']['log_loss']:.3f}, is worse than the plain logistic model's. Oversampling and class weights move the mean to {bs['oversample']['mean_p']:.3f} and {bs['class weights']['mean_p']:.3f}, closer to the truth and not past it, and cut the log loss to {bs['oversample']['log_loss']:.3f} and {bs['class weights']['log_loss']:.3f}. SMOTE and undersampling overshoot, to log losses of {bs['SMOTE']['log_loss']:.3f} and {bs['undersample']['log_loss']:.3f}. So "resampling breaks the probabilities" is a statement about a well-calibrated model; for one that starts miscalibrated it can go either way, and the only way to know is to measure.
+
+That is also why the prior correction does not help the trees: the oversampled trees' probabilities were never inflated — their mean, {bs['oversample']['mean_p']:.3f}, is below the prevalence — so dividing their odds by about 49 pushes them far too low, and the log loss gets worse, not better.
 
 The digits — "is this an 8?", about {dg['prevalence']:.0%} positive, logistic regression over 30 splits — agree with the simulation. The plain model has the highest AUC ({ds['plain']['auc']:.4f}) and the highest precision at 80% recall ({ds['plain']['precision_r80']:.3f}), against {ds['oversample']['precision_r80']:.3f} oversampled and {ds['undersample']['precision_r80']:.3f} undersampled.""",
         figures=[figs["f2"]])
@@ -442,7 +466,7 @@ The digits — "is this an 8?", about {dg['prevalence']:.0%} positive, logistic 
 
 **Losses that are not proper.** The comparison assumes the model is trained on log loss. Trained to maximise accuracy directly, a model on imbalanced data can genuinely learn to ignore the minority class, and reweighting changes what it learns.
 
-**One simulated task.** The tree result depends on how much the trees can memorise; with stronger regularisation the damage shrinks. The direction — no gain in ranking — held in all three settings measured.""")
+**One simulated task.** The tree result may depend on how closely the trees can fit individual rows; their regularisation was not varied here. The direction — no gain in ranking — held in all three settings measured.""")
 
     post.add(
         "What to keep",
@@ -452,9 +476,9 @@ The digits — "is this an 8?", about {dg['prevalence']:.0%} positive, logistic 
 
 3. The recall they gain at 0.5 the plain model gets with a threshold near the prevalence ({mt['oversample']['plain_threshold']:.3f}), at the same precision or better.
 
-4. They inflate predicted probabilities about {ratio:.0f}-fold. For a linear model the prior correction undoes it.
+4. On logistic regression they inflate predicted probabilities about {ratio:.0f}-fold, and the prior correction undoes it.
 
-5. On boosted trees they made the ranking worse: about -0.01 AUC, and {-bp['SMOTE']['ap']['mean']:.3f} of average precision for SMOTE.
+5. On boosted trees they made the ranking worse: about -0.01 AUC, and {-bp['SMOTE']['ap']['mean']:.3f} of average precision for SMOTE. The plain trees' probabilities were too low (mean {bs['plain']['mean_p']:.3f}), and oversampling and class weights improved them; check calibration before assuming either way.
 
 6. Imbalance is not a defect in the data. It is a cost question, and a threshold is where costs belong.""")
 

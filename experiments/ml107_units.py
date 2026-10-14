@@ -10,12 +10,13 @@ from a hundredth to a hundred times the standardised ones and refitting
 cross-validated lasso:
 
 * Seven of the ten features are kept in some units and dropped in others;
-  only sex, BMI and blood pressure survive every choice.
-* The cross-validated error of all 90 refits stays within about 4% of the
-  base model's: the selections differ, the predictions barely do.
+  only sex, BMI and blood pressure survive every choice -- not the three
+  largest coefficients: s5's is the largest, and it is dropped at x 0.01.
+* The cross-validated error of all 90 refits spans 5.3% of the base
+  model's: the selections differ, the cross-validated error barely does.
 * Standardising is itself a choice of units. A binary feature with the same
-  effect per occurrence is kept 60% of the time at 2% prevalence when
-  standardised and 18% when left as 0/1.
+  effect per occurrence is kept in 24 of 40 datasets at 2% prevalence when
+  standardised and 7 of 40 when left as 0/1.
 
 Run: `standarderror run ml107_units --publish`
 """
@@ -42,11 +43,22 @@ EXT = os.environ.get("SERR_FIG_EXT", "png")
 SERIES = "Machine Learning, Taught Through What Breaks"
 SERIES_TAG = "ML"
 EFFECT = 0.3
+REPS = 40
 
 
 def compute() -> dict:
+    X, y, names = ln.diabetes()
+    # The standardised model's own coefficients, with the same LassoCV
+    # settings as unit_sweep's factor-1 refit: which features are largest.
+    coef = ln._lasso_cv(X, y, seed=0)[0]
     return {"unit": ln.unit_sweep(),
-            "binary": ln.binary_prevalence(effect=EFFECT, reps=40)}
+            "binary": ln.binary_prevalence(effect=EFFECT, reps=REPS),
+            "coef": dict(zip(names, (float(c) for c in coef)))}
+
+
+def _count(share: float) -> int:
+    """A keep-share over REPS datasets as the count it came from."""
+    return int(round(share * REPS))
 
 
 def _flippable(u):
@@ -113,16 +125,17 @@ def figures(res: dict) -> dict:
         title="Standardising is a choice of units too",
         subtitle=(f"How often cross-validated lasso keeps a binary feature "
                   f"with the same effect, {EFFECT}, per occurrence, at "
-                  f"different prevalences. 500 rows, 40 datasets each."),
+                  f"different prevalences. 500 rows, {REPS} datasets each."),
         xlabel="share of rows where the feature is 1",
         ylabel="share of datasets where it is kept",
         source="Simulated; standarderror/ml/linear.py.",
         alt=("Two falling lines; the standardised one stays higher, and the "
              "gap widens as the feature gets rarer."),
         caption=(f"At {lo['prevalence']:.0%} prevalence the same feature is "
-                 f"kept **{lo['kept_standardised']:.0%}** of the time "
-                 f"standardised and {lo['kept_raw']:.0%} as 0/1. Neither is "
-                 f"the neutral choice; there isn't one."),
+                 f"kept in **{_count(lo['kept_standardised'])} of {REPS}** "
+                 f"datasets standardised and {_count(lo['kept_raw'])} of "
+                 f"{REPS} as 0/1. Neither is the neutral choice; there "
+                 f"isn't one."),
         path=str(IMG / f"ml107-f1-binary.{EXT}"))[0]
 
     show = [0.01, 0.1, 1, 10, 100]
@@ -177,8 +190,8 @@ def _hero(res: dict):
         headline="A lasso penalty is a price per unit",
         panels=[(grid, f"{len(_flippable(u))} of 10", "features units decide"),
                 (flat, f"{spread:.0%}", "spread in CV error"),
-                (lines, f"{b[-1]['kept_standardised']:.0%} vs "
-                        f"{b[-1]['kept_raw']:.0%}",
+                (lines, f"{_count(b[-1]['kept_standardised'])}/{REPS} vs "
+                        f"{_count(b[-1]['kept_raw'])}/{REPS}",
                  "a 2% binary, kept")],
         note=("Re-express a feature in coarser units and its coefficient "
               "must grow to say the same thing, so the lasso charges it "
@@ -231,8 +244,16 @@ def build() -> Post:
     age_out = max(f for f, kept in zip(k, u["kept"][age]) if not kept)
     s3 = u["names"].index("s3")
     lo, hi = b[-1], b[0]
+    n_std, n_raw = _count(lo["kept_standardised"]), _count(lo["kept_raw"])
+    coef = res["coef"]
+    top = max(coef, key=lambda n: abs(coef[n]))
+    top_out = max(f for f, kept in zip(k, u["kept"][u["names"].index(top)])
+                  if not kept)
 
     # The spine, asserted rather than trusted.
+    # Surviving every unit is not the same as having the largest
+    # coefficient: the largest one flips.
+    assert top in flip and top not in always
     assert len(flip) >= 6 and set(always) == {"sex", "bmi", "bp"}
     assert spread < 0.06
     assert not u["base"][s3] and u["kept"][s3, k.index(3)]
@@ -262,12 +283,12 @@ def build() -> Post:
             f"features are kept in some units and dropped in others; only "
             f"{', '.join(always)} survive every choice. The 90 refits' "
             f"cross-validated errors span {spread:.1%} of the base model's: "
-            f"different selections, near-identical predictions. "
+            f"different selections, near-identical cross-validated error. "
             f"Standardising does not escape the choice - it is one. A "
             f"binary feature with the same effect per occurrence is kept in "
-            f"{lo['kept_standardised']:.0%} of datasets at "
+            f"{n_std} of {REPS} datasets at "
             f"{lo['prevalence']:.0%} prevalence when standardised and "
-            f"{lo['kept_raw']:.0%} when left as 0/1."),
+            f"{n_raw} of {REPS} when left as 0/1."),
         tags=["machine-learning", "data-science", "statistics", "lasso",
               "regularisation", "lectures"],
         author=se.SETTINGS.author,
@@ -314,11 +335,11 @@ The diabetes data makes this concrete: 442 patients, ten baseline measurements, 
 
 {snip['unit'].markdown()}
 
-A `#` is kept, a `.` dropped; the middle column, factor 1, is the standardised model. **{len(flip)} of the ten features change status with their units.** Age, for instance, is dropped at every factor up to {age_out:g} and kept from 1 upward; s3 is out of the standardised model and in it at a factor of 3. Only {', '.join(always)} — the three strongest — are kept whatever their units.""",
+A `#` is kept, a `.` dropped; the middle column, factor 1, is the standardised model. **{len(flip)} of the ten features change status with their units.** Age, for instance, is dropped at every factor up to {age_out:g} and kept from 1 upward; s3 is out of the standardised model and in it at a factor of 3. Only {', '.join(always)} are kept whatever their units, and they are not simply the strongest: in the standardised fit the largest coefficient belongs to {top} ({coef[top]:+.1f}), and {top} is dropped at a factor of {top_out:g}. A large coefficient in standard deviations is no protection once a coarse enough unit makes each unit of it expensive.""",
         figures=[figs["f0"]])
 
     post.add(
-        "Different models, the same predictions",
+        "Different models, nearly the same error",
         f"""If the different selections predicted differently, the units would at least be choosing between better and worse models. They are not.
 
 {snip['mse'].markdown()}
@@ -336,7 +357,7 @@ So: a binary feature with the same effect, {EFFECT} per occurrence, beside five 
 
 {snip['binary'].markdown()}
 
-At 50% both versions keep the feature nearly always. At {lo['prevalence']:.0%}, the standardised lasso keeps it in {lo['kept_standardised']:.0%} of datasets and the raw one in {lo['kept_raw']:.0%}. Standardising divides a rare indicator by a small standard deviation, which inflates its column, shrinks its coefficient and lowers its price; the raw version charges it per occurrence, and a rare occurrence has little data behind it.
+At 50% both versions keep the feature nearly always. At {lo['prevalence']:.0%}, the standardised lasso keeps it in {n_std} of {REPS} datasets and the raw one in {n_raw}. Standardising divides a rare indicator by a small standard deviation, which inflates its column, shrinks its coefficient and lowers its price; the raw version charges it per occurrence, and a rare occurrence has little data behind it.
 
 Neither is right. A per-occurrence effect and a per-standard-deviation effect are different questions, and the lasso answers whichever its units ask. Gelman's suggestion to divide continuous inputs by two standard deviations so that they compare with untouched binaries is one principled answer; it is still a choice.""",
         figures=[figs["f1"]])
@@ -361,7 +382,7 @@ Neither is right. A per-occurrence effect and a per-standard-deviation effect ar
 
 3. The cross-validated errors of all those models span {spread:.1%}: the data cannot distinguish them.
 
-4. Standardising is a choice of units. A binary feature at {lo['prevalence']:.0%} prevalence is kept {lo['kept_standardised']:.0%} of the time standardised and {lo['kept_raw']:.0%} raw.
+4. Standardising is a choice of units. A binary feature at {lo['prevalence']:.0%} prevalence is kept in {n_std} of {REPS} datasets standardised and {n_raw} of {REPS} raw.
 
 5. Report a lasso's selected set as a property of the features *in the units you chose*, or not as a finding at all.""")
 

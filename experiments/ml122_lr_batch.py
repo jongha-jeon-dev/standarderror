@@ -8,8 +8,9 @@ at every batch size:
 * Away from divergence, the training loss depends on the learning rate and
   the batch size only through their ratio. Multiplying both by four gives
   the same loss to within 2.3%, across batches of 8 to 512.
-* Above a rate of about 1.5, training diverges at batch sizes of 128 and
-  512 alike. Batches of 8 and 32
+* At a rate of 3.072 training fails (mean training loss above 1) at batch
+  sizes of 128 and 512 alike: it diverges at 128 and degrades at 512.
+  Batches of 8 and 32
   find their best rate (0.192 and 0.768) below the wall; batches of 128 and
   512 would need 3.1 and 12.3 and stop at 1.536, with training loss 3 and 55
   times higher.
@@ -55,7 +56,7 @@ def compute() -> dict:
             a, b = L[i, j], L[i + 1, j + 2]
             if a < 1 and b < 1:
                 # "far": both runs at least four times below the rate at
-                # which their own batch size diverges
+                # which their own batch size fails (mean training loss > 1)
                 far = lrs[j] * 4 <= div[i] and lrs[j + 2] * 4 <= div[i + 1]
                 pairs.append({"B": Bs[i], "lr": lrs[j], "a": float(a),
                               "b": float(b), "rel": float(abs(b - a) / a),
@@ -89,14 +90,14 @@ def figures(res: dict) -> dict:
         title="Four batch sizes, four curves",
         subtitle=("Training loss after 20 epochs' worth of examples, plain "
                   "SGD, against the learning rate. Average of two seeds; "
-                  "diverged runs are drawn at the top."),
+                  "losses above 3 are drawn at 3."),
         xlabel="learning rate",
         ylabel="training loss (log scale)",
         figsize=(7.2, 4.6),
         source="UCI digits (scikit-learn); standarderror/ml/nets.py.",
         alt=("Four falling curves on log axes, each shifted to the right of "
-             "the last, all cut off by divergence, the two right-hand ones "
-             "at the same learning rate near 3."),
+             "the last, all cut off where training fails, the two right-hand "
+             "ones at the same learning rate near 3."),
         caption=("Each fourfold increase in batch size moves the curve two "
                  "grid points to the right, until the curve runs into the "
                  "same wall."),
@@ -111,8 +112,9 @@ def figures(res: dict) -> dict:
         ylabel="training loss (log scale)",
         figsize=(7.2, 4.6),
         source="UCI digits (scikit-learn); standarderror/ml/nets.py.",
-        alt=("The four curves collapse onto one falling line, and each "
-             "leaves it at a different point, the largest batch first."),
+        alt=("The four curves collapse onto one falling line; the batches of "
+             "8 and 32 leave it together, the batch of 128 earlier and the "
+             "batch of 512 first."),
         caption=(f"Away from the wall, runs with the same ratio reach the "
                  f"same loss to within {res['far_max']:.1%}. The batch of 512 "
                  f"leaves the shared curve first."),
@@ -127,7 +129,7 @@ def figures(res: dict) -> dict:
     out["f2"] = charts.table_image(
         rows,
         header=["batch", "best rate", "rate / batch", "training loss",
-                "test accuracy", "first rate that diverges",
+                "test accuracy", "first rate that fails (loss > 1)",
                 "rate the ratio asks for"],
         title="Where the ratio stops working",
         subtitle=("Best learning rate on a grid of doublings from 0.003, "
@@ -138,7 +140,7 @@ def figures(res: dict) -> dict:
              "32 and stops at 1.536; training loss rises sharply for the "
              "batch of 512."),
         caption=("Batches of 128 and 512 would need rates of 3.072 and 12.288 "
-                 "to keep the ratio. Both rates diverge."),
+                 "to keep the ratio. Both rates fail."),
         bold_cells={(3, 3), (3, 6)},
         align="rrrrrrr",
         path=str(IMG / f"ml122-f2-table.{EXT}"))[0]
@@ -232,6 +234,11 @@ def build() -> Post:
     assert L[0, 1] < L[1, 3] < L[2, 5] < L[3, 7] < 0.19
     assert max(L[0, 3], L[1, 5], L[2, 7]) / min(L[0, 3], L[1, 5], L[2, 7]) < 1.01
     assert L[2, 8] > 2.5 * L[1, 8]
+    # "Fails" is what `div` measures: mean training loss above 1. A network
+    # that has learned nothing scores ln 10 = 2.30. The batch of 512 at the
+    # wall is degraded, not diverged; the others are at or near 2.3 or worse.
+    assert L[0, 7] > 1.5 and L[1, 9] > 2.2 and L[2, 10] > 2.2
+    assert 1.0 < L[3, 10] < 2.0 and L[3, 11] > 2.2
 
     post = Post(
         title=(f"{SERIES_TAG} 22: Learning Rate and Batch Size Are One Knob, "
@@ -246,7 +253,7 @@ def build() -> Post:
         subtitle=("With plain SGD and a fixed number of examples, multiplying "
                   "the batch size and the learning rate by the same factor "
                   "gives the same training run, until the learning rate "
-                  "reaches the point where training diverges."),
+                  "reaches the point where training fails."),
         summary=(
             f"Plain SGD on a two-layer network on the digits, with 20 "
             f"epochs' worth of examples at every batch size, swept over "
@@ -254,8 +261,9 @@ def build() -> Post:
             f"with the same ratio of learning rate to batch size reached the "
             f"same training loss to within {res['far_max']:.1%}, from "
             f"batches of 8 to 512. The best rate grew fourfold from batch 8 "
-            f"({blr[0]:.3f}) to 32 ({blr[1]:.3f}). Above about 1.5, training "
-            f"diverged at batch sizes of 128 and 512 alike, so those stopped "
+            f"({blr[0]:.3f}) to 32 ({blr[1]:.3f}). At a rate of "
+            f"{div[2]:.3f} training failed (mean training loss above 1) at "
+            f"batch sizes of 128 and 512 alike, so those stopped "
             f"at {blr[2]:.3f}, where their training loss was "
             f"{bl[2] / bl[1]:.0f} and {bl[3] / bl[1]:.0f} times the batch of "
             f"32's and test accuracy {ba[2]:.3f} and {ba[3]:.3f} against "
@@ -308,23 +316,23 @@ The best learning rate for batches of 32 is **four times** the best for batches 
 
 {snip['ratio'].markdown()}
 
-At a ratio of 0.00075 the four batch sizes reach {L[0, 1]:.3f} to {L[3, 7]:.3f}. At 0.003 the first three agree to within 1%. Over every pair of runs on the grid where the batch and the rate are both four times larger, and both rates are at least four times below the rate at which their batch size diverges, the losses differ by at most **{res['far_max']:.1%}**. Closer to divergence the pairs part, by up to {res['near_max']:.0%}. Plotted against the ratio, the four curves in the second figure are one curve.
+At a ratio of 0.00075 the four batch sizes reach {L[0, 1]:.3f} to {L[3, 7]:.3f}. At 0.003 the first three agree to within 1%. Over every pair of runs on the grid where the batch and the rate are both four times larger, and both rates are at least four times below the rate at which their batch size fails (defined below), the losses differ by at most **{res['far_max']:.1%}**. Closer to failure the pairs part, by up to {res['near_max']:.0%}. Plotted against the ratio, the four curves in the second figure are one curve.
 
 There is a simple reason. With a fixed number of examples, a batch four times larger means four times fewer steps, and a rate four times larger means each step goes four times as far; at small rates, where the gradient changes little over a few steps, four small steps on four batches land almost where one big step on their union does. A second reason gives the same ratio: the noise in a minibatch gradient has a variance proportional to 1/B, and Smith and Le showed that the size of the random kicks SGD gives the weights scales with the learning rate divided by the batch. Either way, the run is set by lr/B, and the two "separate knobs" are one.""",
         figures=[figs["f1"]])
 
     post.add(
         "The wall",
-        f"""The last line of the output is where the rule ends. At a ratio of 0.012 the batch of 512 needs a learning rate of 6.144, and the run diverges. In fact every batch size diverges somewhere: the batch of 8 at {div[0]:.3f}, the batch of 32 at {div[1]:.3f}, and the batches of 128 and 512 both at **{div[2]:.3f}**.
+        f"""The last line of the output is where the rule ends. At a ratio of 0.012 the batch of 512 needs a learning rate of 6.144, and the run ends with a mean training loss of {L[3, 11]:.2f}. Call a run *failed* when its mean training loss ends above 1; a network that has learned nothing scores ln 10 = 2.30. Every batch size fails somewhere: the batch of 8 at {div[0]:.3f} (mean loss {L[0, 7]:.2f}), the batch of 32 at {div[1]:.3f} ({L[1, 9]:.2f}), and the batches of 128 and 512 both at **{div[2]:.3f}**. At that rate the batch of 128 diverges outright ({L[2, 10]:.2f}); the batch of 512 is degraded rather than diverged, ending at {L[3, 10]:.2f}, worse than at any smaller rate but still below a network that has learned nothing.
 
-For the two small batches the divergence point follows the ratio too, at 0.048 per example. For the two large ones it does not: it is the same learning rate for both. That is the signature of a limit that has nothing to do with the batch. Gradient descent on a loss whose sharpest curvature is λ is stable only for learning rates below about 2/λ, a property of the loss surface, and it binds the full-batch step and the large-batch step alike. The small batches hit a limit that scales with the batch, as a limit set by gradient noise would; the large ones hit one that does not, as a limit set by curvature would.
+For the two small batches the failure point follows the ratio too, at 0.048 per example. For the two large ones it does not: it is the same learning rate for both. That is what a limit unrelated to the batch would look like, though with two batch sizes and a grid of doublings it is suggestive rather than shown. Gradient descent on a loss whose sharpest curvature is λ is stable only for learning rates below about 2/λ, a property of the loss surface, and it binds the full-batch step and the large-batch step alike. The small batches hit a limit that scales with the batch, as a limit set by gradient noise would; the large ones hit one that does not, as a limit set by curvature would. Curvature itself was not measured here.
 
-Once a batch size needs a rate above that wall, the linear scaling rule has nothing left to offer. Here the batch of 128 reached a training loss {bl[2] / bl[1]:.1f} times the batch of 32's at its best rate, and the batch of 512, {bl[3] / bl[1]:.0f} times; test accuracy fell from {ba[1]:.3f} to {ba[3]:.3f}. With 35 steps in total, it simply did not travel far enough, and the only way to travel further is more steps. That is what McCandlish and colleagues call the critical batch size: beyond it, a larger batch buys little reduction in the number of steps needed, so it mostly spends more computation.""",
+Once a batch size needs a rate above that wall, the linear scaling rule has nothing left to offer. Here the batch of 128 reached a training loss {bl[2] / bl[1]:.1f} times the batch of 32's at its best rate, and the batch of 512, {bl[3] / bl[1]:.0f} times; test accuracy fell from {ba[1]:.3f} to {ba[3]:.3f}. With 35 steps in total, the likeliest reading is that it did not travel far enough, and the only way to travel further is more steps. That is what McCandlish and colleagues call the critical batch size: beyond it, a larger batch buys little reduction in the number of steps needed, so it mostly spends more computation.""",
         figures=[figs["f2"]])
 
     post.add(
         "What this means for a training script",
-        f"""The practical rule that follows is not "tune both". It is: treat lr/B as the setting, and change the batch size only with the learning rate in proportion, while the rate stays well below the point where training diverges. Below the wall that is free: the batch of 32 and the batch of 8 reached the same loss, {bl[1]:.4f} and {bl[0]:.4f}, with a quarter of the steps. Above it, a larger batch is a decision to train less, and should be paid for with more epochs.
+        f"""The practical rule that follows is not "tune both". It is: treat lr/B as the setting, and change the batch size only with the learning rate in proportion, while the rate stays well below the point where training fails. Below the wall that is free: the batch of 32 and the batch of 8 reached the same loss, {bl[1]:.4f} and {bl[0]:.4f}, with a quarter of the steps. Above it, a larger batch is a decision to train less, and should be paid for with more epochs.
 
 It also says how to read a tuning result. A learning rate tuned at one batch size is a ratio tuned at that batch size. Copying the rate to a run with four times the batch, as happens when a script moves to a larger machine, divides the effective setting by four. On this grid, the batch of 32's best rate, {r['lrs'][8]:.3f}, gives the batch of 128 a training loss of {L[2, 8]:.4f} instead of {L[1, 8]:.4f}.
 
@@ -338,7 +346,7 @@ Goyal and colleagues trained ImageNet in an hour on this principle, with batches
 
 **One network and one budget.** The position of the wall depends on the network's curvature, and the critical batch size depends on the task's gradient noise, so neither number transfers. What transfers is the shape: a ratio that sets the run, and a wall that does not move with the batch.
 
-**A coarse grid.** Rates double, so "best" and "diverges" are each known only to within a factor of two.""")
+**A coarse grid.** Rates double, so "best" and "fails" are each known only to within a factor of two.""")
 
     post.add(
         "What to keep",
@@ -346,7 +354,7 @@ Goyal and colleagues trained ImageNet in an hour on this principle, with batches
 
 2. The best rate grew fourfold from a batch of 8 to a batch of 32 ({blr[0]:.3f} to {blr[1]:.3f}), with the same loss and test accuracy.
 
-3. Training diverged at a learning rate that did not move with the batch for large batches ({div[2]:.3f} for both 128 and 512). Batches that needed more than that reached a training loss {bl[2] / bl[1]:.0f} and {bl[3] / bl[1]:.0f} times higher.
+3. Training failed (mean training loss above 1) at a learning rate that did not move with the batch for large batches ({div[2]:.3f} for both 128 and 512: diverging at 128, degraded to {L[3, 10]:.2f} at 512). Batches that needed more than that reached a training loss {bl[2] / bl[1]:.0f} and {bl[3] / bl[1]:.0f} times higher.
 
 4. Change the batch size and the learning rate together; beyond the wall, a larger batch means less training, not faster training.""")
 

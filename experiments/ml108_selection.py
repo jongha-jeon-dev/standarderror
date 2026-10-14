@@ -7,7 +7,7 @@ Measured where the truth is known and on bootstrap resamples of real data:
 * Ten features, two with effects, one irrelevant but correlated with a
   relevant one, seven pure noise. At the cross-validation-minimising
   penalty the lasso keeps both relevant features nearly always -- and about
-  2.7 of the 7 noise features, and the irrelevant correlated one about a
+  2.8 of the 7 noise features, and the irrelevant correlated one about a
   third of the time, whatever the correlation.
 * The 1-SE rule removes most of the noise (about 0.2 kept) but not the
   confusion between correlated features: at correlation 0.99 the irrelevant
@@ -140,22 +140,27 @@ def figures(res: dict) -> dict:
                 rows_t.append([tag, f"{r['rho']:g}", f"{r['a']:.2f}",
                                f"{r['b']:.2f}", f"{r['b_only']:.2f}",
                                f"{r['noise_kept']:.2f}"])
+    c_min = min(r["c"] for r in res["min"])
+    c_1se = min(r["c"] for r in res["1se"])
+    nk = float(np.mean([r["noise_kept"] for r in res["min"]]))
     out["f2"] = charts.table_image(
         rows_t,
         header=["penalty", "corr(a, b)", "keeps a", "keeps b",
                 "keeps b, not a", "noise features kept (of 7)"],
         title="What the lasso selects when the truth is known",
-        subtitle=("Effects of 0.5 on a and on c (always kept), none on b or "
-                  "the seven noise features. 60 datasets of 100 rows per "
-                  "row of the table."),
+        subtitle=(f"Effects of 0.5 on a and on c (c kept in at least "
+                  f"{c_min:.0%} of datasets at the CV minimum, {c_1se:.0%} "
+                  f"under the 1-SE rule), none on b or the seven noise "
+                  f"features. 60 datasets of 100 rows per row of the table."),
         source="Simulated; standarderror/ml/linear.py.",
-        alt=("A six-row table: under the CV minimum, about 2.7 noise "
-             "features kept at every correlation; under the 1-SE rule, about "
-             "0.2, with the stand-in kept more often as correlation rises."),
+        alt=(f"A six-row table: under the CV minimum, about {nk:.1f} noise "
+             f"features kept at every correlation; under the 1-SE rule, "
+             f"about 0.2, with the stand-in kept more often as correlation "
+             f"rises."),
         caption=("The CV minimum optimises prediction, which tolerates "
                  "small spurious coefficients. The 1-SE rule trades a little "
-                 "prediction for far fewer, and still cannot separate a "
-                 "feature from a near-copy."),
+                 "prediction for far fewer, and still does not reliably "
+                 "separate a feature from a near-copy at 100 rows."),
         align="lrrrrr",
         path=str(IMG / f"ml108-f2-table.{EXT}"))[0]
 
@@ -194,8 +199,9 @@ def _hero(res: dict, i_age: int, i_s3: int):
                        f"{sm['negative'][i_age]:.0%}", "age: + / - in 100")],
         note=("Tuned by cross-validation, the lasso keeps both real effects "
               "and a few pure-noise features as well. A stricter penalty "
-              "drops the noise but still cannot separate a feature from a "
-              "correlated stand-in, and on real data it keeps features whose "
+              "drops the noise but at 100 rows still does not reliably "
+              "separate a feature from a correlated stand-in, and on real "
+              "data it keeps features whose "
               "sign flips between resamples."),
         alt=("Three hand-drawn frames: a tall bar beside a short one; two "
              "lines converging; and two pairs of bars on either side of "
@@ -264,6 +270,14 @@ def build() -> Post:
     assert s1["negative"][i3] > 0.9
     assert sm["positive"][i2] > sm["negative"][i2]
     assert s1["negative"][i2] > s1["positive"][i2]
+    # c, the uncorrelated relevant feature: kept nearly always at the CV
+    # minimum, and not always under the 1-SE rule.
+    c_min = min(r["c"] for r in mn)
+    a_min = min(r["a"] for r in mn)
+    assert c_min > 0.95 and se1[0]["c"] < mn[0]["c"]
+    # At rho = 0.99 the lasso favours the real feature, but not reliably.
+    assert hi1["a_only"] > 2 * hi1["b_only"] and hi1["b_only"] > 0.15
+    assert mn[-1]["a_only"] > 2 * mn[-1]["b_only"]
 
     post = Post(
         title=(f"{SERIES_TAG} 8: Cross-Validated Lasso Is Tuned to Predict, "
@@ -282,7 +296,8 @@ def build() -> Post:
         summary=(
             f"With two real effects, one irrelevant feature correlated with "
             f"a real one and seven of pure noise, cross-validated lasso "
-            f"keeps both real effects and on average {noise_min:.1f} of the "
+            f"keeps the real effects (c in at least {c_min:.0%} of datasets, "
+            f"a in at least {a_min:.0%}) and on average {noise_min:.1f} of the "
             f"7 noise features, and the irrelevant correlated one about "
             f"{np.mean(b_min):.0%} of the time at every correlation. The 1-SE "
             f"rule cuts the noise to {noise_1se:.1f} but not the confusion: "
@@ -345,11 +360,11 @@ None of this is a malfunction. Prediction loses almost nothing by giving a noise
 
 {snip['1se'].markdown()}
 
-The passengers mostly get off: {noise_1se:.1f} noise features on average, and b is kept only {se1[0]['b']:.0%} of the time when it is uncorrelated. But the stand-in problem gets *worse* as the correlation rises: at ρ = {hi1['rho']:g}, b is kept {hi1['b']:.0%} of the time and a only {hi1['a']:.0%}. No setting of the penalty can tell two near-identical columns apart, because the data barely can. The lasso keeps one of them, more or less at random, and a report of "the selected features" names whichever it happened to be.
+The passengers mostly get off: {noise_1se:.1f} noise features on average, and b is kept only {se1[0]['b']:.0%} of the time when it is uncorrelated. But the stand-in problem gets *worse* as the correlation rises: at ρ = {hi1['rho']:g}, b is kept {hi1['b']:.0%} of the time and a only {hi1['a']:.0%}. Neither rule reliably tells two near-identical columns apart at 100 rows, because the data carry little information about which is which. The lasso does favour the real one — at ρ = {hi1['rho']:g} it keeps a without b in {hi1['a_only']:.0%} of datasets and b without a in {hi1['b_only']:.0%} — but in roughly one dataset in {1 / hi1['b_only']:.0f} a report of "the selected features" names the stand-in instead of the real effect.
 
-The geometry says why. When two columns are nearly identical, the fitted values depend almost only on the *sum* of their coefficients. The L1 penalty charges |β_a| + |β_b|, which for coefficients of the same sign is also just the sum. Every split of the shared effect between a and b fits about equally well and costs exactly the same penalty, so which corner the solver lands on is decided by the small accidents of the sample. Ridge, whose penalty is β_a² + β_b², strictly prefers an even split and keeps both; the elastic net mixes the two penalties precisely to get that grouping back. Neither tells you which of the two is the real one. With ρ = 0.99 and 100 rows, the data do not contain that information, and no penalty can create it.
+The geometry says why. When two columns are nearly identical, the fitted values depend almost only on the *sum* of their coefficients. The L1 penalty charges |β_a| + |β_b|, which for coefficients of the same sign is also just the sum. Every split of the shared effect between a and b fits about equally well and costs exactly the same penalty, so which corner the solver lands on is decided by the small accidents of the sample. Ridge, whose penalty is β_a² + β_b², strictly prefers an even split and keeps both; the elastic net mixes the two penalties precisely to get that grouping back. Neither tells you which of the two is the real one. With ρ = 0.99 and 100 rows the data contain little of that information, and no penalty can create more.
 
-The 1-SE rule also costs the relevant feature something even when there is no stand-in: at ρ = 0 it keeps a in {se1[0]['a']:.0%} of datasets, against {mn[0]['a']:.0%} at the CV minimum. A larger penalty shrinks every coefficient, and an effect of 0.5 in 100 noisy rows is not always large enough to survive it. Sparser means fewer false positives and more false negatives; there is no setting that gives fewer of both.""",
+The 1-SE rule also costs the relevant feature something even when there is no stand-in: at ρ = 0 it keeps a in {se1[0]['a']:.0%} of datasets, against {mn[0]['a']:.0%} at the CV minimum, and c, which is correlated with nothing, in {se1[0]['c']:.0%} against {mn[0]['c']:.0%}. A larger penalty shrinks every coefficient, and an effect of 0.5 in 100 noisy rows is not always large enough to survive it. Sparser means fewer false positives and more false negatives; there is no setting that gives fewer of both.""",
         figures=[figs["f2"]])
 
     post.add(
@@ -369,11 +384,11 @@ Under the 1-SE rule age almost vanishes ({s1['positive'][ia] + s1['negative'][ia
 
 **Stability selection is the principled fix, and it changes the question.** Meinshausen and Bühlmann's procedure keeps features selected in a large share of subsamples across many penalties, with an error-control guarantee. It is still blind to which of two near-copies is the real one; the guarantee is about noise features, not stand-ins.
 
-**The elastic net groups, it does not choose.** Adding a ridge component (half and half, tuned by the same cross-validation) keeps correlated features together instead of picking one. On this design it does so by keeping the stand-in *more* often: {en[0]['b']:.0%} of the time at ρ = 0 and {en[-1]['b']:.0%} at ρ = {en[-1]['rho']:g}, with {np.mean([r['noise_kept'] for r in en]):.1f} noise features kept on average. More stable, and no closer to the truth.
+**The elastic net groups, it does not choose.** Adding a ridge component (half and half, tuned by the same cross-validation) keeps correlated features together instead of picking one. On this design it does so by keeping the stand-in *more* often: {en[0]['b']:.0%} of the time at ρ = 0 and {en[-1]['b']:.0%} at ρ = {en[-1]['rho']:g}, with {np.mean([r['noise_kept'] for r in en]):.1f} noise features kept on average. Grouping is not choosing, and it is no closer to the truth.
 
-**One simulation design.** Ten features, 100 rows, effects of 0.5. With more rows the CV minimum keeps fewer passengers; with more noise features it keeps more. The stand-in problem does not shrink with more rows at a fixed high correlation.
+**One simulation design.** Ten features, 100 rows, effects of 0.5. How the number of passengers changes with more rows was not measured; a penalty tuned for prediction is known not to be selection-consistent in general, so do not count on it falling to zero. The stand-in problem should shrink with more rows: in this design b's correlation with the true features is ρ, below 1, so the irrepresentable condition holds and Zhao and Yu's theory says a suitably tuned lasso eventually separates a from b. The rows that takes grow as ρ approaches 1, and nothing here measures how many.
 
-**Bootstrap selection frequencies are themselves estimates.** A hundred resamples resolve a share to about ±5 points; the sign splits quoted are far wider than that.""")
+**Bootstrap selection frequencies are themselves estimates.** A hundred resamples pin a share down to within about ±10 points at 95%; the sign splits quoted are well clear of that.""")
 
     post.add(
         "What to keep",
@@ -381,7 +396,7 @@ Under the 1-SE rule age almost vanishes ({s1['positive'][ia] + s1['negative'][ia
 
 2. The 1-SE rule drops most of them ({noise_1se:.1f}) at a small cost in prediction.
 
-3. No penalty separates a feature from a highly correlated stand-in: at ρ = {hi1['rho']:g}, the stand-in was kept {hi1['b']:.0%} of the time and the real feature {hi1['a']:.0%}.
+3. Neither penalty rule reliably separated a feature from a highly correlated stand-in at 100 rows: at ρ = {hi1['rho']:g}, the stand-in was kept {hi1['b']:.0%} of the time and the real feature {hi1['a']:.0%}.
 
 4. On the diabetes data, age was kept in {sm['positive'][ia] + sm['negative'][ia]:.0%} of bootstrap fits with its sign split {sm['positive'][ia]:.0%} / {sm['negative'][ia]:.0%}. Report sign stability, not only selection frequency.
 

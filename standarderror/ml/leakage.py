@@ -5,7 +5,7 @@ advice delivered as if every violation were equally bad. Measured, they are
 not. A step that never looks at the label -- standardising, mean imputation
 -- leaks almost nothing when fitted on all the data. A step that looks at the
 label leaks in proportion to how much it can fit: selecting 20 of 5,000
-pure-noise features on all 100 rows turns a coin flip into 0.89 cross-
+pure-noise features on all 100 rows turns a coin flip into 0.88 cross-
 validated accuracy. And duplicated rows leak in proportion to how local the
 model is: nothing much for logistic regression, everything for 1-NN.
 

@@ -68,7 +68,7 @@ The first run is the one to follow. Training accuracy reaches 100% at step **200
 
 By the sentence under test, training is over at step 200. It continues anyway, and for a long time nothing visible happens. Training accuracy stays at 100% at every checkpoint. Test accuracy stays under 10% until step 2,300, 12 times as long as it took to fit the training set. Then it climbs, steeply, and passes 99% at step **4,900**. By the end of the run the network answers every one of the 5,646 pairs it never saw.
 
-Power and colleagues, who first reported this on small algorithmic tasks, named it *grokking*. Nanda and colleagues later opened up a small transformer trained on the same task and found what it had learned: its embeddings place the numbers on circles, and it adds angles, which is modular addition done with trigonometry. Whether this network found the same solution was not checked here; what is measured is that it found one that answers the unseen pairs. A memorised table and a rule both fit the training pairs perfectly. Only the rule answers the rest.
+Power and colleagues, who first reported this on small algorithmic tasks, named it *grokking*. Nanda and colleagues later opened up a small transformer trained on modular addition (modulo 113 rather than 97) and found what it had learned: its embeddings place the numbers on circles, and it adds angles, which is modular addition done with trigonometry. Whether this network found the same solution was not checked here; what is measured is that it found one that answers the unseen pairs. A memorised table and a rule both fit the training pairs perfectly. Only the rule answers the rest.
 
 So "100% training accuracy" does not identify what the network has learned. Two quite different functions, a lookup table and the rule, score identically on the training set, and training moved from the first to the second while the score on the training set never changed.
 
@@ -110,7 +110,7 @@ That is the shape Power and colleagues reported: the delay between memorising an
 
 2. Learning continued after the training set was fitted. Training accuracy reached 100% at step 200, test accuracy was 0.000 then, and it passed 99% at step 4,900.
 
-3. Weight decay drove the switch: the parameter norm fell from 112 to 76 on the way. Without it, test accuracy was 0.1% after 10,000 steps.
+3. In these runs, weight decay drove the switch: the parameter norm fell from 112 to 76 on the way. Without it, in the one control run, test accuracy was 0.1% after 10,000 steps.
 
 4. More training data brought the rule sooner: step 1,500 with 60% of the pairs.
 

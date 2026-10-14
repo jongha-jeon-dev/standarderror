@@ -12,8 +12,8 @@ splits:
 * Pixel noise changed nothing. Mirror images and half-turns, which turn some
   digits into others or into nothing, cost 9.2 and 12.3.
 * An augmentation is a claim that the label survives a transformation. It
-  helps exactly where the test data vary in that way, and hurts where the
-  claim is false.
+  helps where the test data vary in that way, and hurts where the claim is
+  false; on a fixed budget even a true claim cost a little on clean data.
 
 Run: `standarderror run ml128_augmentation --publish`
 """
@@ -89,9 +89,9 @@ def figures(res: dict) -> dict:
         alt=("A five-by-five grid of 8 by 8 pixel digits: the shifted and "
              "noisy copies still read as the same digit; the mirrored 3 and "
              "the half-turned 6 and 7 read as something else or nothing."),
-        caption=("The first two columns keep the label. The mirrored 3 is no "
-                 "longer a 3, the half-turned 6 is a 9, and the mirrored 0 "
-                 "is still a 0."),
+        caption=("The shifted and noisy copies keep the label. The mirrored 3 "
+                 "is no longer a 3, the half-turned 6 is a 9, and the "
+                 "mirrored 0 is still a 0."),
         path=str(IMG / f"ml128-f0-grid.{EXT}"))[0]
 
     def bars(ax, m):
@@ -227,6 +227,9 @@ def build() -> Post:
     se_, sem = a["gain_se"], a["moved"]["gain_se"]
     flip_all = [d for d, v in f["flip"].items() if v > 0.95]
     rot_all = [d for d, v in f["rot180"].items() if v > 0.95]
+    self_max = max([1 - f["flip"][d] for d in flip_all] +
+                   [1 - f["rot180"][d] for d in rot_all])
+    assert 0 < self_max < 0.05      # "almost never", not "never"
 
     # The spine, asserted rather than trusted.
     assert g["real"] > 0.03 and g["real"] > 5 * se_["real"]
@@ -320,11 +323,11 @@ That is what an augmentation is. It is not data in the sense of new observations
 
     post.add(
         "When the assumption is false",
-        f"""Mirrors and half-turns are ordinary augmentations for photographs: a mirrored cat is a cat. They are not label-preserving for digits. A clean network, shown the transformed versions of digits it would otherwise classify, gives a different answer for each class at these rates:
+        f"""Mirrors and half-turns are ordinary augmentations for photographs: a mirrored cat is a cat. They are not label-preserving for digits. A network trained on clean digits, shown transformed test digits, gives an answer other than the true class at these rates, class by class:
 
 {snip['flip'].markdown()}
 
-A mirrored {', '.join(str(d) for d in flip_all[:-1])} or {flip_all[-1]} is never read as itself, and neither is a half-turned {', '.join(str(d) for d in rot_all[:-1])} or {rot_all[-1]}: a half-turned 6 looks like a 9, and a mirrored 3 like no digit at all. Zeros survive both, and eights mostly do. Training on these copies under their original labels tells the network that the shape of a 9 is evidence for a 6, which is false, and it pays for the falsehood: {g['flip']:+.3f} from mirrors and {g['rot180']:+.3f} from half-turns, against the network that saw only the 150 originals. On the moved test digits they cost too, {gm['flip']:+.3f} and {gm['rot180']:+.3f}.
+A mirrored {', '.join(str(d) for d in flip_all[:-1])} or {flip_all[-1]} is almost never read as itself, and neither is a half-turned {', '.join(str(d) for d in rot_all[:-1])} or {rot_all[-1]}: each is read as itself in at most {self_max:.0%} of cases. To a human eye a half-turned 6 is a 9. Zeros survive both, and eights mostly do. Training on these copies under their original labels tells the network that the shape of a 9 is evidence for a 6, which is false, and it pays for the falsehood: {g['flip']:+.3f} from mirrors and {g['rot180']:+.3f} from half-turns, against the network that saw only the 150 originals. On the moved test digits they cost too, {gm['flip']:+.3f} and {gm['rot180']:+.3f}.
 
 Pixel noise is the control. Its copies preserve the label, and it changed nothing: {g['noise']:+.3f} on the clean test set and {gm['noise']:+.3f} on the moved one. Neither test set contains noisy pixels, so the invariance it teaches is never asked for, and at a standard deviation of 2 on a 0-to-16 scale it does not disturb the image enough to get in the way. Copies that assert something true and irrelevant are simply wasted.""",
         figures=[figs["f2"]])
@@ -333,7 +336,7 @@ Pixel noise is the control. Its copies preserve the label, and it changed nothin
         "Reading augmentation as a prior",
         f"""Chen, Dobriban and Lee make this precise. When the transformations form a group under which the true label is invariant, training on augmented data is equivalent to averaging the loss over the group's orbit of each example. That can only reduce the variance of what is learned, and it introduces no bias. When the label is *not* invariant, the same averaging introduces bias, because it trains the model on a distribution that does not exist.
 
-Both halves were visible here, along with a cost the theory does not count. Shifts are close to an invariance of handwriting, and the shifted copies bought {gm['shift']:+.3f} where shifts actually occurred. On a fixed budget of training they still cost {-g['shift']:.3f} where shifts did not: a true assumption is free in the limit, not on 300 steps. Mirrors and half-turns break the label for at least three classes, and the cost was large wherever they were scored.
+Both halves were visible here, along with a cost the theory does not count. Shifts are close to an invariance of handwriting, and the shifted copies bought {gm['shift']:+.3f} where shifts actually occurred. On a fixed budget of training they still cost {-g['shift']:.3f} where shifts did not: a true assumption may be free in the limit, but on 300 steps it was not, plausibly because of the budget (equal epochs were not tried). Mirrors and half-turns break the label for at least three classes, and the cost was large wherever they were scored.
 
 The practical reading is that an augmentation should be chosen the way a prior is: by asking what is true of the world the model will see, not what makes the training set bigger. A shift augmentation for a camera that may not be centred; a colour jitter for a model that will meet different lighting; no mirror for text, no half-turn for digits, no time reversal for a sequence with a direction. The question is never how many copies, but whether the test data will vary in the way the copies do and whether the label survives it.""")
 

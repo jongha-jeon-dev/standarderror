@@ -9,11 +9,11 @@ set grows to 25,600 rows and the Bayes error is known, and on the digits:
 * The two-parameter power law ``a n^-b`` is optimistic in every one of 18
   fits, and for the flexible models predicts errors *below the Bayes error*,
   which no classifier can reach.
-* Adding a floor ``a n^-b + c`` fixes the model whose curve has already bent
-  (logistic regression, within 0.3% from 6,400 rows) and fails for the one
-  still improving: the boosted trees' fitted floor is above the error they
-  actually reach when fitted to 400 rows, and below the Bayes error when
-  fitted to 1,600 or 6,400.
+* Adding a floor ``a n^-b + c`` fixes logistic regression (within 0.3% from
+  6,400 rows), works for 15-NN from 1,600 rows, and fails for the boosted
+  trees, which are still improving fastest: their fitted floor is above the
+  error they actually reach when fitted to 400 rows, and below the Bayes
+  error when fitted to 1,600 or 6,400.
 * The best model changes with the size: on digits, logistic regression is
   best at 50 images and worst at 1,200.
 
@@ -164,8 +164,8 @@ def figures(res: dict) -> dict:
              "low; the three-parameter ones are close for logistic "
              "regression and miss in both directions for boosted trees."),
         caption=("Every two-parameter prediction is too low. The floor helps "
-                 "the model that has stopped improving and misleads about "
-                 "the one that has not."),
+                 "logistic regression, and 15-NN from 1,600 rows, and "
+                 "misleads about the boosted trees."),
         bold_cells=bold, align="llrrrr",
         path=str(IMG / f"ml104-f2-table.{EXT}"))[0]
 
@@ -209,8 +209,8 @@ def _hero(res: dict):
                 (cross, "best -> worst", "logistic, 50 -> 1,200")],
         note=("Fitted to a pilot study, the usual power law promised a lower "
               "error than more data delivered in every one of 18 fits, and "
-              "sometimes lower than any classifier can reach. A floor fixes "
-              "curves that have bent and misleads about those that have not."),
+              "sometimes lower than any classifier can reach. A floor helped "
+              "two models and misled about the one still falling fastest."),
         alt=("Three hand-drawn frames: a falling curve with a straighter line "
              "crossing below a flat floor; a falling line crossing that "
              "floor; and three curves that cross each other."),
@@ -275,8 +275,33 @@ def build() -> Post:
     de = dig["error"]
     worst1200 = max(de, key=lambda k: de[k][D_TARGET])
     zero_floors = [r for r in dext if r["until"] == 300 and r["floor"] < 1e-6]
+    # Local log-log slopes over every neighbouring pair of sizes; slope i
+    # runs from sizes[i] to sizes[i + 1].
+    sizes = task["sizes"]
+    sl = {k: cu.log_slope(task, k) for k in task["error"]}
+    pilot = [i for i in range(len(sizes) - 1)
+             if sizes[i] >= 100 and sizes[i + 1] <= 1600]
+    bt_pilot = [sl["boosted trees"][i] for i in pilot]
+    late = [i for i in range(len(sizes) - 1) if sizes[i] >= 800]
+    lg_late = max(abs(sl["logistic"][i]) for i in late)
+    lg_mid = sl["logistic"][sizes.index(400)]
+    nn_err = [task["error"]["15-NN"][n] for n in sizes]
 
     # The spine, asserted rather than trusted.
+    # Slopes flatten overall, but not at every step, and the boosted trees'
+    # bend comes after the pilot range.
+    assert all(abs(s[-1]) < abs(s[0]) for s in sl.values())
+    assert any(abs(b_) > abs(a_) for a_, b_ in zip(sl["boosted trees"],
+                                                    sl["boosted trees"][1:]))
+    assert abs(sl["boosted trees"][-1]) < min(abs(x) for x in bt_pilot) / 2
+    assert lg_late < 0.015 and abs(lg_mid) > 2 * lg_late
+    # 15-NN is still falling at every size and its floored fits from 1,600
+    # rows on are close, with floors above Bayes.
+    assert all(a_ > b_ for a_, b_ in zip(nn_err, nn_err[1:]))
+    for u in (1600, 6400):
+        assert abs(cu.relative_error(nn[u]["power_floor"],
+                                     nn[u]["actual"])) < 0.02
+        assert nn[u]["floor"] > bayes
     assert all(r["power"] < r["actual"] for r in ext + dext)
     assert len(below) >= 4
     assert bt[400]["floor"] > bt[400]["actual"]
@@ -356,7 +381,7 @@ def build() -> Post:
 
 The standard tool is the learning curve — test error against training-set size — and the standard way to read it forward is a power law. Error falls as a n^-b on a log-log plot as a straight line; fit the line to the pilot sizes, extend it, read off the error at the size you could afford. It is the same move as the scaling laws used to plan large training runs, made at the scale of a spreadsheet.
 
-Whether it works can be checked only where the curve can be followed much further than the fit. So here is a task built for that: two classes in ten dimensions whose covariances differ, so the best possible boundary is quadratic, training sets grown from 50 rows to {TARGET:,}, and a {task['test']:,}-point test set on which the Bayes error — the error of the true decision rule, which nothing can beat — is computed exactly from the densities.
+Whether it works can be checked only where the curve can be followed much further than the fit. So here is a task built for that: two classes in ten dimensions whose covariances differ, so the best possible boundary is quadratic, training sets grown from 50 rows to {TARGET:,}, and a {task['test']:,}-point test set on which the Bayes error — the error of the true decision rule, which nothing can beat — is computed from the true densities, as that rule's error on those same test points.
 
 {snip['curve'].markdown()}
 
@@ -374,16 +399,18 @@ The reason is visible in the local slope of the curve on log-log axes. A power l
 
 {snip['slope'].markdown()}
 
-Every slope shrinks towards zero as the curve approaches a floor it cannot go through. A straight line fitted to the early, steep part of the curve carries that steepness forward and overshoots.""",
+The printout shows every third slope. In full the slopes are noisy and do not shrink at every step: the boosted trees' stays between {min(bt_pilot):.3f} and {max(bt_pilot):.3f} from 100 to 1,600 rows, as straight as a power law over the whole pilot range. But every curve ends far flatter than it starts — the boosted trees at {sl['boosted trees'][-1]:.3f} between 12,800 and 25,600 rows — as it approaches a floor it cannot go through, and for the boosted trees that bend comes after the pilot stops. A straight line fitted to the early, steep part of the curve carries that steepness forward and overshoots.""",
         figures=[figs["f0"]])
 
     post.add(
         "Adding a floor, and where that fails",
-        f"""The textbook fix is a third parameter: a n^-b + c, where c is the error the model would reach with unlimited data. For logistic regression it works. Its curve has already flattened by a few hundred rows, so the fit can see the floor, and from 6,400 rows it predicts {lg[6400]['power_floor']:.4f} against {lg[6400]['actual']:.4f} actual. Its fitted floor, {lg[6400]['floor']:.3f}, is far above the Bayes error, and correctly so: a linear boundary on a quadratic problem has its own limit.
+        f"""The textbook fix is a third parameter: a n^-b + c, where c is the error the model would reach with unlimited data. For logistic regression it works. Its curve has flattened by about a thousand rows — its local slope is {lg_mid:.3f} between 400 and 800 rows and within ±{lg_late:.3f} from 800 on — so the fit can see the floor, and from 6,400 rows it predicts {lg[6400]['power_floor']:.4f} against {lg[6400]['actual']:.4f} actual. Its fitted floor, {lg[6400]['floor']:.3f}, is far above the Bayes error, and correctly so: a linear boundary on a quadratic problem has its own limit.
 
 For the boosted trees, which are still improving at every size measured, the floor is not something the fit can see, so it guesses. Fitted to 400 rows the floor is {bt[400]['floor']:.3f}, above the {bt[400]['actual']:.3f} the trees actually reach — the fit concludes that more data will barely help, and predicts {bt[400]['power_floor']:.3f} at {TARGET:,} rows when the trees in fact get to {bt[400]['actual']:.3f}. Fitted to 1,600 or 6,400 rows the floor is {bt[1600]['floor']:.3f} and {bt[6400]['floor']:.3f}, below the Bayes error. The predictions at {TARGET:,} rows are closer — {bt[1600]['power_floor']:.3f} and {bt[6400]['power_floor']:.3f} against {bt[1600]['actual']:.3f} — but the parameter that is supposed to say how far the model can go has no meaning.
 
-So the floor helps exactly when it is least needed. A curve that has visibly bent tells you more data will not help much, with or without a fit. A curve that is still falling is the case where the decision matters, and there the third parameter is set by noise in the last few points.""",
+15-NN sits in between. It is still falling at every size measured, yet its floored fits from 1,600 and 6,400 rows miss by only {cu.relative_error(nn[1600]['power_floor'], nn[1600]['actual']):+.1%} and {cu.relative_error(nn[6400]['power_floor'], nn[6400]['actual']):+.1%}, with floors of {nn[1600]['floor']:.3f} and {nn[6400]['floor']:.3f}, above the Bayes error. A floor can work on a curve that is still falling; what the fit cannot tell you is whether it has.
+
+So the floor is least reliable where it is most needed. A curve that has visibly bent tells you more data will not help much, with or without a fit. A curve still falling fast is the case where the decision matters, and there the third parameter is poorly determined: for the boosted trees it moved from {bt[400]['floor']:.3f} to {bt[1600]['floor']:.3f} when the fit range grew from 400 to 1,600 rows.""",
         figures=[figs["f1"], figs["f2"]])
 
     post.add(
@@ -404,7 +431,7 @@ The table also shows the second way a pilot study misleads. Logistic regression 
 
 **The task was chosen to have a known floor.** Real problems have one too, but nobody computes it, which is the point: the only check on a fitted floor is the Bayes error, and in practice it is unavailable.
 
-**Single training sets at the largest sizes.** The {TARGET:,}-row errors average three training sets, the digits' 1,200 is one. Their noise is small next to the gaps quoted, but not zero.""")
+**Few training sets at the largest sizes.** The {TARGET:,}-row errors average three training sets, the digits' 1,200 is one. Their noise is small next to the gaps quoted, but not zero.""")
 
     post.add(
         "What to keep",
@@ -412,9 +439,9 @@ The table also shows the second way a pilot study misleads. Logistic regression 
 
 2. On a task with a known Bayes error of {bayes:.3f}, {len(below)} of 9 such predictions were below it — errors no classifier can reach.
 
-3. Learning curves flatten towards a floor; the local log-log slope shrinks, so a straight line fitted early overshoots.
+3. Learning curves flatten towards a floor; the local log-log slope shrinks overall, if not at every step, so a straight line fitted early overshoots.
 
-4. The floored form a n^-b + c works for curves that have already bent and fails for those still falling: the boosted trees' fitted floor went from {bt[400]['floor']:.3f} (above what they reach) to {bt[1600]['floor']:.3f} (below Bayes) with the fit range.
+4. The floored form a n^-b + c worked for logistic regression and, from 1,600 rows, for 15-NN, and failed for the boosted trees, still falling fastest: their fitted floor went from {bt[400]['floor']:.3f} (above what they reach) to {bt[1600]['floor']:.3f} (below Bayes) with the fit range.
 
 5. The best model at pilot size need not be the best at full size. On digits, logistic regression went from best at 50 images to worst at 1,200.""")
 

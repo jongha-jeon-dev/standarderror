@@ -271,6 +271,12 @@ def build() -> Post:
             (acc_s - min(r["acc"] for r in res["speed"]["sgd"])) / 2)
     m_d = np.mean(d["adam"]["acc"])
     assert 1 - g["bayes"] - np.mean(g["adam"]["acc"]) > 0.01
+    # The Bayes rule's error depends on the test sample it is scored on:
+    # g["bayes"] is on this episode's 5,000 test rows, episode 4 quotes the
+    # same task's 20,000 (a density evaluation, no training).
+    from standarderror.ml.curves import GaussianTask
+    ep4_bayes = GaussianTask().bayes
+    assert ep4_bayes != g["bayes"] and abs(ep4_bayes - g["bayes"]) < 0.02
 
     post = Post(
         title=f"{SERIES_TAG} 23: Adam Is a Little Faster and No Better",
@@ -289,7 +295,8 @@ def build() -> Post:
             f"Adam and SGD with momentum 0.9, each with its learning rate "
             f"tuned on a validation set, were trained from the same initial "
             f"weights on 20 splits of the digits and of a simulated task with "
-            f"Bayes error {g['bayes']:.3f}. Adam's test accuracy was higher "
+            f"Bayes error {g['bayes']:.3f} on its test sample. Adam's test "
+            f"accuracy was higher "
             f"by {d['diff_mean']:+.4f} ± {d['diff_se']:.4f} on the digits and "
             f"{g['diff_mean']:+.4f} ± {g['diff_se']:.4f} on the simulated "
             f"task: no difference. At the rates validation chose, SGD's "
@@ -306,9 +313,10 @@ def build() -> Post:
             "Optical Recognition of Handwritten Digits (UCI), as bundled with "
             "scikit-learn, CC BY 4.0; stratified half splits, seeds 0 to 19 "
             "(0 to 4 for the speed study), tuning on split 100.",
-            "Simulated: episode 4's two-class Gaussian task in 10 dimensions, "
-            "Bayes error 0.276; 2,000 training rows per split and 5,000 "
-            "fixed test rows.",
+            f"Simulated: episode 4's two-class Gaussian task in 10 "
+            f"dimensions; 2,000 training rows per split and 5,000 fixed test "
+            f"rows, on which the Bayes rule's error is {g['bayes']:.3f} "
+            f"({ep4_bayes:.3f} on episode 4's 20,000).",
             "Machinery: `standarderror/ml/nets.py`, tested in "
             "`tests/test_ml.py`; PyTorch networks with two hidden layers "
             "(256 for digits, 64 for the simulated task), ReLU, minibatches "
@@ -339,7 +347,7 @@ def build() -> Post:
         "The default optimiser",
         f"""Episode 22 found that for plain SGD the learning rate and the batch size act as one setting. Most networks today are not trained with plain SGD. They are trained with Adam, which keeps a running estimate of each weight's gradient scale and divides by it, so that every weight moves at a similar rate whatever the size of its gradient. Its reputation is the sentence under test: *Adam converges faster and generalises as well as SGD*. Both halves have been challenged. Wilson and colleagues reported adaptive methods generalising worse than SGD; Choi and colleagues found that rankings of optimisers change when every optimiser's settings are tuned with the same care.
 
-So tune both with the same care. On a separate split of the digits, each optimiser's learning rate is chosen from a grid of five spanning a factor of 100, by accuracy on a held-out fifth. SGD gets momentum 0.9, as it usually does in practice. Then both are trained, from the same initial weights, on twenty fresh splits, and the same again on episode 4's simulated task, where the Bayes error of {g['bayes']:.3f} leaves room for a better optimiser to show:
+So tune both with the same care. On a separate split of the digits, each optimiser's learning rate is chosen from a grid of five spanning a factor of 100, by accuracy on a held-out fifth. SGD gets momentum 0.9, as it usually does in practice. Then both are trained, from the same initial weights, on twenty fresh splits, and the same again on episode 4's simulated task, where the Bayes rule's error of {g['bayes']:.3f} on this episode's 5,000 test rows ({ep4_bayes:.3f} on episode 4's 20,000) leaves room for a better optimiser to show:
 
 {snip['acc'].markdown()}
 
@@ -363,7 +371,7 @@ At each optimiser's fastest rate, {fa['lr']:g} for Adam and {fs['lr']:g} for SGD
 
 The tuning split could not see these differences. Its held-out fifth is {d['tuning']['adam']['n_val']} digits, so one digit is {1 / d['tuning']['adam']['n_val']:.4f} of accuracy, and on it Adam's rates of {d['tuning']['adam']['lrs'][1]:g} and {d['tuning']['adam']['lrs'][2]:g} tied, as did SGD's three largest rates. Ties went to the smaller rate, which is the cautious choice and the slower one. The speed comparison "at the tuned rates" is therefore a comparison of tie-breaks, and it favoured SGD by accident.
 
-What does differ between the optimisers is how much the rate matters. Across Adam's grid of five rates, spanning a factor of 100, test accuracy stayed between {min(r['acc'] for r in res['speed']['adam']):.3f} and {acc_a:.3f}; across SGD's, between {min(r['acc'] for r in res['speed']['sgd']):.3f} and {acc_s:.3f}. Dividing by the gradient scale makes Adam less sensitive to its learning rate, which is a practical virtue, and a different claim from converging faster. Choi and colleagues made the general point: rankings of optimisers depend on how, and how much, each one is tuned.""",
+What does differ between the optimisers is how much the rate matters. Across Adam's grid of five rates, spanning a factor of 100, test accuracy stayed between {min(r['acc'] for r in res['speed']['adam']):.3f} and {acc_a:.3f}; across SGD's, between {min(r['acc'] for r in res['speed']['sgd']):.3f} and {acc_s:.3f}. On these grids Adam was less sensitive to its learning rate, plausibly because it divides by the gradient scale (the mechanism was not isolated here, and a range across a grid depends on where the grid sits). That is a practical virtue, and a different claim from converging faster. Choi and colleagues made the general point: rankings of optimisers depend on how, and how much, each one is tuned.""",
         figures=[figs["f2"]])
 
     post.add(
@@ -374,7 +382,7 @@ Each part is narrower than the original, and each is measured. The generalisatio
 
     post.add(
         "Where this breaks",
-        """**Small networks, small data.** Two hidden layers on 900 digits or 2,000 simulated rows. On large language and vision models Adam (or AdamW) is the near-universal choice, partly because SGD is hard to tune at that scale and partly because adaptive scaling helps with very different gradient scales across layers, such as embeddings.
+        """**Small networks, small data.** Two hidden layers on 900 digits or 2,000 simulated rows. On large language models Adam (or AdamW) is the near-universal choice, and it is common in vision, partly because SGD is hard to tune at that scale and partly because adaptive scaling helps with very different gradient scales across layers, such as embeddings.
 
 **A coarse grid.** Five rates per optimiser, spaced by about a factor of three. Both "fastest" and "tuned" are known only to that resolution, and validation accuracy on a fifth of one split (180 digits) has ties: Adam's 3e-4 and 1e-3 both scored the same, and the smaller was taken.
 

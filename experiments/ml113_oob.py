@@ -7,10 +7,12 @@ cross-validation and a held-out half on breast cancer and digits:
 * With 500 trees it is as good as cross-validation and costs one fit
   instead of six: within half a point of the held-out error on both
   datasets.
-* With few trees it is badly pessimistic: at 5 trees, 2.7 times the
-  held-out error on both. Each row's OOB prediction comes from the roughly
-  37% of trees that did not see it -- a smaller forest than the one being
-  evaluated -- and some rows get no vote at all.
+* With few trees it is badly pessimistic: at 5 trees, 2.7 and 2.8 times the
+  held-out error. Each row's OOB prediction comes from the roughly 37% of
+  trees that did not see it -- a smaller forest than the one being
+  evaluated -- and about a tenth of rows get no vote at all, which
+  scikit-learn scores as votes for the first class. Those rows supply
+  almost half of the breast-cancer figure and a third of the digits one.
 * It assumes the rows are independent. With every digit image duplicated in
   the training data, OOB error is exactly 0 while the held-out error is
   2.7%.
@@ -44,6 +46,8 @@ SERIES_TAG = "ML"
 def compute() -> dict:
     return {"bc": tr.oob_study(data="breast cancer"),
             "dg": tr.oob_study(data="digits", reps=5),
+            "nv_bc": tr.oob_novote(data="breast cancer", trees=5, reps=10),
+            "nv_dg": tr.oob_novote(data="digits", trees=5, reps=5),
             "dup": tr.oob_duplicates()}
 
 
@@ -90,8 +94,8 @@ def figures(res: dict) -> dict:
         source="Breast Cancer Wisconsin and UCI digits (scikit-learn); "
                "standarderror/ml/trees.py.",
         alt=("Solid out-of-bag lines start far above the dashed held-out "
-             "and dotted cross-validation lines at 5 trees and meet them by "
-             "100 trees."),
+             "and dotted cross-validation lines at 5 trees, close in on them "
+             "by 100 trees and meet them by 500."),
         caption=(f"At 5 trees the out-of-bag error is "
                  f"**{b5['oob'] / b5['test']:.1f}x** the held-out error on "
                  f"breast cancer and {d5['oob'] / d5['test']:.1f}x on digits. "
@@ -155,9 +159,11 @@ def figures(res: dict) -> dict:
                "standarderror/ml/trees.py.",
         alt=("A ten-row table: out-of-bag error far above the others at 5 "
              "and 10 trees and close to them from 100 trees on."),
-        caption=("From 100 trees on, out-of-bag and five-fold "
-                 "cross-validation are both within about half a point of the "
-                 "held-out error; out-of-bag costs a sixth of the fitting."),
+        caption=("At 500 trees, out-of-bag and five-fold cross-validation are "
+                 "both within about half a point of the held-out error on "
+                 "both datasets; at 100 trees that holds on breast cancer, "
+                 "while on digits both are still about a point high. "
+                 "Out-of-bag costs a sixth of the fitting."),
         align="lrrrrr",
         path=str(IMG / f"ml113-f2-table.{EXT}"))[0]
 
@@ -218,6 +224,14 @@ def _snippets(res: dict) -> dict:
         # share of all trees for which a given row is out of bag
         print(" ".join(f"{T} trees: {tr.oob_coverage(T):.3f}" for T in (5, 100)))
         """)
+    out["novote"] = s.run("""
+        # 5 trees: how much OOB error comes from rows that got no OOB vote
+        for data, reps in (("breast cancer", 10), ("digits", 5)):
+            v = tr.oob_novote(data=data, trees=5, reps=reps)
+            print(f"{data:13s} OOB {v['oob']:.3f}  no-vote rows "
+                  f"{v['from_novote']:.3f} ({v['novote_share']:.0%} of rows)"
+                  f"  voted rows' error {v['voted_error']:.3f}")
+        """)
     out["dup"] = s.run("""
         d = tr.oob_duplicates()     # digits; each training image twice
         print(f"independent rows: OOB {d['oob']:.3f}, held-out {d['test']:.3f}")
@@ -237,8 +251,24 @@ def build() -> Post:
 
     bc, dg, d = res["bc"], res["dg"], res["dup"]
     b5, d5, bl, dl = bc[0], dg[0], bc[-1], dg[-1]
+    b100, d100 = bc[3], dg[3]
+    nb, nd = res["nv_bc"], res["nv_dg"]
+    fb, fd = nb["from_novote"] / nb["oob"], nd["from_novote"] / nd["oob"]
 
     # The spine, asserted rather than trusted.
+    assert b100["trees"] == 100 and d100["trees"] == 100
+    assert abs(b100["oob"] - b100["test"]) < 0.005
+    assert abs(b100["cv"] - b100["test"]) < 0.005
+    assert 0.008 < d100["oob"] - d100["test"] < 0.015
+    assert 0.008 < d100["cv"] - d100["test"] < 0.015
+    # the no-vote split reproduces oob_study's 5-tree numbers exactly
+    assert abs(nb["oob"] - b5["oob"]) < 1e-12 and abs(nd["oob"] - d5["oob"]) < 1e-12
+    assert 0.4 < fb < 0.5 and 0.3 < fd < 0.4
+    for v, r in ((nb, b5), (nd, d5)):
+        assert r["test"] < v["voted_error"] < v["oob"]
+        assert 0.08 < v["novote_share"] < 0.12
+    assert nb["voted_error"] < 1.8 * b5["test"]
+    assert _novote(25) < 1e-3
     for rows in (bc, dg):
         assert rows[0]["oob"] > 2.2 * rows[0]["test"]
         assert rows[0]["oob"] > rows[0]["cv"] > rows[0]["test"]
@@ -271,9 +301,12 @@ def build() -> Post:
             f"breast cancer and {abs(dl['oob'] - dl['test']):.3f} on digits, "
             f"about as close as cross-validation, from a single fit. With 5 trees "
             f"it is {b5['oob'] / b5['test']:.1f} and "
-            f"{d5['oob'] / d5['test']:.1f} times the held-out error, because "
-            f"each row is judged by the third of the forest that did not see "
-            f"it. With every digit image duplicated in the training data, "
+            f"{d5['oob'] / d5['test']:.1f} times the held-out error, for two "
+            f"reasons: each row is judged by the third of the forest that did "
+            f"not see it, and the {nb['novote_share']:.0%} of rows that every "
+            f"tree saw get no vote, which scikit-learn scores as a vote for "
+            f"the first class. Those rows supply {fb:.0%} of the breast-cancer "
+            f"figure. With every digit image duplicated in the training data, "
             f"out-of-bag error is exactly {d['oob_dup']:.0f} while the "
             f"held-out error is {d['test_dup']:.3f}."),
         tags=["machine-learning", "data-science", "statistics",
@@ -324,11 +357,15 @@ At 5 trees it fails badly: **OOB {b5['oob']:.3f} against a held-out {b5['test']:
 
 {snip['share'].markdown()}
 
-A row's OOB verdict comes from about 37% of the forest. With 500 trees that is around 185, plenty for a stable vote, so the estimate describes a forest almost as good as the real one. With 5 trees it is one or two, and a forest of one or two trees is far worse than a forest of five. The OOB error at T trees estimates the error of a forest of roughly T/e trees, which matters exactly when the forest is small enough for the difference to matter.
+A row's OOB verdict comes from about 37% of the forest. With 500 trees that is around 185, plenty for a stable vote, so the estimate describes a forest almost as good as the real one. With 5 trees it is one or two on average, and a vote of one or two trees can be expected to be worse than a forest of five. In that sense the OOB error at T trees describes a forest of roughly T/e trees, which matters exactly when the forest is small enough for the difference to matter.
 
-Some rows are worse off still. The chance that a row was drawn into every one of T bootstrap samples is about (1 − 1/e)^T: {_novote(5):.0%} of rows at 5 trees, {_novote(10):.1%} at 10. Those rows have no OOB prediction at all, and a forest that cannot predict them cannot be right about them.
+Some rows are worse off still. The chance that a row was drawn into every one of T bootstrap samples is about (1 − 1/e)^T: {_novote(5):.0%} of rows at 5 trees, {_novote(10):.1%} at 10. Those rows have no OOB prediction at all, and scikit-learn does not drop them. It warns, gives them an all-zero vote, and the predicted class becomes the first one — malignant in the breast-cancer data, the digit 0 in the digits. Every such row from another class is counted as an error. How much of the 5-tree number that bookkeeping accounts for can be measured directly:
 
-Pessimism is the safe direction for an error estimate, and by 100 trees it is gone. It still matters in two places: when OOB error is used to choose the number of trees, where it argues for more trees than are needed; and when it is used to compare a forest against a model scored by honest cross-validation, where a small forest is handicapped. Janitza and Hornung (2018) document a further, subtler pessimism in OOB error for small samples, which the two datasets here are too large to show.""",
+{snip['novote'].markdown()}
+
+On breast cancer, {nb['from_novote']:.3f} of the {nb['oob']:.3f} — {fb:.0%} of the out-of-bag error — comes from rows that received no vote. Among the rows that did get one the error is {nb['voted_error']:.3f}, {nb['voted_error'] / b5['test']:.1f} times the held-out {b5['test']:.3f}. On digits the no-vote rows supply {fd:.0%} of the {nd['oob']:.3f}, and the voted rows still err at {nd['voted_error']:.3f}, {nd['voted_error'] / d5['test']:.1f} times the held-out {d5['test']:.3f}. So the 5-tree pessimism is part artefact and part a genuinely smaller voting forest. The artefact disappears once every row has a vote — by 25 trees the expected share without one is far below one row in a thousand — and the smaller-forest effect fades more slowly.
+
+Pessimism is the safe direction for an error estimate, and it fades as trees are added: at 100 trees out-of-bag error is {b100['oob']:.3f} against a held-out {b100['test']:.3f} on breast cancer, still {d100['oob']:.3f} against {d100['test']:.3f} on digits, and by 500 it is gone on both. It still matters in two places: when OOB error is used to choose the number of trees, where it argues for more trees than are needed; and when it is used to compare a forest against a model scored by honest cross-validation, where a small forest is handicapped. Janitza and Hornung (2018) document a further, subtler pessimism in OOB error for small samples, which these runs were not designed to isolate.""",
         figures=[figs["f2"]])
 
     post.add(
@@ -339,16 +376,16 @@ Duplicate every digit image in the training half and refit:
 
 {snip['dup'].markdown()}
 
-Out-of-bag error is **exactly {d['oob_dup']:.0f}**. When one copy of an image is out of a tree's bootstrap sample, the other copy is almost always in it, so the "unseen" row was seen. The held-out error is unchanged at {d['test_dup']:.3f}: the model is no better, only its own estimate of itself is broken.
+Out-of-bag error is **exactly {d['oob_dup']:.0f}**. When one copy of an image is out of a tree's bootstrap sample, the other copy is in it about 63% of the time (1 − 1/e), so most of the trees voting on a row have seen its twin, and a fully grown tree that has seen a row's twin predicts that row correctly. The "unseen" row was seen. The held-out error is unchanged at {d['test_dup']:.3f}: the model is no better, only its own estimate of itself is broken.
 
-This is the same failure episode 3 measured for cross-validation with grouped rows, and it has the same remedy, with a cost: the rows must be grouped and the groups held out together. A forest's built-in OOB estimate has no notion of groups, so on grouped data it cannot be used at all. Grouped cross-validation, or a held-out set split by group, has to replace it.""",
+This is the same failure episode 3 measured for cross-validation with duplicated rows, and it has the same remedy, with a cost: the rows must be grouped and the groups held out together. A forest's built-in OOB estimate has no notion of groups. With exact copies, as here, it says nothing at all; with looser groups — repeated visits, related images — it should be optimistic to a lesser degree, which was not measured here. Either way, grouped cross-validation, or a held-out set split by group, has to replace it.""",
         figures=[figs["f1"]])
 
     post.add(
         "Using it well",
         f"""None of this makes out-of-bag error less useful; it says when to use it. The cost argument is real: for a forest of a few hundred trees, OOB error comes with the fit, while five-fold cross-validation fits five more forests. On large data that is the difference between an estimate and no estimate.
 
-Three habits keep it honest. Grow the forest first and read the OOB error last: the curve above settles by 100 trees on both datasets, and below that the number describes a weaker model than the one you have. Keep a held-out set anyway for the final, reported number, because the OOB error of the model you chose after looking at several OOB errors is no longer an independent estimate. And before trusting it at all, ask whether two rows of the training data can be the same thing in disguise. If they can, the bootstrap's notion of "unseen" is wrong, and so is every number built on it, as the duplicated digits show with an error of exactly {d['oob_dup']:.0f}.""")
+Three habits keep it honest. Grow the forest first and read the OOB error last: the curve above settles by 100 trees on breast cancer and only by 500 on digits, and before it settles the number describes a weaker model than the one you have. Keep a held-out set anyway for the final, reported number, because the OOB error of the model you chose after looking at several OOB errors is no longer an independent estimate. And before trusting it at all, ask whether two rows of the training data can be the same thing in disguise. If they can, the bootstrap's notion of "unseen" is wrong, and so is every number built on it, as the duplicated digits show with an error of exactly {d['oob_dup']:.0f}.""")
 
     post.add(
         "Where this breaks",
@@ -356,19 +393,21 @@ Three habits keep it honest. Grow the forest first and read the OOB error last: 
 
 **Gradient boosting has no equivalent.** Its trees are fitted in sequence, each to the residuals of all the earlier ones, so no tree is independent of a row it did not sample. Subsampled boosting reports an "out-of-bag improvement", which is a different and much rougher quantity.
 
-**Two datasets, one model setting.** Both datasets are easy and both forests use scikit-learn's defaults. The crossover to an honest estimate came at about 100 trees here; it depends on how much a single tree's error exceeds the forest's.
+**Two datasets, one model setting.** Both datasets are easy and both forests use scikit-learn's defaults. The crossover to an honest estimate came between 100 and 500 trees here; it plausibly depends on how much a single tree's error exceeds the forest's.
 
-**Duplicates are the extreme case.** Near-duplicates, such as augmented copies with small shifts or repeated visits by one patient, leak less than exact copies but leak in the same direction.""")
+**Other libraries treat the no-vote rows differently.** The artefact measured above is scikit-learn's: a library that drops rows without an OOB vote, or reports them separately, would show less pessimism at 5 trees, and the same smaller-forest effect.
+
+**Duplicates are the extreme case.** Near-duplicates, such as augmented copies with small shifts or repeated visits by one patient, should leak less than exact copies but in the same direction; only exact copies were measured here.""")
 
     post.add(
         "What to keep",
         f"""1. With 500 trees, out-of-bag error was within {max(abs(bl['oob'] - bl['test']), abs(dl['oob'] - dl['test'])):.3f} of the held-out error on both datasets, about as close as five-fold cross-validation, for one fit instead of six.
 
-2. With 5 trees it was {b5['oob'] / b5['test']:.1f} and {d5['oob'] / d5['test']:.1f} times the held-out error. Each row's OOB vote comes from about 37% of the forest, so a small forest is judged as an even smaller one.
+2. With 5 trees it was {b5['oob'] / b5['test']:.1f} and {d5['oob'] / d5['test']:.1f} times the held-out error. Each row's OOB vote comes from about 37% of the forest, so a small forest is judged as an even smaller one; and scikit-learn scores the rows with no vote as the first class, which supplied {fb:.0%} and {fd:.0%} of those errors.
 
-3. Use OOB error once the forest has at least a hundred or so trees, and never to compare against a smaller forest.
+3. Use OOB error once the forest has a few hundred trees, and do not compare a small forest's OOB error with another model's cross-validated one.
 
-4. With duplicated rows, OOB error was {d['oob_dup']:.0f} and the held-out error {d['test_dup']:.3f}. On grouped or repeated data, OOB error is not an estimate of anything.
+4. With duplicated rows, OOB error was {d['oob_dup']:.0f} and the held-out error {d['test_dup']:.3f}. With exact copies OOB error is not an estimate of anything; on grouped data, expect it to be optimistic.
 
 5. Selecting hyperparameters by OOB error makes the winner's OOB error optimistic, like any reused validation score.""")
 

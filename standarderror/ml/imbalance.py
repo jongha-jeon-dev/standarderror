@@ -15,8 +15,9 @@ moving the decision threshold of the unweighted model:
 * What they change in the *decisions* at the default 0.5 cut -- recall from
   0.2 to over 0.8 -- the plain model does by moving its threshold, at the
   same precision.
-* For boosted trees resampling is not neutral: duplicated or interpolated
-  minority rows are memorised, and ranking gets worse.
+* For boosted trees resampling is not neutral: ranking gets worse. The
+  plain trees' probabilities are too low, and oversampling and class
+  weights move them towards the prevalence and lower the log loss.
 
 References: Chawla et al., "SMOTE: synthetic minority over-sampling
 technique", *JAIR* (2002); Elkan, "The foundations of cost-sensitive

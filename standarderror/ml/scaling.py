@@ -3,7 +3,8 @@ to it.
 
 `train` builds and trains one model; `scripts/train_scaling.py` runs the
 ladder and commits the losses to `data/ml_scaling/results.json`, because the
-whole ladder takes half an hour and an episode build should not. `fit` and
+whole ladder took 1.9 hours on two CPU threads and an episode build should
+not. `fit` and
 `predict` are what the episode does with those numbers.
 """
 

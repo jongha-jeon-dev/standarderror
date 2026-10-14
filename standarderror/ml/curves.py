@@ -5,16 +5,17 @@ usually put into practice by fitting a power law to errors measured on small
 training sets and reading off the error at a larger one. Measured on a
 simulated task where the training set can be grown to 25,600 rows and the
 Bayes error is known (0.268), the two-parameter power law ``a n^-b`` is
-optimistic for every model and, for 15-NN, predicts an error *below* the
-Bayes error -- a number no classifier can reach. Adding an asymptote
-``a n^-b + c`` fixes the models whose curves have already bent, and fails
-for the one that has not: for boosted trees the fitted floor moves with the
-fit range and lands below the Bayes error. And the model that is best at
-200 rows is not the model that is best at 25,600.
+optimistic for every model and, for boosted trees, predicts an error *below*
+the Bayes error -- a number no classifier can reach. Adding an asymptote
+``a n^-b + c`` fixes logistic regression, works for 15-NN from 1,600 rows,
+and fails for the boosted trees, still falling fastest: their fitted floor
+moves with the fit range and lands below the Bayes error. And the model
+that is best at 50 rows (logistic regression) is not the model that is best
+at 25,600 (boosted trees).
 
 On the UCI digits the same pattern holds within the 1,200 training images
 available: a power law fitted up to 300 underpredicts the error at 1,200,
-and logistic regression, best at 100 images, is worst at 1,200.
+and logistic regression, best at 50 images, is worst at 1,200.
 
 Viering and Loog, "The shape of learning curves: a review", *IEEE TPAMI*
 (2023), surveys the ways real curves depart from a power law; Hestness et

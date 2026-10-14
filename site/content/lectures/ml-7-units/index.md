@@ -13,7 +13,7 @@ images: ["ml107-hero.png"]
 
 Disclosure: this post was written with the assistance of an AI system (Claude), which wrote the analysis code, ran the experiments and drafted the text. The topic, the constraints, the data choices and the final review are the author's.
 
-*On the diabetes data, re-expressing one feature at a time in units from a hundredth to a hundred times the standardised ones and refitting cross-validated lasso, 7 of 10 features are kept in some units and dropped in others; only sex, bmi, bp survive every choice. The 90 refits' cross-validated errors span 5.3% of the base model's: different selections, near-identical predictions. Standardising does not escape the choice - it is one. A binary feature with the same effect per occurrence is kept in 60% of datasets at 2% prevalence when standardised and 18% when left as 0/1.*
+*On the diabetes data, re-expressing one feature at a time in units from a hundredth to a hundred times the standardised ones and refitting cross-validated lasso, 7 of 10 features are kept in some units and dropped in others; only sex, bmi, bp survive every choice. The 90 refits' cross-validated errors span 5.3% of the base model's: different selections, near-identical cross-validated error. Standardising does not escape the choice - it is one. A binary feature with the same effect per occurrence is kept in 24 of 40 datasets at 2% prevalence when standardised and 7 of 40 when left as 0/1.*
 
 Episode 7 of *Machine Learning, Taught Through What Breaks*. The syllabus and the other episodes: https://jongha-jeon-dev.github.io/standarderror/lectures/
 
@@ -52,13 +52,13 @@ s6   . . . . # # # # #
 factors 0.01 0.03 0.1 0.3 1 3 10 30 100
 ```
 
-A `#` is kept, a `.` dropped; the middle column, factor 1, is the standardised model. **7 of the ten features change status with their units.** Age, for instance, is dropped at every factor up to 0.3 and kept from 1 upward; s3 is out of the standardised model and in it at a factor of 3. Only sex, bmi, bp — the three strongest — are kept whatever their units.
+A `#` is kept, a `.` dropped; the middle column, factor 1, is the standardised model. **7 of the ten features change status with their units.** Age, for instance, is dropped at every factor up to 0.3 and kept from 1 upward; s3 is out of the standardised model and in it at a factor of 3. Only sex, bmi, bp are kept whatever their units, and they are not simply the strongest: in the standardised fit the largest coefficient belongs to s5 (+31.8), and s5 is dropped at a factor of 0.01. A large coefficient in standard deviations is no protection once a coarse enough unit makes each unit of it expensive.
 
 ![A grid of ten features by nine unit factors: three rows kept throughout, seven rows dropped at small factors and kept at large ones.](ml107-f0-units.png)
 
 ***7 of 10 features** are in the model in some units and out of it in others. Only sex, bmi, bp survive every choice.*
 
-## Different models, the same predictions
+## Different models, nearly the same error
 
 If the different selections predicted differently, the units would at least be choosing between better and worse models. They are not.
 
@@ -99,13 +99,13 @@ prevalence   5%  kept: standardised 0.70   raw 0/1 0.45
 prevalence   2%  kept: standardised 0.60   raw 0/1 0.17
 ```
 
-At 50% both versions keep the feature nearly always. At 2%, the standardised lasso keeps it in 60% of datasets and the raw one in 18%. Standardising divides a rare indicator by a small standard deviation, which inflates its column, shrinks its coefficient and lowers its price; the raw version charges it per occurrence, and a rare occurrence has little data behind it.
+At 50% both versions keep the feature nearly always. At 2%, the standardised lasso keeps it in 24 of 40 datasets and the raw one in 7. Standardising divides a rare indicator by a small standard deviation, which inflates its column, shrinks its coefficient and lowers its price; the raw version charges it per occurrence, and a rare occurrence has little data behind it.
 
 Neither is right. A per-occurrence effect and a per-standard-deviation effect are different questions, and the lasso answers whichever its units ask. Gelman's suggestion to divide continuous inputs by two standard deviations so that they compare with untouched binaries is one principled answer; it is still a choice.
 
 ![Two falling lines; the standardised one stays higher, and the gap widens as the feature gets rarer.](ml107-f1-binary.png)
 
-*At 2% prevalence the same feature is kept **60%** of the time standardised and 18% as 0/1. Neither is the neutral choice; there isn't one.*
+*At 2% prevalence the same feature is kept in **24 of 40** datasets standardised and 7 of 40 as 0/1. Neither is the neutral choice; there isn't one.*
 
 ## Where this breaks
 
@@ -127,7 +127,7 @@ Neither is right. A per-occurrence effect and a per-standard-deviation effect ar
 
 3. The cross-validated errors of all those models span 5.3%: the data cannot distinguish them.
 
-4. Standardising is a choice of units. A binary feature at 2% prevalence is kept 60% of the time standardised and 18% raw.
+4. Standardising is a choice of units. A binary feature at 2% prevalence is kept in 24 of 40 datasets standardised and 7 of 40 raw.
 
 5. Report a lasso's selected set as a property of the features *in the units you chose*, or not as a finding at all.
 

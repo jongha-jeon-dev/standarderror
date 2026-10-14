@@ -17,8 +17,8 @@ Measured:
   83%.
 * Digits, 300 training images, 797-image fixed test set: corr = -0.21.
 * A held-out set answers the conditional question -- positive correlation,
-  near-nominal coverage -- at the price of a noisier estimate and a model
-  trained on less data.
+  coverage closer to nominal though still short of it -- at the price of a
+  noisier estimate and a model trained on less data.
 
 Run: `standarderror run ml102_cv_target --publish`
 """
@@ -263,6 +263,11 @@ def build() -> Post:
     assert fresh["cover"] > cvx["cover"]
     assert cva["rmse"] < cvx["rmse"]
     assert lin["split_err_xy"].mean() > lin["err"]
+    # Undercoverage is not only correlated losses: the held-out intervals,
+    # whose losses are independent given the fit, fall short too, and CV's
+    # centre sits above err.
+    assert fresh["cover"] < 0.9 and split["cover"] < 0.9
+    assert lin["cv"].mean() > lin["err"]
 
     post = Post(
         title=(f"{SERIES_TAG} 2: Cross-Validation Estimates the Error of a "
@@ -308,7 +313,7 @@ def build() -> Post:
             "do it?\", *JASA* (2023), which proves the linear-model result "
             "and proposes nested CV for honest intervals; Hastie, "
             "Tibshirani and Friedman, *The Elements of Statistical Learning* "
-            "(2009), section 7.12, which first reported the weak "
+            "(2009), section 7.12, which illustrates the weak "
             "correlation.",
         ],
         reproducibility={
@@ -348,7 +353,7 @@ The usual interval around it does not cover either target at its nominal rate.
 
 {snip['cover'].markdown()}
 
-The standard error used there treats the {lin['n']} per-row losses as independent, and they are not: every fold's model was trained on most of the other folds' rows, so the losses are correlated, and the interval is too narrow for err and pointed at the wrong target for err_xy. Bates, Hastie and Tibshirani prove the linear-model version of this and propose nested CV to get the width right; the point here is the one before that, about what the centre is.""")
+The standard error used there treats the {lin['n']} per-row losses as independent, and they are not: every fold's model was trained on most of the other folds' rows, so the losses are correlated, and that is one reason the interval is too narrow for err and pointed at the wrong target for err_xy. It is not the only one. The centre sits {lin['cv'].mean() - lin['err']:.3f} above err, and squared losses are skewed: even the held-out intervals below, whose losses are independent given the fitted model, cover only {fresh['cover']:.0%} and {split['cover']:.0%}. Bates, Hastie and Tibshirani prove the linear-model version of the correlation problem and propose nested CV to get the width right; the point here is the one before that, about what the centre is.""")
 
     post.add(
         "On real digits it runs backwards",
@@ -356,9 +361,9 @@ The standard error used there treats the {lin['n']} per-row losses as independen
 
 {snip['digits'].markdown()}
 
-The correlation is **{dig['corr']:+.2f}**: negative. Training sets that cross-validate well produce models that do slightly worse on new digits. The mechanism is the same averaging seen from the other side. A training set that happens to contain more awkward, atypical digits scores poorly in CV, because its held-out folds are full of them, and produces a model that has seen more awkward digits and handles the test set's better. CV rewards the easy sample, not the good model.
+The correlation is **{dig['corr']:+.2f}**: negative. Training sets that cross-validate well produce models that do slightly worse on new digits. One explanation, not tested here, is the same averaging seen from the other side. A training set that happens to contain more awkward, atypical digits would score poorly in CV, because its held-out folds are full of them, and would produce a model that has seen more awkward digits and handles the test set's better. If so, CV rewards the easy sample, not the good model; measuring each draw's difficulty would be the way to check.
 
-The fixed, disjoint test set matters. An earlier version of this experiment scored each fit on all the digits it had not trained on, which makes the test set the complement of the training set: a draw that took the hard digits left an easier test set behind, which exaggerates the effect — that version gave -0.28. With the test set fixed in advance it is {dig['corr']:+.2f}: smaller, and still there.""",
+The fixed, disjoint test set matters. Scoring each fit on all the digits it had not trained on would make the test set the complement of the training set: a draw that took the hard digits would leave an easier test set behind, and the two effects would be confounded. With the test set fixed in advance and disjoint from every draw, that route is closed, and the correlation is still {dig['corr']:+.2f}.""",
         figures=[figs["f1"]])
 
     post.add(
@@ -376,7 +381,7 @@ That is the real choice. Cross-validation gives a stable estimate of how a *proc
 
     post.add(
         "Where this breaks",
-        f"""**The zero correlation is for this model and this size.** Bates, Hastie and Tibshirani show it holds for linear models broadly; for flexible models and very large n the conditional and average errors move closer together and the distinction matters less. At {lin['n']} rows and {lin['p']} features it matters a lot.
+        f"""**The zero correlation is for this model and this size.** Bates, Hastie and Tibshirani show it holds for linear models broadly. With very many rows per feature the fitted model's error varies little from one training set to the next, so the conditional and average errors move closer together and the distinction matters less; other model classes were not measured here. At {lin['n']} rows and {lin['p']} features it matters a lot.
 
 **The digits test set is a proxy for the truth.** It is a sample of {dig['test']} images, so each model's score on it is its true accuracy plus an error of order 0.008 — shared in part between models, since they face the same images, but not identical. The sign survived the switch to a fixed test set; the size should be read loosely.
 
@@ -388,9 +393,9 @@ That is the real choice. Cross-validation gives a stable estimate of how a *proc
 
 2. On simulated least squares, the 10-fold CV estimate's correlation with err_xy is {cvx['corr']:+.2f}. CV estimates err.
 
-3. CV's naive 90% interval covers err_xy {cvx['cover']:.0%} of the time and err {cva['cover']:.0%}: the width is wrong because the per-row losses are not independent.
+3. CV's naive 90% interval covers err_xy {cvx['cover']:.0%} of the time and err {cva['cover']:.0%}: partly because the per-row losses are not independent, partly because they are skewed and CV's centre sits above err.
 
-4. On real digits the correlation is {dig['corr']:+.2f}: easy training samples cross-validate well and generalise slightly worse.
+4. On real digits the correlation is {dig['corr']:+.2f}: training samples that cross-validate well generalised slightly worse.
 
 5. To evaluate a model you will ship, hold data out. To compare procedures, cross-validate. Say which one you did.""")
 

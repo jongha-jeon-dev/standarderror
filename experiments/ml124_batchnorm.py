@@ -10,7 +10,8 @@ network on the digits:
   other members all share one class, it changes 23% of the time.
 * Trained in batches of 2, the normalised network scores 0.863 in inference
   mode against 0.972 for the same network without normalisation; from
-  batches of 16 up, normalisation helps by about half a point.
+  batches of 16 up, normalisation scores 0.5 to 0.8 points higher over
+  three seeds.
 
 Run: `standarderror run ml124_batchnorm --publish`
 """
@@ -228,6 +229,9 @@ def build() -> Post:
     assert t[2]["plain"] - t[2]["bn"] > 0.08
     assert t[2]["bn_train_mode"] < 0.65
     assert all(t[b]["bn"] > t[b]["plain"] for b in (16, 64))
+    # Small gains, quoted in points and in test digits; the 16 one is smaller.
+    assert all(0.003 < t[b]["bn"] - t[b]["plain"] < 0.01 for b in (16, 64))
+    assert t[16]["bn"] - t[16]["plain"] < t[64]["bn"] - t[64]["plain"]
     assert all(abs(t[b]["plain"] - 0.97) < 0.01 for b in t)
     assert t[64]["bn_train_mode"] > t[64]["bn"] - 0.01
 
@@ -256,7 +260,10 @@ def build() -> Post:
             f"{1 - d['skewed_agree']:.0%}. Trained in batches of 2, the "
             f"normalised network scored {t[2]['bn']:.3f} in inference mode "
             f"against {t[2]['plain']:.3f} without normalisation; trained in "
-            f"batches of 16 or 64 it gained about half a point."),
+            f"batches of 16 or 64 it scored "
+            f"{100 * (t[16]['bn'] - t[16]['plain']):.1f} and "
+            f"{100 * (t[64]['bn'] - t[64]['plain']):.1f} points higher, over "
+            f"three seeds."),
         tags=["machine-learning", "deep-learning", "neural-networks",
               "batch-normalization", "training", "lectures"],
         author=se.SETTINGS.author,
@@ -320,7 +327,7 @@ The second experiment trains the same architecture with and without batch normal
 
 {snip['train'].markdown()}
 
-Without normalisation, accuracy is about the same at every batch size, {min(r['plain'] for r in res['b']):.3f} to {max(r['plain'] for r in res['b']):.3f}. With it, the network trained in batches of 2 scores **{t[2]['bn']:.3f}** in inference mode and {t[2]['bn_train_mode']:.3f} when evaluated in training mode on test batches of 2: normalisation cost it {t[2]['plain'] - t[2]['bn']:.3f}. In batches of 4 the cost is {t[4]['plain'] - t[4]['bn']:.3f}. From batches of 16 up, normalisation helps, by {t[16]['bn'] - t[16]['plain']:.3f} and {t[64]['bn'] - t[64]['plain']:.3f}, which is the improvement it is known for. In batches of 64 the two modes agree to within a point, {t[64]['bn']:.3f} and {t[64]['bn_train_mode']:.3f}, which is the condition under which the running averages are a faithful stand-in for the batch.""",
+Without normalisation, accuracy is about the same at every batch size, {min(r['plain'] for r in res['b']):.3f} to {max(r['plain'] for r in res['b']):.3f}. With it, the network trained in batches of 2 scores **{t[2]['bn']:.3f}** in inference mode and {t[2]['bn_train_mode']:.3f} when evaluated in training mode on test batches of 2: normalisation cost it {t[2]['plain'] - t[2]['bn']:.3f}. In batches of 4 the cost is {t[4]['plain'] - t[4]['bn']:.3f}. From batches of 16 up, normalisation helps, by {t[16]['bn'] - t[16]['plain']:.3f} and {t[64]['bn'] - t[64]['plain']:.3f}, in the direction it is known for; over three seeds, though, the smaller gain is {(t[16]['bn'] - t[16]['plain']) * 899:.1f} of the 899 test digits, and the spread across seeds was not measured. In batches of 64 the two modes agree to within a point, {t[64]['bn']:.3f} and {t[64]['bn_train_mode']:.3f}, which is the condition under which the running averages are a faithful stand-in for the batch.""",
         figures=[figs["f1"], figs["f2"]])
 
     post.add(
@@ -331,13 +338,13 @@ The practical failures of batch normalisation follow from the measurement direct
 
     post.add(
         "Where this breaks",
-        """**Fully connected layers on small images.** In convolutional networks the statistics are pooled over all spatial positions as well as the batch, so a batch of 2 images contributes many values per channel and the dependence is weaker than here.
+        """**Fully connected layers on small images.** In convolutional networks the statistics are pooled over all spatial positions as well as the batch, so a batch of 2 images contributes many values per channel and the dependence is likely weaker than here; that was not measured.
 
 **Frozen running statistics in the first study.** The momentum was set to zero so that the evaluation did not change the network; in a real training-mode deployment the running averages would also drift with every batch.
 
 **One architecture, one data set.** The batch size at which normalisation turns from hurting to helping, between 4 and 16 here, depends on the network and on how much the batch statistics vary, and is not a general constant.
 
-**Adam at one learning rate.** The batch-size study holds the learning rate at 1e-3 for every batch size; episode 22 showed that the best rate moves with the batch, so the plain network's flat line is partly a matter of where 1e-3 happens to sit.""")
+**Adam at one learning rate.** The batch-size study holds the learning rate at 1e-3 for every batch size; episode 22 showed, for plain SGD, that the best rate moves with the batch, and Adam's rate is unlikely to be immune, so the plain network's flat line is partly a matter of where 1e-3 happens to sit.""")
 
     post.add(
         "What to keep",
@@ -347,7 +354,7 @@ The practical failures of batch normalisation follow from the measurement direct
 
 3. In a batch of 2 every normalised unit is ±1 before the learned scale and shift: the layer keeps only which example was larger. Trained that way, the network scored {t[2]['bn']:.3f} in inference mode, against {t[2]['plain']:.3f} without normalisation.
 
-4. From batches of 16 up, normalisation helped by about half a point; at 64 the two modes agreed to within a point. Check both conditions before trusting it: batches large enough and mixed enough that their statistics are the population's.""")
+4. From batches of 16 up, normalisation scored {100 * (t[16]['bn'] - t[16]['plain']):.1f} and {100 * (t[64]['bn'] - t[64]['plain']):.1f} points higher over three seeds; at 64 the two modes agreed to within a point. Check both conditions before trusting it: batches large enough and mixed enough that their statistics are the population's.""")
 
     post.add(
         "Exercise",

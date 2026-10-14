@@ -69,7 +69,7 @@ print(f"90% CV interval covers the average error        "
 90% CV interval covers the average error        83.3%
 ```
 
-The standard error used there treats the 100 per-row losses as independent, and they are not: every fold's model was trained on most of the other folds' rows, so the losses are correlated, and the interval is too narrow for err and pointed at the wrong target for err_xy. Bates, Hastie and Tibshirani prove the linear-model version of this and propose nested CV to get the width right; the point here is the one before that, about what the centre is.
+The standard error used there treats the 100 per-row losses as independent, and they are not: every fold's model was trained on most of the other folds' rows, so the losses are correlated, and that is one reason the interval is too narrow for err and pointed at the wrong target for err_xy. It is not the only one. The centre sits 0.039 above err, and squared losses are skewed: even the held-out intervals below, whose losses are independent given the fitted model, cover only 87% and 84%. Bates, Hastie and Tibshirani prove the linear-model version of the correlation problem and propose nested CV to get the width right; the point here is the one before that, about what the centre is.
 
 ## On real digits it runs backwards
 
@@ -88,9 +88,9 @@ test accuracy  mean 0.9376  SD 0.0085
 correlation    -0.212
 ```
 
-The correlation is **-0.21**: negative. Training sets that cross-validate well produce models that do slightly worse on new digits. The mechanism is the same averaging seen from the other side. A training set that happens to contain more awkward, atypical digits scores poorly in CV, because its held-out folds are full of them, and produces a model that has seen more awkward digits and handles the test set's better. CV rewards the easy sample, not the good model.
+The correlation is **-0.21**: negative. Training sets that cross-validate well produce models that do slightly worse on new digits. One explanation, not tested here, is the same averaging seen from the other side. A training set that happens to contain more awkward, atypical digits would score poorly in CV, because its held-out folds are full of them, and would produce a model that has seen more awkward digits and handles the test set's better. If so, CV rewards the easy sample, not the good model; measuring each draw's difficulty would be the way to check.
 
-The fixed, disjoint test set matters. An earlier version of this experiment scored each fit on all the digits it had not trained on, which makes the test set the complement of the training set: a draw that took the hard digits left an easier test set behind, which exaggerates the effect — that version gave -0.28. With the test set fixed in advance it is -0.21: smaller, and still there.
+The fixed, disjoint test set matters. Scoring each fit on all the digits it had not trained on would make the test set the complement of the training set: a draw that took the hard digits would leave an easier test set behind, and the two effects would be confounded. With the test set fixed in advance and disjoint from every draw, that route is closed, and the correlation is still -0.21.
 
 ![A cloud of dots with a gently falling fitted line.](ml102-f1-digits.png)
 
@@ -123,7 +123,7 @@ That is the real choice. Cross-validation gives a stable estimate of how a *proc
 
 ## Where this breaks
 
-**The zero correlation is for this model and this size.** Bates, Hastie and Tibshirani show it holds for linear models broadly; for flexible models and very large n the conditional and average errors move closer together and the distinction matters less. At 100 rows and 20 features it matters a lot.
+**The zero correlation is for this model and this size.** Bates, Hastie and Tibshirani show it holds for linear models broadly. With very many rows per feature the fitted model's error varies little from one training set to the next, so the conditional and average errors move closer together and the distinction matters less; other model classes were not measured here. At 100 rows and 20 features it matters a lot.
 
 **The digits test set is a proxy for the truth.** It is a sample of 797 images, so each model's score on it is its true accuracy plus an error of order 0.008 — shared in part between models, since they face the same images, but not identical. The sign survived the switch to a fixed test set; the size should be read loosely.
 
@@ -135,9 +135,9 @@ That is the real choice. Cross-validation gives a stable estimate of how a *proc
 
 2. On simulated least squares, the 10-fold CV estimate's correlation with err_xy is -0.01. CV estimates err.
 
-3. CV's naive 90% interval covers err_xy 80% of the time and err 83%: the width is wrong because the per-row losses are not independent.
+3. CV's naive 90% interval covers err_xy 80% of the time and err 83%: partly because the per-row losses are not independent, partly because they are skewed and CV's centre sits above err.
 
-4. On real digits the correlation is -0.21: easy training samples cross-validate well and generalise slightly worse.
+4. On real digits the correlation is -0.21: training samples that cross-validate well generalised slightly worse.
 
 5. To evaluate a model you will ship, hold data out. To compare procedures, cross-validate. Say which one you did.
 
@@ -158,7 +158,7 @@ Episode 3 takes the rule everyone learns right after cross-validation — fit ev
 - Simulated: standard-normal features, coefficients 0.5, noise SD 1, so each fitted model's expected squared error is exactly 1 + |b - beta|^2.
 - UCI Optical Recognition of Handwritten Digits, as bundled with scikit-learn (`load_digits`), CC BY 4.0.
 - Machinery: `standarderror/ml/evaluation.py`, tested in `tests/test_ml.py`.
-- Where this stops: Bates, Hastie and Tibshirani, "Cross-validation: what does it estimate and how well does it do it?", *JASA* (2023), which proves the linear-model result and proposes nested CV for honest intervals; Hastie, Tibshirani and Friedman, *The Elements of Statistical Learning* (2009), section 7.12, which first reported the weak correlation.
+- Where this stops: Bates, Hastie and Tibshirani, "Cross-validation: what does it estimate and how well does it do it?", *JASA* (2023), which proves the linear-model result and proposes nested CV for honest intervals; Hastie, Tibshirani and Friedman, *The Elements of Statistical Learning* (2009), section 7.12, which illustrates the weak correlation.
 
 ### Reproducibility
 

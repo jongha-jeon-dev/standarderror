@@ -58,7 +58,7 @@ On the label, the approximation is excellent. The average of 300 masks and the w
 
 For a single linear unit the two rules are the same thing. A unit computing w·x with each input kept with probability 1 − p has expected value (1 − p) w·x, which is exactly what scaling the weights computes. The approximation enters through everything that is not linear. A ReLU of an average is not the average of a ReLU, and a softmax of averaged logits is not the average of softmaxes; with two hidden layers the gaps compound.
 
-The direction of the error is visible in the confidence:
+The difference is visible in the confidence:
 
 ```python
 print(f"mean top probability: weight scaling {d['ws_conf']:.3f}, "
@@ -72,9 +72,9 @@ mean top probability: weight scaling 0.985, 300 masks 0.954
 averaged top probability where the labels differ: 0.42
 ```
 
-The weight-scaled network puts a mean of **0.985** on its top class, the average of masks 0.954. Each thinned network is a slightly different classifier, and on hard digits they vote differently. The average carries that disagreement into its probabilities; the single weight-scaled network has no way to represent it. The few digits where the two rules give different labels are exactly the ones where the masks split: the average's top probability on them is 0.42, against 0.96 elsewhere.
+The weight-scaled network puts a mean of **0.985** on its top class, the average of masks 0.954. Each thinned network is a slightly different classifier, and on hard digits they vote differently. The average carries that disagreement into its probabilities; the single weight-scaled network does not show it. The few digits where the two rules give different labels are ones where the masks split: the average's top probability on them is 0.42, against 0.96 elsewhere.
 
-Log loss punishes a confident mistake far more than an unsure one, which is why the gap shows there. A coarser calibration check misses it: the expected calibration error over ten bins is 0.014 for weight scaling and 0.021 for the average, because on a task this easy nearly every prediction lands in the top bin and the bins cannot resolve where the confidence is misplaced.
+A coarser calibration check points the other way. The expected calibration error over ten bins is 0.014 for weight scaling and 0.021 for the average, and on average it is the average that is further off: its mean top probability is 0.019 below its accuracy of 0.973, while weight scaling's is 0.012 above its accuracy of 0.973. So the log-loss gap is not a matter of average confidence. Log loss punishes a confident mistake far more than an unsure one, and the likeliest source of the gap is the few digits weight scaling gets wrong with near-certainty; that was not isolated here.
 
 ![An eight-row table: on the digits, accuracy equal and log loss lower for 300 masks; on the hard task, both nearly equal; one mask is worse than weight scaling on every measure.](ml125-f2-table.png)
 
@@ -82,10 +82,10 @@ Log loss punishes a confident mistake far more than an unsure one, which is why 
 
 ## On a hard task
 
-The digits are nearly separable; most test images are far from any boundary. Episode 4's simulated task is the opposite: two overlapping Gaussian classes with a Bayes error of 0.276, so a large share of rows sit near the boundary whatever the model.
+The digits are nearly separable; most test images are far from any boundary. Episode 4's simulated task is the opposite: two overlapping Gaussian classes whose Bayes rule errs on 0.276 of the 5,000 test rows used here (0.268 on episode 4's 20,000), so a large share of rows sit near the boundary whatever the model.
 
 ```python
-g = nets.dropout_mc(task="gauss")   # episode 4's task, Bayes error 0.28
+g = nets.dropout_mc(task="gauss")   # episode 4's task, a hard one
 print(f"weight scaling {g['ws_acc']:.3f} / {g['ws_nll']:.4f}, "
       f"300 masks {g['mc_acc'][-1]:.3f} / {g['mc_nll'][-1]:.4f}, "
       f"same label {g['mc_agree'][-1]:.1%}")
@@ -104,7 +104,7 @@ So the approximation is good in the sense that matters for decisions, and loose 
 
 ![A tight cloud along the diagonal; the orange points where the labels differ sit near the centre, around 0.5 on both axes.](ml125-f1-scatter.png)
 
-*The median gap between the two probabilities is 0.019 and the largest 0.19. The 4.7% of rows with different labels sit where both rules are close to 0.5.*
+*The median gap between the two probabilities is 0.019 and the largest 0.19. The 4.7% of rows with different labels (seed 0) sit where both rules are close to 0.5.*
 
 ## The cheap version that is worse than both
 
@@ -112,11 +112,11 @@ The averaging needs K forward passes per prediction. The tempting shortcut is on
 
 That is the cost of a random network: one draw of the mask removes half the units, and the prediction inherits that draw's luck. It matters in practice because forgetting to switch a model to evaluation mode is a common bug, and a model served in training mode makes exactly these single-mask predictions, a different one each time the same input arrives.
 
-The more principled use of sampling is Gal and Ghahramani's reading of dropout as approximate Bayesian inference, where the spread of the K sampled predictions is taken as a measure of the model's uncertainty. What this episode measures supports the narrow part of that reading: the spread is real, it concentrates on the rows where the labels are in doubt, and the weight-scaled network throws it away. Whether it is a *calibrated* measure of uncertainty is a separate question this episode does not answer.
+The more principled use of sampling is Gal and Ghahramani's reading of dropout as approximate Bayesian inference, where the spread of the K sampled predictions is taken as a measure of the model's uncertainty. What this episode measures supports the narrow part of that reading: the masks do disagree, the averaged probability drops on the rows where the labels are in doubt, and the weight-scaled network does not show that drop. The spread of the K samples itself was not computed here. Whether it is a *calibrated* measure of uncertainty is a separate question this episode does not answer.
 
 ## Where this breaks
 
-**One dropout rate.** At p = 0.5 each mask removes half the units, the largest perturbation in common use. At p = 0.1, the thinned networks are much closer to each other and to the scaled one, and both gaps shrink.
+**One dropout rate.** At p = 0.5 each mask removes half the units, the largest perturbation in common use. At p = 0.1, the thinned networks are much closer to each other and to the scaled one, and both gaps should shrink; that was not measured here.
 
 **Small fully connected networks.** Two hidden layers; the gap compounds with depth, so deeper networks could differ more. Convolutional networks usually apply dropout only near the output, which limits how much nonlinearity sits between the masks and the prediction.
 
@@ -149,7 +149,7 @@ Arc V ends here. Initialisation, learning rate and batch size, the optimiser, ba
 ### Data
 
 - Optical Recognition of Handwritten Digits (UCI), as bundled with scikit-learn, CC BY 4.0; stratified half splits, seeds 0 to 2.
-- Simulated: episode 4's two-class Gaussian task in 10 dimensions, Bayes error 0.276; 2,000 training rows and 5,000 test rows.
+- Simulated: episode 4's two-class Gaussian task in 10 dimensions; 2,000 training rows and 5,000 test rows, on which the Bayes rule's error is 0.276 (0.268 on episode 4's 20,000).
 - Machinery: `standarderror/ml/nets.py`, tested in `tests/test_ml.py`; PyTorch networks with two hidden layers (256 for digits, 128 for the simulated task), ReLU, dropout 0.5 after each hidden layer, SGD with momentum 0.9, learning rate 0.01, minibatches of 32, 60 epochs.
 - Where this stops: Srivastava et al., "Dropout: a simple way to prevent neural networks from overfitting", *JMLR* (2014); Gal and Ghahramani, "Dropout as a Bayesian approximation", *ICML* (2016).
 

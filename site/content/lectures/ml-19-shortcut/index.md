@@ -41,7 +41,7 @@ rate  90%  same-shortcut test 0.986  clean test 0.947  wrong markers 0.663
 rate 100%  same-shortcut test 0.991  clean test 0.884  wrong markers 0.598
 ```
 
-With no marker the four scores are the same model on the same images. At 90%, the shortcut model scores **0.986 on a test set drawn like its training set**, better than the clean model's 0.971. Any model-selection procedure that compared the two on that test set — cross-validation included — would pick the shortcut model.
+With no marker in training, the first two test sets are the same images, and the clean forest scores exactly the same, 0.971, on the third, where markers have been lit on the wrong classes: the lit pixels change none of its answers. At 90%, the shortcut model scores **0.986 on a test set drawn like its training set**, better than the clean model's 0.971. Any model-selection procedure that compared the two on that test set — cross-validation included — would pick the shortcut model.
 
 ![Four lines: the same-shortcut test score rising above the dashed clean baseline; the clean, marked-class and wrong-marker scores falling, the last steeply.](ml119-f0-lines.png)
 
@@ -51,7 +51,7 @@ With no marker the four scores are the same model on the same images. At 90%, th
 
 The other columns show what that score bought. On clean images the shortcut model falls to 0.947, below the clean model. On the four marked classes alone it gets 0.895 of clean images right, against 0.954: it has learned that a 3 is, in large part, an image with a pixel lit in the top-left corner, and it is less sure what a 3 looks like without one. Move the markers to the wrong classes — the 3s' marker onto the 5s and so on — and it scores **0.663**.
 
-The trend is monotone in the shortcut's reliability. At 50% the marker helps a little and hurts a little. At 100% the test score is 0.991, the best of any model here, and the clean score is 0.884, the worst. The more perfectly the shortcut predicts the label in the data, the more the model leans on it, and the less of the real task it bothers to learn.
+The trend is monotone in the shortcut's reliability, in every column of the table below. At 50% the marker's gain on its own test set, 0.002, is within noise, while the clean score already falls by 0.007. At 100% the test score is 0.991, the best of any model here, and the clean score is 0.884, the worst. The more perfectly the shortcut predicts the label in the data, the more the model leans on it, and the less of the real task it bothers to learn.
 
 None of this is a malfunction. The forest was asked to predict the label from 64 pixels as accurately as possible on data where one pixel predicts four classes almost perfectly. It did. The test set agreed, because it was built the same way. The score measures how well the model fits the data-generating process of the test set, and that process included the shortcut.
 
@@ -65,20 +65,20 @@ In this case the shortcut is easy to find, if anyone looks:
 
 ```python
 for r in rd.shortcut_study(rates=(0.5, 0.9)):
-    print(f"rate {r['rate']:.0%}: best marker pixel ranks "
+    print(f"rate {r['rate']:.0%}: best marker pixel's mean rank "
           f"{r['marker_rank']:.0f} of 64 by permutation importance")
     print(f"          marked-class accuracy on clean images "
           f"{r['marked_clean']:.3f}")
 ```
 
 ```text
-rate 50%: best marker pixel ranks 4 of 64 by permutation importance
+rate 50%: best marker pixel's mean rank 4 of 64 by permutation importance
           marked-class accuracy on clean images 0.937
-rate 90%: best marker pixel ranks 1 of 64 by permutation importance
+rate 90%: best marker pixel's mean rank 1 of 64 by permutation importance
           marked-class accuracy on clean images 0.895
 ```
 
-Permutation importance on the shortcut test set ranks a marker pixel **first among 64** from 90% on — a pixel that is blank or nearly so in every real digit, at the top of the importance chart. That is exactly the kind of result episodes 12 and 16 taught suspicion of, and here suspicion is the right response: a feature that should carry no information about the task is the most important feature.
+Permutation importance on the shortcut test set ranks a marker pixel **first among 64** in every split from 90% on (the ranks printed are means over the three splits) — a pixel that is blank or nearly so in every real digit, at the top of the importance chart. That is exactly the kind of result episodes 12 and 16 taught suspicion of, and here suspicion is the right response: a feature that should carry no information about the task is the most important feature.
 
 Three checks generalise beyond planted pixels. Look at what the model relies on and ask whether it *should* matter. Score the model on a slice where the suspected shortcut is absent or broken — here, clean images of the marked classes. And, most expensive and most informative, evaluate on data from a different source: another hospital, another scanner, another year. A shortcut tied to how one dataset was collected rarely survives a change of collection.
 
@@ -92,17 +92,17 @@ It is worth being precise about what failed. Not the held-out set's size, and no
 
 Cross-validation inherits the same blind spot, because its folds are cut from the same data. So does any metric computed on a random split, however many times it is repeated, and so do the error bars of episode 1 — they quantify sampling noise around the wrong target. A bigger test set would only make the shortcut model's advantage, 0.015 here, more significant.
 
-The only evidence that can separate the two models is evidence from a different process: images without the marker, images where the marker means something else, images from another source. In this experiment those cost nothing to make. In practice they cost a second site, a second device or a second year of data, and that cost is why so many published models are evaluated only on a random split of one dataset.
+The only evidence that can separate the two models is evidence from a different process: images without the marker, images where the marker means something else, images from another source. In this experiment those cost nothing to make. In practice they cost a second site, a second device or a second year of data, and that cost is one reason so many published models are evaluated only on a random split of one dataset.
 
 ## Where this breaks
 
 **A planted shortcut is obvious once named.** One lit pixel is easy to find. Real shortcuts are spread over many features — texture, background, image statistics — and importance methods find them only partly, which is why external validation matters more than any explanation.
 
-**A forest, not a network.** Deep networks are, if anything, more prone to shortcuts: they learn the simplest predictive features first. The direction of the result does not depend on the model; its size does.
+**A forest, not a network.** Deep networks are often argued to be, if anything, more prone to shortcuts, because they tend to pick up the simplest predictive features first (Geirhos et al. review the evidence); no network was trained here. The direction of the result should not depend on the model; its size will.
 
 **The shortcut is perfectly stable here.** In practice a shortcut's reliability drifts — a hospital changes scanners — and a model that leaned on it fails gradually, which is harder to notice than a collapse.
 
-**Three splits.** The scores are means over three half splits of about 900 test images each, so differences of a few thousandths are within noise; the gaps quoted are several times larger.
+**Three splits.** The scores are means over three half splits of about 900 test images each, so differences of a few thousandths are within noise — including the 50% marker's gain on its own test set; the other gaps quoted are several times larger.
 
 ## What to keep
 

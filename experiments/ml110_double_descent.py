@@ -259,6 +259,15 @@ def build() -> Post:
     pr = min(r10["test"], key=r10["test"].get)
     er = r10["test"][pr]
     worst = {lam: max(c["test"].values()) for lam, c in res["ridge"].items()}
+    # Margin by which the best small model beats the most-features one, per
+    # unpenalised setting; n = 50 is the closest call.
+    def _margin(c_):
+        return c_["test"][c_["ps"][-1]] - ln.best_under(c_)[1]
+
+    margin = {("n", n_): _margin(c_) for n_, c_ in res["n"].items()}
+    margin.update({("sigma", s_): _margin(c_)
+                   for s_, c_ in res["sigma"].items()})
+    m50 = margin[("n", 50)]
     r1 = res["ridge"][1.0]
     p1 = min(r1["test"], key=r1["test"].get)
     e1 = r1["test"][p1]
@@ -278,6 +287,7 @@ def build() -> Post:
     flat = [p for p in base["ps"] if r10["test"][p] - er < 0.01]
     assert 60 <= pr <= 150 and 100 in flat and er < eb and er < big
     assert p1 < 100 and e1 > er
+    assert m50 > 0 and m50 == min(margin.values())
 
     post = Post(
         title=(f"{SERIES_TAG} 10: The Second Descent Is Real, and a Ridge "
@@ -354,15 +364,15 @@ All three phases are there. Error falls to {eb:.3f} at p = {pb}, climbs to **{ba
 
     post.add(
         "Where the peak sits, and what feeds it",
-        f"""The peak tracks the number of rows, not the number of features. With 50 rows it sits at p = 50, with 200 at p = 200; on a features-per-row axis the three curves line up. That is the *interpolation threshold*: the first p at which an exact fit exists.
+        f"""The peak tracks the number of rows, not the number of features. With 50 rows it sits at p = 50, with 200 at p = 200; on a features-per-row axis the three peaks line up, though away from the peak more rows give lower error. That is the *interpolation threshold*: the first p at which an exact fit exists.
 
 What makes the peak tall is anything the fit cannot represent but must still pass through. Label noise is the obvious candidate. It is not the only one:
 
 {snip['sigma'].markdown()}
 
-With no label noise at all the peak is still {s0['test'][100]:.1f}. A finite set of random ReLU features cannot express this target exactly, and the part it misses looks to the fit exactly like noise. Doubling the noise makes the peak taller ({s6['test'][100]:.1f}) and moves every other point up with it. In both cases the best model below the threshold beats the model with 2,000 features: {ln.best_under(s0)[1]:.3f} against {s0['test'][2000]:.3f} without noise, {ln.best_under(s6)[1]:.3f} against {s6['test'][2000]:.3f} with double.
+With no label noise at all the peak is still {s0['test'][100]:.1f}. A finite set of random ReLU features cannot express this target exactly, and the part it misses acts on the fit much like noise: something it must pass through but cannot represent. Doubling the noise makes the peak taller ({s6['test'][100]:.1f}) and moves every other point up with it. In both cases the best model below the threshold beats the model with 2,000 features: {ln.best_under(s0)[1]:.3f} against {s0['test'][2000]:.3f} without noise, {ln.best_under(s6)[1]:.3f} against {s6['test'][2000]:.3f} with double.
 
-So the second descent here is a *recovery*, not an improvement. Going far past the threshold undoes the damage the threshold did; it does not reach the bottom of the first U.""")
+So the second descent here is a *recovery*, not an improvement. Going far past the threshold undoes the damage the threshold did; it does not reach the bottom of the first U. The closest call is n = 50, where the best small model beats the 1,000-feature one by only {m50:.3f}: a near-tie on medians of 30 training sets, so there "never wins" means "does not win", not "loses badly".""")
 
     post.add(
         "A penalty removes the peak",
@@ -407,7 +417,7 @@ If your production model interpolates its training data, ask which side of a thr
 
     post.add(
         "Next",
-        """Arc II ends here: separability, units, selection, the U and its second descent were all properties of linear models and the averages built from them. Arc III turns to trees and ensembles, starting with the claim that makes a single decision tree popular: that it is interpretable. Episode 11 bootstraps the rows and counts how often the root split, and the shape of the tree beneath it, survive.""")
+        """Arc II ends here: separability, units, selection, the U and its second descent were all properties of linear models and of predictors that average, from neighbours to trees. Arc III turns to trees and ensembles, starting with the claim that makes a single decision tree popular: that it is interpretable. Episode 11 bootstraps the rows and counts how often the root split, and the shape of the tree beneath it, survive.""")
 
     return post
 

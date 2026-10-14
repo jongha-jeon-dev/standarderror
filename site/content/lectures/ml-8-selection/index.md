@@ -13,7 +13,7 @@ images: ["ml108-hero.png"]
 
 Disclosure: this post was written with the assistance of an AI system (Claude), which wrote the analysis code, ran the experiments and drafted the text. The topic, the constraints, the data choices and the final review are the author's.
 
-*With two real effects, one irrelevant feature correlated with a real one and seven of pure noise, cross-validated lasso keeps both real effects and on average 2.8 of the 7 noise features, and the irrelevant correlated one about 34% of the time at every correlation. The 1-SE rule cuts the noise to 0.2 but not the confusion: at correlation 0.99 it keeps the stand-in 38% of the time and the real feature 70%. On 100 bootstrap resamples of the diabetes data, age is kept in 82% of fits, 37% with a positive sign and 45% negative.*
+*With two real effects, one irrelevant feature correlated with a real one and seven of pure noise, cross-validated lasso keeps the real effects (c in at least 100% of datasets, a in at least 78%) and on average 2.8 of the 7 noise features, and the irrelevant correlated one about 34% of the time at every correlation. The 1-SE rule cuts the noise to 0.2 but not the confusion: at correlation 0.99 it keeps the stand-in 38% of the time and the real feature 70%. On 100 bootstrap resamples of the diabetes data, age is kept in 82% of fits, 37% with a positive sign and 45% negative.*
 
 Episode 8 of *Machine Learning, Taught Through What Breaks*. The syllabus and the other episodes: https://jongha-jeon-dev.github.io/standarderror/lectures/
 
@@ -70,15 +70,15 @@ rho 0.95  keeps a 0.85  b 0.28  b-not-a 0.08  noise 0.25 of 7
 rho 0.99  keeps a 0.70  b 0.38  b-not-a 0.23  noise 0.27 of 7
 ```
 
-The passengers mostly get off: 0.2 noise features on average, and b is kept only 2% of the time when it is uncorrelated. But the stand-in problem gets *worse* as the correlation rises: at ρ = 0.99, b is kept 38% of the time and a only 70%. No setting of the penalty can tell two near-identical columns apart, because the data barely can. The lasso keeps one of them, more or less at random, and a report of "the selected features" names whichever it happened to be.
+The passengers mostly get off: 0.2 noise features on average, and b is kept only 2% of the time when it is uncorrelated. But the stand-in problem gets *worse* as the correlation rises: at ρ = 0.99, b is kept 38% of the time and a only 70%. Neither rule reliably tells two near-identical columns apart at 100 rows, because the data carry little information about which is which. The lasso does favour the real one — at ρ = 0.99 it keeps a without b in 55% of datasets and b without a in 23% — but in roughly one dataset in 4 a report of "the selected features" names the stand-in instead of the real effect.
 
-The geometry says why. When two columns are nearly identical, the fitted values depend almost only on the *sum* of their coefficients. The L1 penalty charges |β_a| + |β_b|, which for coefficients of the same sign is also just the sum. Every split of the shared effect between a and b fits about equally well and costs exactly the same penalty, so which corner the solver lands on is decided by the small accidents of the sample. Ridge, whose penalty is β_a² + β_b², strictly prefers an even split and keeps both; the elastic net mixes the two penalties precisely to get that grouping back. Neither tells you which of the two is the real one. With ρ = 0.99 and 100 rows, the data do not contain that information, and no penalty can create it.
+The geometry says why. When two columns are nearly identical, the fitted values depend almost only on the *sum* of their coefficients. The L1 penalty charges |β_a| + |β_b|, which for coefficients of the same sign is also just the sum. Every split of the shared effect between a and b fits about equally well and costs exactly the same penalty, so which corner the solver lands on is decided by the small accidents of the sample. Ridge, whose penalty is β_a² + β_b², strictly prefers an even split and keeps both; the elastic net mixes the two penalties precisely to get that grouping back. Neither tells you which of the two is the real one. With ρ = 0.99 and 100 rows the data contain little of that information, and no penalty can create more.
 
-The 1-SE rule also costs the relevant feature something even when there is no stand-in: at ρ = 0 it keeps a in 93% of datasets, against 100% at the CV minimum. A larger penalty shrinks every coefficient, and an effect of 0.5 in 100 noisy rows is not always large enough to survive it. Sparser means fewer false positives and more false negatives; there is no setting that gives fewer of both.
+The 1-SE rule also costs the relevant feature something even when there is no stand-in: at ρ = 0 it keeps a in 93% of datasets, against 100% at the CV minimum, and c, which is correlated with nothing, in 92% against 100%. A larger penalty shrinks every coefficient, and an effect of 0.5 in 100 noisy rows is not always large enough to survive it. Sparser means fewer false positives and more false negatives; there is no setting that gives fewer of both.
 
-![A six-row table: under the CV minimum, about 2.7 noise features kept at every correlation; under the 1-SE rule, about 0.2, with the stand-in kept more often as correlation rises.](ml108-f2-table.png)
+![A six-row table: under the CV minimum, about 2.8 noise features kept at every correlation; under the 1-SE rule, about 0.2, with the stand-in kept more often as correlation rises.](ml108-f2-table.png)
 
-*The CV minimum optimises prediction, which tolerates small spurious coefficients. The 1-SE rule trades a little prediction for far fewer, and still cannot separate a feature from a near-copy.*
+*The CV minimum optimises prediction, which tolerates small spurious coefficients. The 1-SE rule trades a little prediction for far fewer, and still does not reliably separate a feature from a near-copy at 100 rows.*
 
 ## On real data: kept, but which way?
 
@@ -115,11 +115,11 @@ Under the 1-SE rule age almost vanishes (3%), and s3 becomes stably negative (98
 
 **Stability selection is the principled fix, and it changes the question.** Meinshausen and Bühlmann's procedure keeps features selected in a large share of subsamples across many penalties, with an error-control guarantee. It is still blind to which of two near-copies is the real one; the guarantee is about noise features, not stand-ins.
 
-**The elastic net groups, it does not choose.** Adding a ridge component (half and half, tuned by the same cross-validation) keeps correlated features together instead of picking one. On this design it does so by keeping the stand-in *more* often: 42% of the time at ρ = 0 and 90% at ρ = 0.99, with 3.6 noise features kept on average. More stable, and no closer to the truth.
+**The elastic net groups, it does not choose.** Adding a ridge component (half and half, tuned by the same cross-validation) keeps correlated features together instead of picking one. On this design it does so by keeping the stand-in *more* often: 42% of the time at ρ = 0 and 90% at ρ = 0.99, with 3.6 noise features kept on average. Grouping is not choosing, and it is no closer to the truth.
 
-**One simulation design.** Ten features, 100 rows, effects of 0.5. With more rows the CV minimum keeps fewer passengers; with more noise features it keeps more. The stand-in problem does not shrink with more rows at a fixed high correlation.
+**One simulation design.** Ten features, 100 rows, effects of 0.5. How the number of passengers changes with more rows was not measured; a penalty tuned for prediction is known not to be selection-consistent in general, so do not count on it falling to zero. The stand-in problem should shrink with more rows: in this design b's correlation with the true features is ρ, below 1, so the irrepresentable condition holds and Zhao and Yu's theory says a suitably tuned lasso eventually separates a from b. The rows that takes grow as ρ approaches 1, and nothing here measures how many.
 
-**Bootstrap selection frequencies are themselves estimates.** A hundred resamples resolve a share to about ±5 points; the sign splits quoted are far wider than that.
+**Bootstrap selection frequencies are themselves estimates.** A hundred resamples pin a share down to within about ±10 points at 95%; the sign splits quoted are well clear of that.
 
 ## What to keep
 
@@ -127,7 +127,7 @@ Under the 1-SE rule age almost vanishes (3%), and s3 becomes stably negative (98
 
 2. The 1-SE rule drops most of them (0.2) at a small cost in prediction.
 
-3. No penalty separates a feature from a highly correlated stand-in: at ρ = 0.99, the stand-in was kept 38% of the time and the real feature 70%.
+3. Neither penalty rule reliably separated a feature from a highly correlated stand-in at 100 rows: at ρ = 0.99, the stand-in was kept 38% of the time and the real feature 70%.
 
 4. On the diabetes data, age was kept in 82% of bootstrap fits with its sign split 37% / 45%. Report sign stability, not only selection frequency.
 

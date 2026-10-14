@@ -13,7 +13,7 @@ images: ["ml129-hero.png"]
 
 Disclosure: this post was written with the assistance of an AI system (Claude), which wrote the analysis code, ran the experiments and drafted the text. The topic, the constraints, the data choices and the final review are the author's.
 
-*In a simulation where the test inputs move up to two standard deviations while P(y | x) stays fixed, the Bayes accuracy stays between 0.832 and 0.839. A flexible spline logistic model stays within 0.018 of it up to a shift of 1.5 and loses 0.027 at 2. A linear logistic model falls from 0.816 to 0.536. Importance weighting recovers the best linear model for the test inputs: lower log loss at every shift, but lower accuracy at a shift of 1 (0.680 against 0.758), and at a shift of 2 the weights keep an effective 6% of the sample.*
+*In a simulation where the test inputs move up to two standard deviations while P(y | x) stays fixed, the Bayes accuracy stays between 0.832 and 0.839. A flexible spline logistic model stays within 0.018 of it up to a shift of 1.5 and loses 0.027 at 2. A linear logistic model falls from 0.816 to 0.536. Importance weighting moves the line towards the best linear model for the test inputs (within 0.048 of its accuracy): lower log loss at every non-zero shift, but lower accuracy at a shift of 1 (0.680 against 0.758), and at a shift of 2 the weights keep an effective 6% of the sample.*
 
 Episode 29 of *Machine Learning, Taught Through What Breaks*. The syllabus and the other episodes: https://jongha-jeon-dev.github.io/standarderror/lectures/
 
@@ -54,7 +54,7 @@ The figure above shows what the linear model did. Most training inputs sit betwe
 
 Nothing about the line was wrong *for the training distribution*. It was the best linear approximation to the wave over N(0, 1), and the best linear approximation depends on where the inputs are. When the inputs move, the best line moves, and the fitted one does not. That is the whole mechanism: covariate shift hurts a model by exposing the places where it was approximating, and a misspecified model approximates everywhere.
 
-The spline model follows the wave where it has data, so its errors in the test region are mostly the irreducible ones. It does lose something at the largest shift, 0.027 of accuracy at s = 2, because the right tail of the test distribution reaches x = 4 and beyond, where the training data have almost no points and the spline extrapolates linearly. Shift far enough and every model is extrapolating. The difference is how early the cost starts. For the line it starts at the first step.
+The spline model follows the wave where it has data, so its errors in the test region are mostly the irreducible ones. It does lose something at the largest shift, 0.027 of accuracy at s = 2, plausibly because the right tail of the test distribution reaches x = 4 and beyond, where the training data have almost no points and the spline extrapolates linearly; the mechanism was not isolated. Shift far enough and every model is extrapolating. The difference is how early the cost starts. For the line it starts at the first step.
 
 Calibration says the same thing more loudly. The linear model's expected calibration error at s = 2 is 0.44: its probabilities are confidently pointed the wrong way. The spline's is 0.08.
 
@@ -81,19 +81,19 @@ shift 1.5  accuracy 0.666 -> 0.735  log loss 1.178 -> 0.635  effective n 15%
 shift 2.0  accuracy 0.536 -> 0.777  log loss 1.737 -> 0.583  effective n 6%
 ```
 
-The weighted log loss is lower than the unweighted at every shift, and the table below shows it tracks a linear model fitted to 200,000 rows drawn from the test distribution itself, the target the weights aim at. At s = 2 the weights turn the line around, and accuracy goes from 0.536 to 0.777.
+The weighted log loss is lower than the unweighted at every non-zero shift (at zero the weights are all 1 and change nothing), and the table below shows it moving towards a linear model fitted to 200,000 rows drawn from the test distribution itself, the target the weights aim at: within 0.048 of its accuracy and 0.035 of its log loss, closer at small shifts than at large ones. At s = 2 the weights turn the line around, and accuracy goes from 0.536 to 0.777.
 
 At s = 1 accuracy goes the other way, from 0.758 to 0.680. This is not the weights failing. The best linear model for N(1, 1) inputs, by log loss, is a nearly flat line (it scores 0.665 itself), because over that range the wave rises and falls about equally. Log loss rewards a line that hedges near 0.5; accuracy rewards one that commits. Importance weighting fixes the loss it is given, and when the model is misspecified, the loss-optimal and the accuracy-optimal models are different models.
 
-![A five-row table: weighted log loss is below unweighted at every shift; weighted accuracy is below unweighted at shifts 0.5 and 1 and above it at 1.5 and 2; effective n falls to a few percent.](ml129-f2-table.png)
+![A five-row table: weighted log loss is below unweighted at every non-zero shift and equal at zero; weighted accuracy is below unweighted at shifts 0.5 and 1 and above it at 1.5 and 2; effective n falls to a few percent.](ml129-f2-table.png)
 
-*The weighted model tracks the best linear model in both accuracy and log loss. The best linear model at a shift of 1 is a worse classifier than the unweighted one.*
+*The weighted model moves towards the best linear model, coming within 0.048 of its accuracy and 0.035 of its log loss at every shift. The best linear model at a shift of 1 is a worse classifier than the unweighted one.*
 
 ## The price of the weights
 
 Weights are not free. A weighted sample of 500 rows carries less information than 500 rows, and Kong's effective sample size, (Σw)² / Σw², measures how much less. At a shift of 1 it is 39% of the sample. At 1.5 it is 15%, and at 2 it is **6%**: a few rows in the training set's right tail carry most of the weight, and the fit is effectively made from about 32 of them.
 
-That is why the weighted linear model's accuracy varies more from one training set to the next: its standard deviation over the twenty repetitions is 0.069 at s = 2 against 0.001 unweighted. The weights buy a smaller bias with a larger variance, and the trade gets worse the further the shift goes. When the test inputs lie where the training data have none, there is nothing to reweight.
+That is why the weighted linear model's accuracy varies more from one training set to the next: its standard deviation over the twenty repetitions is 0.069 at s = 2 against 0.001 unweighted. The weights buy a smaller bias with a larger variance, and the effective sample paying for it shrinks at every step of the shift. When the test inputs lie where the training data have none, there is nothing to reweight.
 
 For the flexible model the weights make little difference in the region it can already follow, and a small one at s = 2: 0.805 unweighted, 0.816 weighted, with the spread across repetitions falling from 0.063 to 0.015. That is the extrapolating tail again: weighting puts more of the fit's attention on the few rows near the test region, which plausibly steadies what the splines do just beyond them. The mechanism was not isolated here.
 
@@ -113,7 +113,7 @@ For the flexible model the weights make little difference in the region it can a
 
 2. What the shift costs is the model's misspecification, exposed. A flexible model stayed within 0.018 of Bayes up to a shift of 1.5; a linear one fell from 0.816 to 0.536.
 
-3. Importance weighting refits the model for the test inputs. It lowered log loss at every shift and tracked the best linear model for the test distribution, which at a shift of 1 was a worse classifier (0.680 against 0.758).
+3. Importance weighting refits the model for the test inputs. It lowered log loss at every non-zero shift and moved towards the best linear model for the test distribution (within 0.048 of its accuracy), which at a shift of 1 was a worse classifier (0.680 against 0.758).
 
 4. The weights shrink the sample: at a shift of 2 the effective sample was 6% of 500 rows.
 
@@ -127,7 +127,7 @@ Compute the effective sample size of those weights. If it is a few percent, the 
 
 ## Next
 
-One episode remains. Every network in this arc was small enough to train many times, which is what let each claim be measured across runs. The last episode climbs a ladder of model sizes and tests the sentence that justifies training very large ones: that loss falls as a power law of model size, so small models predict what large ones will do.
+One episode of this arc remains. Every network in this arc was small enough to train many times, which is what let each claim be measured across runs. The last episode of Arc VI climbs a ladder of model sizes and tests the sentence that justifies training very large ones: that loss falls as a power law of model size, so small models predict what large ones will do.
 
 ---
 

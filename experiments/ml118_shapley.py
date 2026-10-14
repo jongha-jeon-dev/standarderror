@@ -243,8 +243,19 @@ def build() -> Post:
     ben, mal, mea = (cmp["benign only"], cmp["malignant only"],
                      cmp["feature means"])
     ref = cmp["all training rows"]
+    # how far the global summary (mean |phi|) moves across backgrounds
+    rel = max(float(np.max(np.abs(c["mean_abs"] / ref["mean_abs"] - 1)))
+              for c in cmp.values())
+
+    # the correlation behind "tumours that do not exist", on all 569 tumours
+    from sklearn.datasets import load_breast_cancer
+    bcd = load_breast_cancer()
+    fn = [str(n) for n in bcd.feature_names]
+    r_rc = float(np.corrcoef(bcd.data[:, fn.index("worst radius")],
+                             bcd.data[:, fn.index("worst concave points")])[0, 1])
 
     # The spine, asserted rather than trusted.
+    assert 0.3 < rel < 0.7 and 0.7 < r_rc < 0.9
     assert bg["efficiency_error"] < 1e-9 and res["lin"] < 1e-9
     assert ben["top_differs"] > 0.5 and mal["top_differs"] > 0.2
     assert all(c["sign_flips"] > 0.1 for c in (ben, mal, mea))
@@ -344,7 +355,7 @@ None of these explanations is wrong. Each is the unique fair split of a differen
 
     post.add(
         "Off the data again",
-        """There is a second choice hidden in the interventional definition. Filling in missing features by drawing them from the background *independently* of the features in the coalition builds rows that combine this tumour's worst radius with another tumour's worst concave points. In this data those two features are correlated at about 0.8, so many of those rows are tumours that do not exist, the same problem episodes 16 and 17 met in permutation importance and partial dependence.
+        f"""There is a second choice hidden in the interventional definition. Filling in missing features by drawing them from the background *independently* of the features in the coalition builds rows that combine this tumour's worst radius with another tumour's worst concave points. In this data those two features are correlated at {r_rc:.2f}, so many of those rows are tumours that do not exist, the same problem episodes 16 and 17 met in permutation importance and partial dependence.
 
 The alternative, *conditional* Shapley values, draws the missing features from their distribution given the coalition's values, keeping the rows realistic. It changes the answers again, and it has a cost beyond computation: under the conditional definition a feature the model never uses can receive credit, because it is correlated with one the model does use. Janzing and colleagues argue that the interventional version is the right one for asking what the *model* does; Sundararajan and Najmi catalogue how the variants disagree. The choice between them is a second "compared with what?" that the uniqueness theorem leaves open.
 
@@ -365,13 +376,13 @@ A useful habit is to show two backgrounds side by side whenever an explanation m
 
     post.add(
         "Where this breaks",
-        """**Five features is a toy for enumeration.** Exact computation costs 2^p model evaluations per background row. Real explainers sample coalitions or exploit tree structure; their answers approximate the same quantities and inherit the same dependence on the background.
+        f"""**Five features is a toy for enumeration.** Exact computation costs 2^p model evaluations per background row. Real explainers sample coalitions or exploit tree structure; their answers approximate the same quantities and inherit the same dependence on the background.
 
 **Log-odds, not probabilities.** Attributions computed on predicted probabilities instead of log-odds are different numbers, and libraries differ in which they report. Everything here is in log-odds; the dependence on the background is part of the definition on either scale, but its size was measured on this one only.
 
-**One model, one split.** A different model fitted to the same data, as episode 20 will show, can rank the features differently for the same tumour even with the background fixed.
+**One model, one split.** A different model fitted to the same data could rank the features differently for the same tumour even with the background fixed. That was not measured here; episode 20 shows that models of near-equal accuracy can disagree on the predictions themselves, which is a reason to expect it.
 
-**Global summaries average the problem away.** Mean absolute Shapley values, the usual "SHAP importance" bar chart, change much less across backgrounds than individual explanations do. That stability is real and says nothing about any one prediction.""")
+**Global summaries average the problem away.** Mean absolute Shapley values, the usual "SHAP importance" bar chart, rank the five features in the same order under all four backgrounds, while their sizes move by up to {rel:.0%} and the leading feature of individual explanations changes for up to {ben['top_differs']:.0%} of tumours. That stability of the ranking is real and says nothing about any one prediction.""")
 
     post.add(
         "What to keep",

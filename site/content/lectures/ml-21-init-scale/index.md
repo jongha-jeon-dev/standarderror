@@ -23,7 +23,7 @@ Arc IV ended with networks that differed only in their random seed and disagreed
 
 The first half of the argument is easy to confirm. A network with 30 hidden layers of 128 units, every weight set to 0.01, trained on the digits with the best of four learning rates, scores 0.197, and after training the 128 units of its first layer are still exactly identical: the count of distinct units is 1. Symmetry is never broken by training alone.
 
-The second half, *only*, is the claim to test. Draw the weights from a normal distribution with standard deviation g / √fan-in, the form every standard initialiser takes, and vary the gain g. Every one of these breaks symmetry. Here is what each does to the activations of the same 30-layer network before any training:
+The second half, *only*, is the claim to test. Draw the weights from a normal distribution with standard deviation g / √fan-in, the scaling every standard initialiser uses (some draw from a uniform distribution instead, and Glorot's averages fan-in and fan-out), and vary the gain g. Every one of these breaks symmetry. Here is what each does to the activations of the same 30-layer network before any training:
 
 ```python
 from standarderror.ml import nets
@@ -46,7 +46,7 @@ relu g = 1.41: activation sd at layers 1, 10, 30 = 0.82, 0.83, 1.3
 relu g = 2.00: activation sd at layers 1, 10, 30 = 1.2, 27, 4.3e+04
 ```
 
-![Eight lines on a log scale over 30 layers: four stay roughly level, two fall steeply towards 1e-10 and below, one ReLU line rises to about 1e4, and one tanh line falls slowly.](ml121-f0-stds.png)
+![Eight lines on a log scale over 30 layers: three stay roughly level, one tanh line falls slowly, the ReLU line for g = 1 falls to about 1e-5, two fall to 1e-9 and below, and one ReLU line rises to about 4e4.](ml121-f0-stds.png)
 
 *With ReLU each layer multiplies the scale by about g/√2. At g = √2 the thirtieth layer's activations have standard deviation 1.33; at g = 1, 4e-05.*
 
@@ -82,7 +82,7 @@ relu g = 2.00: best test accuracy 0.099 at learning rate 0.001
 all weights 0.01: 0.197; distinct units in layer 1 after training: 1
 ```
 
-Four of the eight random initialisations do not train at all in thirty epochs. ReLU at g = 1 scores **0.132**; its signal reaches the last hidden layer at less than a ten-thousandth of its size, and the gradients reaching the early layers are of order 1e-05. ReLU at g = 2 scores 0.099, its activations and gradients tens of thousands of times too large for any of the learning rates tried. Tanh at g = 0.5 and ReLU at g = 0.5 score chance. The two ReLU networks that fail sit either side of the one that succeeds, g = √2, which scores **0.919**, by a factor of √2 in the standard deviation of the weights.
+Four of the eight random initialisations do not train at all in thirty epochs. ReLU at g = 1 scores **0.132**; its signal reaches the last hidden layer at less than a ten-thousandth of its size, and the gradients reaching the early layers are of order 1e-05. ReLU at g = 2 scores 0.099, its activations and gradients tens of thousands of times too large for any of the learning rates tried. Tanh at g = 0.5 and ReLU at g = 0.5 score chance. The two failing ReLU networks nearest the one that succeeds, g = 1 and g = 2, sit either side of it by a factor of √2 in the standard deviation of the weights; g = √2 scores **0.919**.
 
 Tanh at g = 1 and g = √2 both train, to 0.949 and 0.919; tanh at g = 2 reaches 0.726, at the smallest learning rate tried, where the exploding gradient is least harmful. With one seed and a coarse grid of learning rates, the ordering among the networks that train is not the point. The point is the gap between the ones that train and the ones that cannot.
 
@@ -111,19 +111,19 @@ constant: 0.385
 
 Every random initialisation trains above 0.9. Two multiplications by 0.707 halve the signal, which the first few updates can absorb; twenty-nine shrink it to less than a ten-thousandth, which they cannot. The constant initialisation still fails at three layers, scoring 0.385: symmetry does not care about depth.
 
-So the sentence holds in shallow networks, where it was first written, and fails in deep ones. Breaking symmetry is necessary at any depth. In a deep network it is not sufficient: the scale has to be chosen so that each layer passes on a signal of about the same size it received, in both directions. That is the whole content of the initialisers that every deep-learning library now applies by default, and the reason they differ by activation. Glorot's rule targets tanh and sigmoid, He's targets ReLU, and each assumes the other's activation at its peril, as the ReLU network at g = 1 shows.
+So the sentence holds in these shallow networks and fails in deep ones. Breaking symmetry is necessary at any depth. In a deep network it is not sufficient: the scale has to be chosen so that each layer passes on a signal of about the same size it received, in both directions. That is the whole content of the initialisers that every deep-learning library now applies by default, and the reason they differ by activation. Glorot's rule targets tanh and sigmoid, He's targets ReLU, and each assumes the other's activation at its peril, as the ReLU network at g = 1 shows.
 
 ![A nine-row table of activation scale, gradient size and accuracy for each activation and gain at 30 and 3 layers.](ml121-f2-table.png)
 
-*Every row but the last breaks symmetry. Only the rows whose scale per layer is close to 1 train at thirty layers.*
+*Every row but the last breaks symmetry. A scale per layer far from 1 stops training at thirty layers; one near 1 is not enough on its own: tanh at g = 2 has 0.998 and scores 0.726.*
 
 ## Where this breaks
 
 **Plain stacks of layers.** Residual connections, which add each block's input to its output, and normalisation layers, which rescale activations at every layer (episode 24), both make a network far less sensitive to the initial scale. Most modern deep networks have both, which is why this failure is rarer in practice than the arithmetic suggests.
 
-**One seed, four learning rates.** The verdicts are large enough to survive both limits: the failing networks score chance at every rate tried. The differences between the networks that train are not established here.
+**One seed, four learning rates.** The verdicts are large enough to survive both limits: the four failing networks score at most 0.132 at any rate tried, against chance at 0.10. The differences between the networks that train are not established here.
 
-**Thirty epochs.** A network whose gradients are 1e-5 might eventually begin to learn with a much larger learning rate or many more epochs. Within any reasonable budget it does not, and a larger rate would overflow the layers whose activations are not small.
+**Thirty epochs.** A network whose gradients are 1e-5 might eventually begin to learn with a much larger learning rate or many more epochs. Neither was tried here, and a much larger rate would risk overflow in the layers whose activations are not small.
 
 **The theory is for the start.** The g/√2 factor describes the network at initialisation. Training changes the weights and the scales with them, which is why the ReLU network at g = √2 can train at all: the initialisation only has to give it a place to start.
 

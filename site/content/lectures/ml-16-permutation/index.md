@@ -13,7 +13,7 @@ images: ["ml116-hero.png"]
 
 Disclosure: this post was written with the assistance of an AI system (Claude), which wrote the analysis code, ran the experiments and drafted the text. The topic, the constraints, the data choices and the final review are the author's.
 
-*A random forest on the diabetes data. Shuffling bmi costs 0.168 of test R²; refitting the forest without bmi costs 0.043, 4 times less. Add an exact copy of bmi and the permutation importances are 0.017 for bmi and 0.021 for the copy — together a quarter of what bmi had alone — while dropping either costs nothing and dropping both costs 0.044, as before. Shuffling s1, correlated 0.90 with s2, puts 29% of rows outside the region that holds 99% of real (s1, s2) pairs.*
+*A random forest on the diabetes data. Shuffling bmi costs 0.168 of test R²; refitting the forest without bmi costs 0.043, 4 times less. Add an exact copy of bmi and the permutation importances are 0.017 for bmi and 0.021 for the copy — together a quarter of what bmi had alone — while dropping bmi and keeping the copy costs nothing and dropping both costs 0.044, as before. Shuffling s1, correlated 0.90 with s2, puts 29% of rows outside the region that holds 99% of real (s1, s2) pairs.*
 
 Episode 16 of *Machine Learning, Taught Through What Breaks*. The syllabus and the other episodes: https://jongha-jeon-dev.github.io/standarderror/lectures/
 
@@ -23,7 +23,7 @@ Arc III ended with forests that predict well and resist being read. Arc IV is ab
 
 That is often described as "how much the model needs the feature". There are at least three different questions hiding in that phrase. How much does *this fitted model* lean on the column? How much would *a model refitted without it* lose? How much *information* does the column carry that nothing else does? Permutation importance answers only the first, and it answers it on rows the shuffle invented.
 
-The diabetes data and a random forest show the gap. bmi is one of its two strongest predictors. Add a second column that copies bmi with a chosen correlation, and measure four things:
+The diabetes data and a random forest show the gap. bmi matters to this forest: shuffling it, as the first row below shows, removes about half of its test R² of 0.33. Add a second column that copies bmi with a chosen correlation, and measure four things:
 
 ```python
 from standarderror.ml import reading as rd
@@ -43,19 +43,19 @@ None  permute bmi 0.168  permute copy +0.000  refit w/o bmi 0.043  w/o both 0.04
  1.0  permute bmi 0.017  permute copy +0.021  refit w/o bmi 0.000  w/o both 0.044
 ```
 
-Start with the first row, no copy. Shuffling bmi costs **0.168** of test R². Refitting the forest without bmi costs 0.043, 4 times less. Both are correct; they measure different things. The fitted forest has organised itself around bmi and is badly hurt when bmi is scrambled. A forest grown without bmi finds most of the same information in s5, bp and the other measurements, and loses only a little.
+Start with the first row, no copy. Shuffling bmi costs **0.168** of test R². Refitting the forest without bmi costs 0.043, 4 times less. Both are correct; they measure different things. The fitted forest has organised itself around bmi and is badly hurt when bmi is scrambled. A forest grown without bmi loses only a little — presumably because it finds much of the same information in the other measurements, though which ones carry it was not measured here.
 
 ![Grouped bars: without a copy, permuting bmi costs far more than refitting without it; with an exact copy, permuting either column costs little and refitting without both costs as much as refitting without bmi did alone.](ml116-f0-copies.png)
 
-*Alone, shuffling bmi costs **0.168** and refitting without it 0.043. With an exact copy, shuffling either costs about 0.02, and only removing both costs anything (0.044).*
+*Alone, shuffling bmi costs **0.168** and refitting without it 0.043. With an exact copy, shuffling either costs about 0.02; removing bmi and keeping the copy costs nothing, and removing both costs 0.044.*
 
 ## A copy hides the original
 
-Now add the copy. With an exact duplicate, the forest splits on whichever of the two it happens to pick at each node, and its reliance is divided between them. Shuffle one and the trees that used the other still work. Permutation importance falls to 0.017 for bmi and 0.021 for its copy. Their sum, 0.038, is a quarter of what bmi had alone: permutation importance is not even additive over copies.
+Now add the copy. With an exact duplicate, the two columns offer identical splits, so which one a node uses comes down to tie-breaking, and the forest's reliance is presumably divided between them. Shuffle one and the splits on the other still work. Permutation importance falls to 0.017 for bmi and 0.021 for its copy. Their sum, 0.038, is a quarter of what bmi had alone: permutation importance is not even additive over copies.
 
-Refitting tells the same story differently. Remove bmi and keep its copy, and nothing is lost (0.000). Remove both and the loss is 0.044, the same as removing bmi when there was no copy. That last column is stable across every row of the table — the information bmi carries is worth about 0.04 of R² however it is presented — while the permutation numbers move by a factor of ten.
+Refitting tells the same story differently. Remove bmi and keep its copy, and nothing is lost (0.000). Remove both and the loss is 0.044, the same as removing bmi when there was no copy. That last column is stable across every row of the table — averaged over the same three splits, the information bmi carries is worth about 0.04 of R² however it is presented — while the permutation numbers move by a factor of ten.
 
-Real tables are full of near-copies: total cholesterol and LDL, height and weight, a price and the same price in another currency, a date and the age computed from it. Every such pair splits its permutation importance between its members and pushes both down a ranking. Episode 12's breast-cancer run already showed it: of 32 features, several real measurements had permutation importance at or below zero.
+Real tables are full of near-copies: total cholesterol and LDL, height and weight, a price and the same price in another currency, a date and the age computed from it. A pair close enough can split its permutation importance between its members and push both down a ranking. How close is close enough is in the table: at a correlation of 0.8 the forest still leaned almost entirely on the original, and the copy's importance was -0.001; at 0.95 the copy took 0.009 against bmi's 0.115; only the exact copy split it evenly. Episode 12's breast-cancer run had three real measurements with permutation importance at or below zero, which is what this effect would produce, though that run did not check the cause.
 
 ![A four-row table: test R^2 unchanged by adding a copy; permutation importance of bmi falling from 0.17 to 0.02 as the copy improves; refitting without both near 0.04 throughout.](ml116-f2-table.png)
 
@@ -89,7 +89,7 @@ So part of what permutation importance measures is how badly the model extrapola
 
 If permutation importance answers the narrowest of the three questions, the fix is to ask a wider one deliberately, and the table already contains the answer to it. Removing bmi and its copy together and refitting cost 0.044 of R², within a hundredth of the 0.043 that removing bmi cost when it had no copy. Measured as a group, the information is stable: duplicated, nearly duplicated or alone, it is worth the same.
 
-That suggests a working procedure. Cluster the features by correlation first — a simple threshold on the absolute correlation is enough to start. Report importance for each cluster, by permuting all its members together or by refitting without the whole cluster. Within a cluster, say which member the model happened to lean on, and say that a different fit could lean on another. Permuting a whole cluster also leaves fewer impossible rows behind, since its members move together and keep their relationship to one another; what is broken is only their relationship to everything else.
+That suggests a working procedure. Cluster the features by correlation first — a simple threshold on the absolute correlation is enough to start. Report importance for each cluster, by permuting all its members together or by refitting without the whole cluster. Within a cluster, say which member the model happened to lean on, and say that a different fit could lean on another. Permuting a whole cluster should also leave fewer impossible rows behind, since its members move together and keep their relationship to one another; what is broken is only their relationship to everything else. That was not measured here.
 
 None of this makes importance a causal statement. A group of features that predicts well may be a proxy for something else entirely, as episode 19 will show with a single pixel. It does make the ranking a property of the information in the data rather than of which column the forest's random splits happened to favour.
 
@@ -99,9 +99,9 @@ None of this makes importance a causal statement. A group of features that predi
 
 **R² on 133 test patients is noisy.** The numbers are averages of three splits, and single splits differ a lot: test R² ranged from 0.26 to 0.42, and the loss from refitting without bmi from -0.07 to +0.13. The direction held in every split — permuting bmi always cost more than refitting without it — but the size of the drop-column numbers, here and in the table, is uncertain to about a tenth of R².
 
-**Other models distribute reliance differently.** A linear model with an exact copy has no unique coefficients at all; a lasso picks one of the two (episode 8). Permutation importance inherits whatever the fitting procedure did.
+**Other models distribute reliance differently.** A linear model with an exact copy has no unique coefficients at all, and neither does a lasso: any split of the coefficient between the two columns with the same sign has the same penalty, so the answer depends on the solver. With near-copies, episode 8 found the lasso's choice between the two varying from fit to fit. Permutation importance inherits whatever the fitting procedure did.
 
-**A copy is the extreme case.** At correlation 0.8 the forest still prefers the original and the copy's permutation importance is near zero; at 0.95 they share. Most real pairs sit somewhere in between, and so does the distortion.
+**A copy is the extreme case.** At correlation 0.8 the forest still prefers the original and the copy's permutation importance is near zero; at 0.95 the copy starts to take a share, and the original still dominates. Most real pairs sit somewhere in between, and so does the distortion.
 
 ## What to keep
 
@@ -109,7 +109,7 @@ None of this makes importance a causal statement. A group of features that predi
 
 2. On diabetes, shuffling bmi cost 0.168 of R²; refitting without it cost 0.043.
 
-3. With an exact copy, the two columns' permutation importances summed to 0.038, a quarter of bmi's alone. Correlated features hide each other.
+3. With an exact copy, the two columns' permutation importances summed to 0.038, a quarter of bmi's alone. Exact copies hide each other; at a correlation of 0.8 the effect had not yet appeared.
 
 4. Shuffling a correlated feature invents rows: 29% of shuffled (s1, s2) pairs lay outside the 99% region of real ones.
 

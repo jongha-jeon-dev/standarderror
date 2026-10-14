@@ -1,9 +1,9 @@
 ---
-title: "ML 5: Resampling Moves the Threshold and Breaks the Probabilities"
+title: "ML 5: Resampling Moves the Threshold and Breaks a Logistic Model's Probabilities"
 date: 2026-10-08
 slug: "ml-5-imbalance"
 draft: false
-description: "'Balance the classes before training' is the first fix taught for a rare positive class. Measured, it never improved the ranking, multiplied the probabilities tenfold, and did nothing to the decisions that a threshold does not."
+description: "'Balance the classes before training' is the first fix taught for a rare positive class. Measured, it never improved the ranking, multiplied a logistic model's probabilities tenfold, and did nothing to its decisions that a threshold does not. Boosted trees lost ranking and, with some methods, gained calibration."
 author: "Jongha Jeon"
 tags: ["machine-learning", "data-science", "statistics", "class-imbalance", "calibration", "lectures"]
 series: ["Machine Learning, Taught Through What Breaks"]
@@ -13,7 +13,7 @@ images: ["ml105-hero.png"]
 
 Disclosure: this post was written with the assistance of an AI system (Claude), which wrote the analysis code, ran the experiments and drafted the text. The topic, the constraints, the data choices and the final review are the author's.
 
-*At 2% prevalence, logistic regression trained on an oversampled, SMOTE-augmented or class-weighted copy of the data ranks the test set no better than the plain model - AUC -0.0012 for oversampling, small and consistently negative - while its mean predicted probability goes from 0.020 to 0.215 and its log loss rises 5.4-fold. The recall it gains at the 0.5 cut, 0.19 to 0.83, the plain model gets with a threshold of 0.021, at 0.106 precision against 0.105. On boosted trees the corrections lower the AUC by about 0.01, and SMOTE costs 0.046 of average precision. The digits agree.*
+*At 2% prevalence, logistic regression trained on an oversampled, SMOTE-augmented or class-weighted copy of the data ranks the test set no better than the plain model - AUC -0.0012 for oversampling, small and consistently negative - while its mean predicted probability goes from 0.020 to 0.215 and its log loss rises 5.4-fold. The recall it gains at the 0.5 cut, 0.19 to 0.83, the plain model gets with a threshold of 0.021, at 0.106 precision against 0.105. On boosted trees the corrections lower the AUC by about 0.01, and SMOTE costs 0.046 of average precision, but the plain trees' probabilities are too low (mean 0.008) and oversampling moves them to 0.017, cutting log loss from 0.102 to 0.087. The digits agree on the ranking.*
 
 Episode 5 of *Machine Learning, Taught Through What Breaks*. The syllabus and the other episodes: https://jongha-jeon-dev.github.io/standarderror/lectures/
 
@@ -94,7 +94,7 @@ That is the real content of "fixing" imbalance: choosing a different trade-off b
 
 ## The probabilities: what resampling breaks
 
-The cost of doing it by resampling shows up in the probabilities. The plain model's mean prediction is 0.020 against a true rate of 0.02: it is calibrated. The oversampled model's is 0.215, about 11 times too high, and its log loss is 5.4 times worse. It was trained on a world where positives are as common as negatives, and it reports probabilities for that world.
+For logistic regression, the cost of doing it by resampling shows up in the probabilities. The plain model's mean prediction is 0.020 against a true rate of 0.02: it is calibrated. The oversampled model's is 0.215, about 11 times too high, and its log loss is 5.4 times worse. It was trained on a world where positives are as common as negatives, and it reports probabilities for that world.
 
 Anyone who reads those numbers as probabilities — to rank by expected cost, to set a threshold by a business rule, to combine with another model, to tell a patient a risk — is reading the wrong world. Van den Goorbergh and colleagues found exactly this in clinical risk models: imbalance corrections improved no discrimination measure and produced strongly overestimated risks.
 
@@ -114,7 +114,7 @@ Mean prediction and log loss are back to the plain model's. Which is a long way 
 
 ![A plain-model line on the diagonal, an oversampled line far below it, and a corrected line back on the diagonal.](ml105-f1-calibration.png)
 
-*Oversampled, a predicted probability is about ten times the real rate: mean prediction 0.215 against a prevalence of 0.02. **One line of algebra** puts it back.*
+*Oversampled, a logistic model's predicted probability is about ten times the real rate: mean prediction 0.215 against a prevalence of 0.02. **One line of algebra** puts it back.*
 
 ## For trees it is not even neutral
 
@@ -134,9 +134,11 @@ undersample   AUC -0.0013 +- 0.0030   avg precision -0.0562
 class weights AUC -0.0099 +- 0.0012   avg precision -0.0060
 ```
 
-Oversampling, SMOTE and class weights each lower the AUC by about 0.01, well outside their standard errors, and SMOTE loses 0.046 of average precision. Undersampling barely moves the AUC (-0.0013, inside its standard error) but loses 0.056 of average precision, which is where a rare-class problem is decided. Duplicated positives are fitted exactly; SMOTE's synthetic positives fill in the space *between* real ones, which is not where positives are, and the trees learn that geometry. At its own operating point the SMOTE model reaches 0.221 precision; the plain model with its threshold moved to the same recall reaches 0.288.
+Oversampling, SMOTE and class weights each lower the AUC by about 0.01, well outside their standard errors, and SMOTE loses 0.046 of average precision. Undersampling barely moves the AUC (-0.0013, inside its standard error) but loses 0.056 of average precision, which is where a rare-class problem is decided. Why the trees lose ranking was not measured here; a likely part of it is that a flexible model can fit the duplicated or synthetic positives themselves rather than the region they came from. At its own operating point the SMOTE model reaches 0.221 precision; the plain model with its threshold moved to the same recall reaches 0.288.
 
-The prior correction does not rescue the trees either: their probabilities were not inflated by a clean intercept shift but distorted by memorising the duplicated rows, and the correction applied to them makes the log loss worse, not better.
+The probabilities tell a different story from logistic regression's. The plain trees are *under*-confident about positives: their mean prediction is 0.008 against a prevalence of 0.02, and their log loss, 0.102, is worse than the plain logistic model's. Oversampling and class weights move the mean to 0.017 and 0.018, closer to the truth and not past it, and cut the log loss to 0.087 and 0.087. SMOTE and undersampling overshoot, to log losses of 0.124 and 0.495. So "resampling breaks the probabilities" is a statement about a well-calibrated model; for one that starts miscalibrated it can go either way, and the only way to know is to measure.
+
+That is also why the prior correction does not help the trees: the oversampled trees' probabilities were never inflated — their mean, 0.017, is below the prevalence — so dividing their odds by about 49 pushes them far too low, and the log loss gets worse, not better.
 
 The digits — "is this an 8?", about 10% positive, logistic regression over 30 splits — agree with the simulation. The plain model has the highest AUC (0.9749) and the highest precision at 80% recall (0.746), against 0.707 oversampled and 0.649 undersampled.
 
@@ -152,7 +154,7 @@ The digits — "is this an 8?", about 10% positive, logistic regression over 30 
 
 **Losses that are not proper.** The comparison assumes the model is trained on log loss. Trained to maximise accuracy directly, a model on imbalanced data can genuinely learn to ignore the minority class, and reweighting changes what it learns.
 
-**One simulated task.** The tree result depends on how much the trees can memorise; with stronger regularisation the damage shrinks. The direction — no gain in ranking — held in all three settings measured.
+**One simulated task.** The tree result may depend on how closely the trees can fit individual rows; their regularisation was not varied here. The direction — no gain in ranking — held in all three settings measured.
 
 ## What to keep
 
@@ -162,9 +164,9 @@ The digits — "is this an 8?", about 10% positive, logistic regression over 30 
 
 3. The recall they gain at 0.5 the plain model gets with a threshold near the prevalence (0.021), at the same precision or better.
 
-4. They inflate predicted probabilities about 11-fold. For a linear model the prior correction undoes it.
+4. On logistic regression they inflate predicted probabilities about 11-fold, and the prior correction undoes it.
 
-5. On boosted trees they made the ranking worse: about -0.01 AUC, and 0.046 of average precision for SMOTE.
+5. On boosted trees they made the ranking worse: about -0.01 AUC, and 0.046 of average precision for SMOTE. The plain trees' probabilities were too low (mean 0.008), and oversampling and class weights improved them; check calibration before assuming either way.
 
 6. Imbalance is not a defect in the data. It is a cost question, and a threshold is where costs belong.
 

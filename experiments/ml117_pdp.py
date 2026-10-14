@@ -8,7 +8,7 @@ effect is known: y = x1 + 2 x2^2, with x2 a noisy copy of x1.
   (ALE) both recover the true effect of x1, slope 1.
 * As the correlation rises the PDP's slope falls -- 0.78, 0.44, 0.30 for a
   forest at correlations 0.69, 0.94 and 0.985 -- while ALE stays between
-  0.93 and 0.96.
+  0.92 and 0.96.
 * The PDP is not wrong about the model. It averages the model's predictions
   over pairs (x1, x2) far from any training row, where a tree ensemble
   predicts something flat and arbitrary.
@@ -166,7 +166,8 @@ def _hero(res: dict, hi: dict):
                 (sl, "0.985", "correlation of x1, x2")],
         note=("With correlated inputs, a partial dependence plot averages "
               "the model's predictions over combinations that never occur. "
-              "On a simulation with a known effect it shows a third of it. "
+              "On a simulation with a known effect, a forest's shows about a "
+              "third of it. "
               "Accumulated local effects, which only compare nearby rows, "
               "recover it."),
         alt=("Three hand-drawn frames: a shallow line under a dashed "
@@ -232,6 +233,17 @@ def build() -> Post:
         assert rows[-1]["pdp_rmse"] > 3 * rows[-1]["ale_rmse"]
         assert rows[-1]["pdp_rmse2"] > 2.5 * rows[-1]["ale_rmse2"]
     assert hi["pdp_slope"] < 0.35 and hi["corr"] > 0.98
+    assert all(0.9 < r["ale_slope"] < 0.97 for r in fr[1:])   # 0.92 to 0.96
+
+    def on_band(noise: float, seed: int = 0) -> float:
+        """Share of the rows a PDP builds at x1 = 0.1 and 0.9 whose own x2
+        lies within two noise standard deviations of x1: on the data."""
+        X, _ = rd.correlated_pair(noise=noise, seed=seed)
+        return float(np.mean([np.mean(np.abs(X[:, 1] - v) <= 2 * noise)
+                              for v in (0.1, 0.9)]))
+
+    on_hi, on_lo = on_band(0.05), on_band(0.3)
+    assert on_hi < 0.3 and on_lo > 2 * on_hi
     for k in range(3):
         sl = [r["pdp_slopes"][k] for r in fr]
         assert all(x > y for x, y in zip(sl, sl[1:]))
@@ -250,7 +262,7 @@ def build() -> Post:
         subtitle=("A partial dependence plot is read as a feature's effect. "
                   "With correlated inputs it is an average over "
                   "combinations that never occur, and on a simulation with "
-                  "a known effect it shows a third of it."),
+                  "a known effect a forest's shows about a third of it."),
         summary=(
             f"With y = x1 + 2 x2² and x2 a noisy copy of x1, the true effect "
             f"of x1 is a straight line of slope 1. With independent inputs, "
@@ -310,15 +322,15 @@ With independent inputs both methods find the line: slopes {ind['pdp_slope']:.2f
 
     post.add(
         "Where the questions are asked",
-        f"""The scatter of training rows is a narrow diagonal band: x2 is never far from x1. To compute the PDP at x1 = 0.1, every row has its x1 set to 0.1 and keeps its own x2, which ranges from 0 to 1. Most of those rows sit far off the band, in regions where the forest saw no data.
+        f"""The scatter of training rows is a narrow diagonal band: x2 is never far from x1. To compute the PDP at x1 = 0.1, every row has its x1 set to 0.1 and keeps its own x2, which ranges roughly from 0 to 1. Most of those rows sit far off the band, in regions where the forest saw no data.
 
-A forest's prediction in such a region is not a guess about the function; it is whatever the nearest leaves on the band say. For a row with x1 = 0.1 and x2 = 0.9, the splits on x2 dominate — they carry most of the signal, since 2x2² varies more than x1 — and send it to leaves trained on rows with both inputs near 0.9. Its prediction is close to what the forest predicts at x1 = 0.9. Averaging such rows flattens the PDP: the curve says x1 barely matters because most of the rows it averages over are answered by x2.
+A forest's prediction in such a region is not a guess about the function; it is whatever the nearest leaves on the band say. For a row with x1 = 0.1 and x2 = 0.9, the splits on x2 are likely to dominate — they carry most of the signal, since 2x2² varies more than x1 — and send it to leaves trained on rows with both inputs near 0.9. Its prediction should then be close to what the forest predicts at x1 = 0.9; individual predictions off the band were not inspected here, but the flattened slope is what that would produce. Averaging such rows flattens the PDP: the curve says x1 barely matters because most of the rows it averages over are answered by x2.
 
 ALE avoids this by never leaving the band. It splits x1 into narrow bins, and within each bin it moves only the rows that are actually there from the bin's lower edge to its upper edge, recording the average change in prediction. Those rows stay close to the data. Accumulating the changes across bins traces the effect:
 
 {snip['ale'].markdown()}
 
-The truth is a rise equal to x1's, and ALE recovers most of it; the shortfall comes from the end bins, where a forest's predictions flatten for want of data beyond them. The result describes the model where it was trained, and on this simulation that is close to the truth.""",
+The truth is a rise equal to x1's, and ALE recovers most of it. Where the shortfall comes from was not broken down here; a likely source is the end bins, where a forest's predictions flatten for want of data beyond them. The result describes the model where it was trained, and on this simulation that is close to the truth.""",
         figures=[figs["f1"]])
 
     post.add(
@@ -334,7 +346,7 @@ ALE has a cost too. It needs enough rows per bin to estimate a local difference,
         "A one-line check",
         f"""Whether a PDP can be trusted is visible before drawing it. Take the feature and the one it is most correlated with, scatter them, and draw the vertical lines of rows the PDP will build at the lowest and highest grid values. The share of those rows inside the cloud is the share of the curve that describes the data; the rest describes the model somewhere else.
 
-In the simulation at a correlation of {hi['corr']:.3f}, most of the rows built at x1 = 0.1 are far above the band, and most of those built at x1 = 0.9 far below it. Most of the PDP is computed off the data, which is why its slope is {hi['pdp_slope']:.2f}. At a correlation of {fr[1]['corr']:.2f} the band is wide enough to hold a good share of them, and the PDP's slope, {fr[1]['pdp_slope']:.2f}, is correspondingly closer to the truth. The check costs one plot, and it says in advance which of the two curves to believe.""")
+In the simulation at a correlation of {hi['corr']:.3f}, counting a built row as on the data when its x2 is within two noise standard deviations of x1, only {on_hi:.0%} of the rows built at x1 = 0.1 and 0.9 are on the data; the rest lie far above the band at 0.1 and far below it at 0.9. Most of the PDP is computed off the data, and its slope is {hi['pdp_slope']:.2f}. At a correlation of {fr[1]['corr']:.2f} the band is wide enough to hold {on_lo:.0%} of them, and the PDP's slope, {fr[1]['pdp_slope']:.2f}, is correspondingly closer to the truth. The check costs one plot, and it says in advance which of the two curves to believe.""")
 
     post.add(
         "Where this breaks",

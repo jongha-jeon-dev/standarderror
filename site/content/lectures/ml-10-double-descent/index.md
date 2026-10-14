@@ -52,7 +52,7 @@ All three phases are there. Error falls to 0.271 at p = 20, climbs to **21.6 at 
 
 ## Where the peak sits, and what feeds it
 
-The peak tracks the number of rows, not the number of features. With 50 rows it sits at p = 50, with 200 at p = 200; on a features-per-row axis the three curves line up. That is the *interpolation threshold*: the first p at which an exact fit exists.
+The peak tracks the number of rows, not the number of features. With 50 rows it sits at p = 50, with 200 at p = 200; on a features-per-row axis the three peaks line up, though away from the peak more rows give lower error. That is the *interpolation threshold*: the first p at which an exact fit exists.
 
 What makes the peak tall is anything the fit cannot represent but must still pass through. Label noise is the obvious candidate. It is not the only one:
 
@@ -70,9 +70,9 @@ noise sd 0.0: peak 23.31 at p = 100; best below 0.225 (p = 40); at p = 2000 0.24
 noise sd 0.6: peak 63.50 at p = 100; best below 0.318 (p = 20); at p = 2000 0.783
 ```
 
-With no label noise at all the peak is still 23.3. A finite set of random ReLU features cannot express this target exactly, and the part it misses looks to the fit exactly like noise. Doubling the noise makes the peak taller (63.5) and moves every other point up with it. In both cases the best model below the threshold beats the model with 2,000 features: 0.225 against 0.248 without noise, 0.318 against 0.783 with double.
+With no label noise at all the peak is still 23.3. A finite set of random ReLU features cannot express this target exactly, and the part it misses acts on the fit much like noise: something it must pass through but cannot represent. Doubling the noise makes the peak taller (63.5) and moves every other point up with it. In both cases the best model below the threshold beats the model with 2,000 features: 0.225 against 0.248 without noise, 0.318 against 0.783 with double.
 
-So the second descent here is a *recovery*, not an improvement. Going far past the threshold undoes the damage the threshold did; it does not reach the bottom of the first U.
+So the second descent here is a *recovery*, not an improvement. Going far past the threshold undoes the damage the threshold did; it does not reach the bottom of the first U. The closest call is n = 50, where the best small model beats the 1,000-feature one by only 0.007: a near-tie on medians of 30 training sets, so there "never wins" means "does not win", not "loses badly".
 
 ## A penalty removes the peak
 
@@ -138,7 +138,7 @@ If your production model interpolates its training data, ask which side of a thr
 
 ## Next
 
-Arc II ends here: separability, units, selection, the U and its second descent were all properties of linear models and the averages built from them. Arc III turns to trees and ensembles, starting with the claim that makes a single decision tree popular: that it is interpretable. Episode 11 bootstraps the rows and counts how often the root split, and the shape of the tree beneath it, survive.
+Arc II ends here: separability, units, selection, the U and its second descent were all properties of linear models and of predictors that average, from neighbours to trees. Arc III turns to trees and ensembles, starting with the claim that makes a single decision tree popular: that it is interpretable. Episode 11 bootstraps the rows and counts how often the root split, and the shape of the tree beneath it, survive.
 
 ---
 

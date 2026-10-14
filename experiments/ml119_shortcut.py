@@ -2,8 +2,9 @@
 
 The nineteenth episode of *Machine Learning, Taught Through What Breaks*.
 "The model with the better test score learned the task better." On the
-digits, one corner pixel -- blank in every real image -- is lit on most
-images of four classes, in training and test alike. A random forest:
+digits, one edge pixel per class -- blank, or at most 1 of 16, in every
+real image -- is lit on most images of four classes, in training and test
+alike. A random forest:
 
 * With the marker on 90% of those classes' images, it scores 0.986 on a test
   set drawn the same way, against 0.971 for a forest trained on clean data.
@@ -13,7 +14,8 @@ images of four classes, in training and test alike. A random forest:
 * With the marker on every image of those classes the test score rises to
   0.991 and the clean score falls to 0.884.
 * Permutation importance on the shortcut test set ranks a marker pixel
-  first among 64 -- the shortcut is visible to anyone who looks.
+  first among 64 in every split from 90% on -- the shortcut is visible to
+  anyone who looks.
 
 Run: `standarderror run ml119_shortcut --publish`
 """
@@ -135,11 +137,11 @@ def figures(res: dict) -> dict:
         rows,
         header=["marker rate", "same-shortcut test", "clean test",
                 "clean, marked classes", "wrong markers",
-                "best marker's rank (of 64)"],
+                "best marker's mean rank (of 64)"],
         title="One model, four test sets",
         subtitle=("Accuracy of 300-tree random forests, means of three half "
                   "splits. The rank is by permutation importance on the "
-                  "same-shortcut test set."),
+                  "same-shortcut test set, averaged over the three splits."),
         source="UCI digits (scikit-learn); standarderror/ml/reading.py.",
         alt=("A four-row table: the same-shortcut score rising with the "
              "marker rate while every other score falls; the marker pixel "
@@ -200,7 +202,7 @@ def _snippets(res: dict) -> dict:
         """)
     out["detect"] = s.run("""
         for r in rd.shortcut_study(rates=(0.5, 0.9)):
-            print(f"rate {r['rate']:.0%}: best marker pixel ranks "
+            print(f"rate {r['rate']:.0%}: best marker pixel's mean rank "
                   f"{r['marker_rank']:.0f} of 64 by permutation importance")
             print(f"          marked-class accuracy on clean images "
                   f"{r['marked_clean']:.3f}")
@@ -225,8 +227,16 @@ def build() -> Post:
     assert r9["clean"] < c0["clean"] - 0.015 and r1["clean"] < r9["clean"]
     assert r9["marked_clean"] < c0["marked_clean"] - 0.04
     assert r9["wrong"] < 0.75 and r1["wrong"] < r9["wrong"]
-    assert r9["marker_rank"] == 1 and r1["marker_rank"] == 1
+    assert r9["marker_rank"] == 1 and r1["marker_rank"] == 1  # 1 in every split
     assert c0["marker_rank"] > 20
+    # monotone in the marker rate, every column
+    for k, up in (("same", True), ("clean", False), ("wrong", False),
+                  ("marked_clean", False)):
+        v = [r[k] for r in st]
+        assert all((a < b) if up else (a > b) for a, b in zip(v, v[1:]))
+    # at 50% the same-shortcut gain is within noise; the clean loss is not
+    assert 0 <= r5["same"] - c0["same"] < 0.005
+    assert c0["clean"] - r5["clean"] > 0.005
 
     post = Post(
         title=(f"{SERIES_TAG} 19: A Planted Shortcut Wins the Test Set and "
@@ -296,14 +306,14 @@ The digits are 8 × 8 images. A few pixels at the edges are blank, or hold at mo
 
 {snip['study'].markdown()}
 
-With no marker the four scores are the same model on the same images. At 90%, the shortcut model scores **{r9['same']:.3f} on a test set drawn like its training set**, better than the clean model's {c0['same']:.3f}. Any model-selection procedure that compared the two on that test set — cross-validation included — would pick the shortcut model.""",
+With no marker in training, the first two test sets are the same images, and the clean forest scores exactly the same, {c0['wrong']:.3f}, on the third, where markers have been lit on the wrong classes: the lit pixels change none of its answers. At 90%, the shortcut model scores **{r9['same']:.3f} on a test set drawn like its training set**, better than the clean model's {c0['same']:.3f}. Any model-selection procedure that compared the two on that test set — cross-validation included — would pick the shortcut model.""",
         figures=[figs["f0"]])
 
     post.add(
         "What it learned",
         f"""The other columns show what that score bought. On clean images the shortcut model falls to {r9['clean']:.3f}, below the clean model. On the four marked classes alone it gets {r9['marked_clean']:.3f} of clean images right, against {c0['marked_clean']:.3f}: it has learned that a 3 is, in large part, an image with a pixel lit in the top-left corner, and it is less sure what a 3 looks like without one. Move the markers to the wrong classes — the 3s' marker onto the 5s and so on — and it scores **{r9['wrong']:.3f}**.
 
-The trend is monotone in the shortcut's reliability. At 50% the marker helps a little and hurts a little. At 100% the test score is {r1['same']:.3f}, the best of any model here, and the clean score is {r1['clean']:.3f}, the worst. The more perfectly the shortcut predicts the label in the data, the more the model leans on it, and the less of the real task it bothers to learn.
+The trend is monotone in the shortcut's reliability, in every column of the table below. At 50% the marker's gain on its own test set, {r5['same'] - c0['same']:.3f}, is within noise, while the clean score already falls by {c0['clean'] - r5['clean']:.3f}. At 100% the test score is {r1['same']:.3f}, the best of any model here, and the clean score is {r1['clean']:.3f}, the worst. The more perfectly the shortcut predicts the label in the data, the more the model leans on it, and the less of the real task it bothers to learn.
 
 None of this is a malfunction. The forest was asked to predict the label from 64 pixels as accurately as possible on data where one pixel predicts four classes almost perfectly. It did. The test set agreed, because it was built the same way. The score measures how well the model fits the data-generating process of the test set, and that process included the shortcut.""",
         figures=[figs["f1"]])
@@ -314,7 +324,7 @@ None of this is a malfunction. The forest was asked to predict the label from 64
 
 {snip['detect'].markdown()}
 
-Permutation importance on the shortcut test set ranks a marker pixel **first among 64** from 90% on — a pixel that is blank or nearly so in every real digit, at the top of the importance chart. That is exactly the kind of result episodes 12 and 16 taught suspicion of, and here suspicion is the right response: a feature that should carry no information about the task is the most important feature.
+Permutation importance on the shortcut test set ranks a marker pixel **first among 64** in every split from 90% on (the ranks printed are means over the three splits) — a pixel that is blank or nearly so in every real digit, at the top of the importance chart. That is exactly the kind of result episodes 12 and 16 taught suspicion of, and here suspicion is the right response: a feature that should carry no information about the task is the most important feature.
 
 Three checks generalise beyond planted pixels. Look at what the model relies on and ask whether it *should* matter. Score the model on a slice where the suspected shortcut is absent or broken — here, clean images of the marked classes. And, most expensive and most informative, evaluate on data from a different source: another hospital, another scanner, another year. A shortcut tied to how one dataset was collected rarely survives a change of collection.""",
         figures=[figs["f2"]])
@@ -325,17 +335,17 @@ Three checks generalise beyond planted pixels. Look at what the model relies on 
 
 Cross-validation inherits the same blind spot, because its folds are cut from the same data. So does any metric computed on a random split, however many times it is repeated, and so do the error bars of episode 1 — they quantify sampling noise around the wrong target. A bigger test set would only make the shortcut model's advantage, {r9['same'] - c0['same']:.3f} here, more significant.
 
-The only evidence that can separate the two models is evidence from a different process: images without the marker, images where the marker means something else, images from another source. In this experiment those cost nothing to make. In practice they cost a second site, a second device or a second year of data, and that cost is why so many published models are evaluated only on a random split of one dataset.""")
+The only evidence that can separate the two models is evidence from a different process: images without the marker, images where the marker means something else, images from another source. In this experiment those cost nothing to make. In practice they cost a second site, a second device or a second year of data, and that cost is one reason so many published models are evaluated only on a random split of one dataset.""")
 
     post.add(
         "Where this breaks",
         """**A planted shortcut is obvious once named.** One lit pixel is easy to find. Real shortcuts are spread over many features — texture, background, image statistics — and importance methods find them only partly, which is why external validation matters more than any explanation.
 
-**A forest, not a network.** Deep networks are, if anything, more prone to shortcuts: they learn the simplest predictive features first. The direction of the result does not depend on the model; its size does.
+**A forest, not a network.** Deep networks are often argued to be, if anything, more prone to shortcuts, because they tend to pick up the simplest predictive features first (Geirhos et al. review the evidence); no network was trained here. The direction of the result should not depend on the model; its size will.
 
 **The shortcut is perfectly stable here.** In practice a shortcut's reliability drifts — a hospital changes scanners — and a model that leaned on it fails gradually, which is harder to notice than a collapse.
 
-**Three splits.** The scores are means over three half splits of about 900 test images each, so differences of a few thousandths are within noise; the gaps quoted are several times larger.""")
+**Three splits.** The scores are means over three half splits of about 900 test images each, so differences of a few thousandths are within noise — including the 50% marker's gain on its own test set; the other gaps quoted are several times larger.""")
 
     post.add(
         "What to keep",

@@ -44,7 +44,7 @@ Four times more real digits raised test accuracy by **+0.041**. Four shifted cop
 
 ![A five-by-five grid of 8 by 8 pixel digits: the shifted and noisy copies still read as the same digit; the mirrored 3 and the half-turned 6 and 7 read as something else or nothing.](ml128-f0-grid.png)
 
-*The first two columns keep the label. The mirrored 3 is no longer a 3, the half-turned 6 is a 9, and the mirrored 0 is still a 0.*
+*The shifted and noisy copies keep the label. The mirrored 3 is no longer a 3, the half-turned 6 is a 9, and the mirrored 0 is still a 0.*
 
 ## What the shifted copies were for
 
@@ -60,7 +60,7 @@ That is what an augmentation is. It is not data in the sense of new observations
 
 ## When the assumption is false
 
-Mirrors and half-turns are ordinary augmentations for photographs: a mirrored cat is a cat. They are not label-preserving for digits. A clean network, shown the transformed versions of digits it would otherwise classify, gives a different answer for each class at these rates:
+Mirrors and half-turns are ordinary augmentations for photographs: a mirrored cat is a cat. They are not label-preserving for digits. A network trained on clean digits, shown transformed test digits, gives an answer other than the true class at these rates, class by class:
 
 ```python
 f = nets.flip_confusions()
@@ -74,7 +74,7 @@ flip   0:  3%  1: 36%  2: 80%  3: 99%  4:  9%  5:100%  6:100%  7: 89%  8: 15%  9
 rot180 0:  3%  1: 30%  2: 58%  3:100%  4: 14%  5: 55%  6:100%  7:100%  8: 18%  9:100%
 ```
 
-A mirrored 3, 5 or 6 is never read as itself, and neither is a half-turned 3, 6, 7 or 9: a half-turned 6 looks like a 9, and a mirrored 3 like no digit at all. Zeros survive both, and eights mostly do. Training on these copies under their original labels tells the network that the shape of a 9 is evidence for a 6, which is false, and it pays for the falsehood: -0.092 from mirrors and -0.123 from half-turns, against the network that saw only the 150 originals. On the moved test digits they cost too, -0.065 and -0.075.
+A mirrored 3, 5 or 6 is almost never read as itself, and neither is a half-turned 3, 6, 7 or 9: each is read as itself in at most 1% of cases. To a human eye a half-turned 6 is a 9. Zeros survive both, and eights mostly do. Training on these copies under their original labels tells the network that the shape of a 9 is evidence for a 6, which is false, and it pays for the falsehood: -0.092 from mirrors and -0.123 from half-turns, against the network that saw only the 150 originals. On the moved test digits they cost too, -0.065 and -0.075.
 
 Pixel noise is the control. Its copies preserve the label, and it changed nothing: +0.001 on the clean test set and +0.002 on the moved one. Neither test set contains noisy pixels, so the invariance it teaches is never asked for, and at a standard deviation of 2 on a 0-to-16 scale it does not disturb the image enough to get in the way. Copies that assert something true and irrelevant are simply wasted.
 
@@ -86,7 +86,7 @@ Pixel noise is the control. Its copies preserve the label, and it changed nothin
 
 Chen, Dobriban and Lee make this precise. When the transformations form a group under which the true label is invariant, training on augmented data is equivalent to averaging the loss over the group's orbit of each example. That can only reduce the variance of what is learned, and it introduces no bias. When the label is *not* invariant, the same averaging introduces bias, because it trains the model on a distribution that does not exist.
 
-Both halves were visible here, along with a cost the theory does not count. Shifts are close to an invariance of handwriting, and the shifted copies bought +0.320 where shifts actually occurred. On a fixed budget of training they still cost 0.027 where shifts did not: a true assumption is free in the limit, not on 300 steps. Mirrors and half-turns break the label for at least three classes, and the cost was large wherever they were scored.
+Both halves were visible here, along with a cost the theory does not count. Shifts are close to an invariance of handwriting, and the shifted copies bought +0.320 where shifts actually occurred. On a fixed budget of training they still cost 0.027 where shifts did not: a true assumption may be free in the limit, but on 300 steps it was not, plausibly because of the budget (equal epochs were not tried). Mirrors and half-turns break the label for at least three classes, and the cost was large wherever they were scored.
 
 The practical reading is that an augmentation should be chosen the way a prior is: by asking what is true of the world the model will see, not what makes the training set bigger. A shift augmentation for a camera that may not be centred; a colour jitter for a model that will meet different lighting; no mirror for text, no half-turn for digits, no time reversal for a sequence with a direction. The question is never how many copies, but whether the test data will vary in the way the copies do and whether the label survives it.
 

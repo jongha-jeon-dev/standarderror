@@ -167,6 +167,24 @@ def norm_per_decade(rows: list[dict], *, start: int = 1000) -> float:
     return float(np.polyfit(x, [r["norm"] for r in late], 1)[0])
 
 
+def augmented_margin_angle(*, pair=(1, 8), seed: int = 0) -> float:
+    """Degrees between scikit-learn's hard-margin SVM direction, whose
+    intercept is free, and the max-margin direction of the problem
+    `gd_path` actually solves, where the intercept is a weight on a column
+    of ones and so counts in the norm. The latter is the limit of gradient
+    descent's direction (Soudry et al. 2018), so this is where `gd_path`'s
+    angle is heading, not zero."""
+    np = _np()
+    from sklearn.svm import LinearSVC
+    Xa, _, ya, _ = digits_pair(*pair, seed=seed)
+    svm, _ = max_margin(Xa, ya)
+    A = np.c_[Xa, np.ones(len(Xa))]
+    m = LinearSVC(fit_intercept=False, loss="hinge", C=1e6, tol=1e-10,
+                  max_iter=2_000_000).fit(A, ya)
+    w = m.coef_[0] / np.linalg.norm(m.coef_[0])
+    return float(np.degrees(np.arccos(min(1.0, float(w @ svm)))))
+
+
 # ================================================================ episode 7
 
 def diabetes():
@@ -258,11 +276,13 @@ def correlated_pair(*, rhos=(0.0, 0.5, 0.8, 0.9, 0.95, 0.99), n: int = 100,
     """Ten features: `a` (feature 0) and `c` (feature 2) have effects of
     0.5, `b` (feature 1) has none but is correlated with `a` at rho, and
     features 3-9 are noise. How often does cross-validated lasso keep each?
+    `c`, `a_only` and `both` record the second relevant feature and how
+    the pair (a, b) was split; they draw nothing extra from the generator.
     """
     np = _np()
     out = []
     for rho in rhos:
-        ka = kb = only_b = 0
+        ka = kb = kc = only_a = only_b = both = 0
         fp = []
         for r in range(int(reps)):
             g = np.random.default_rng(r)
@@ -273,11 +293,15 @@ def correlated_pair(*, rhos=(0.0, 0.5, 0.8, 0.9, 0.95, 0.99), n: int = 100,
             a, b = coef[0] != 0, coef[1] != 0
             ka += a
             kb += b
+            kc += coef[2] != 0
+            only_a += a and not b
             only_b += b and not a
+            both += a and b
             fp.append(int(np.sum(coef[3:] != 0)))
         out.append({"rho": float(rho), "a": ka / reps, "b": kb / reps,
                     "b_only": only_b / reps, "noise_kept": float(np.mean(fp)),
-                    "rule": rule})
+                    "rule": rule, "c": kc / reps, "a_only": only_a / reps,
+                    "both": both / reps})
     return out
 
 
@@ -371,7 +395,8 @@ def forest_sweep(trees=(1, 2, 5, 25, 100), **kw) -> list[dict]:
 
 def forest_rho(sweep: list[dict]) -> float:
     """The between-tree correlation implied by var(T) = rho s2 + (1 - rho)
-    s2 / T, from the one-tree and the largest forest (Breiman 2001)."""
+    s2 / T, from the one-tree and the largest forest (Hastie, Tibshirani and
+    Friedman 2009, eq. 15.1; Breiman 2001 bounds the infinite forest)."""
     s2 = sweep[0]["variance"]
     big = sweep[-1]
     T = big["trees"]

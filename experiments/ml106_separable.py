@@ -14,8 +14,10 @@ Measured:
   default 1e-4, 1,289 at 1e-10. Test log loss goes from 0.08 to 1.5.
 * Gradient descent's weight norm grows by a fixed amount per tenfold more
   steps -- logarithmically, for ever -- while its direction creeps towards
-  the hard-margin SVM. Test accuracy rises along the way and test log loss,
-  after a minimum, rises too.
+  the max-margin direction of the problem it solves, with the intercept
+  counted in the norm: about 6 degrees from scikit-learn's hard-margin SVM,
+  whose intercept is free. Test accuracy rises along the way and test log
+  loss, after a minimum, rises too.
 
 Run: `standarderror run ml106_separable --publish`
 """
@@ -47,7 +49,8 @@ def compute() -> dict:
     gd = ln.gd_path()
     return {"frac": ln.separable_fraction(), "tol": ln.tolerance_sweep(),
             "c": ln.c_path(), "gd": gd,
-            "decade": ln.norm_per_decade(gd["rows"])}
+            "decade": ln.norm_per_decade(gd["rows"]),
+            "aug": ln.augmented_margin_angle(pair=gd["pair"])}
 
 
 # ------------------------------------------------------------------ figures
@@ -63,7 +66,8 @@ def figures(res: dict) -> dict:
         ax.set_xscale("log")
         ax2 = ax.twinx()
         ax2.plot(t, [r["angle"] for r in rows], lw=2.2, ls="--",
-                 color=m.series[1], label="angle to the max-margin direction")
+                 color=m.series[1],
+                 label="angle to scikit-learn's hard-margin SVM")
         ax2.set_ylabel("degrees", color=m.ink_secondary)
         ax2.spines["top"].set_visible(False)
         h1, l1 = ax.get_legend_handles_labels()
@@ -82,12 +86,14 @@ def figures(res: dict) -> dict:
         ylabel="norm of the weights",
         source="Measured; standarderror/ml/linear.py.",
         alt=("A weight norm rising as a straight line against log steps, "
-             "and a dashed angle falling slowly towards zero."),
+             "and a dashed angle falling slowly."),
         caption=(f"The norm grows by **{res['decade']:.1f} per tenfold more "
-                 f"steps** - logarithmically, without limit. The direction "
-                 f"converges to the hard-margin SVM's, at "
+                 f"steps** - logarithmically, without limit. The angle to "
+                 f"scikit-learn's hard-margin SVM is "
                  f"{rows[-1]['angle']:.1f} degrees after "
-                 f"{rows[-1]['step']:,} steps."),
+                 f"{rows[-1]['step']:,} steps, heading for "
+                 f"{res['aug']:.1f}, where the max-margin direction of the "
+                 f"problem gradient descent solves lies."),
         path=str(IMG / f"ml106-f0-norm.{EXT}"))[0]
 
     def test(ax, m):
@@ -248,6 +254,11 @@ def build() -> Post:
     assert bestc["C"] <= 10
     assert 2.0 < res["decade"] < 5.0
     assert rows[-1]["angle"] < rows[0]["angle"] / 4
+    # The limit of GD's direction is the augmented problem's max-margin
+    # direction, measurably off the free-intercept SVM, and GD has not
+    # reached it yet.
+    aug = res["aug"]
+    assert 3.0 < aug < rows[-1]["angle"]
     assert rows[-1]["test_log_loss"] > 1.2 * best["test_log_loss"]
     assert rows[-1]["test_accuracy"] >= best["test_accuracy"]
     assert rows[-1]["train_loss"] < 1e-4
@@ -277,9 +288,11 @@ def build() -> Post:
             f"{first['test_log_loss']:.2f} to {d['test_log_loss']:.2f}. "
             f"Gradient descent's weight norm grows {res['decade']:.1f} per "
             f"tenfold more steps, for ever, while its direction creeps "
-            f"towards the hard-margin SVM - {rows[0]['angle']:.0f} degrees "
-            f"away at the start, {rows[-1]['angle']:.1f} after 100,000 "
-            f"steps. Test accuracy improves along the way; test log loss "
+            f"towards a max-margin limit - {rows[0]['angle']:.0f} degrees "
+            f"from scikit-learn's hard-margin SVM at the start, "
+            f"{rows[-1]['angle']:.1f} after 100,000 steps, heading for "
+            f"{aug:.1f}, because gradient descent counts the intercept in "
+            f"the norm. Test accuracy improves along the way; test log loss "
             f"turns and rises."),
         tags=["machine-learning", "data-science", "statistics",
               "logistic-regression", "optimisation", "lectures"],
@@ -322,9 +335,9 @@ That sounds like an edge case for tiny datasets. It is not an edge case on one o
 
 {snip['sep'].markdown()}
 
-Every stratified half of the Wisconsin breast cancer data — 284 tumours, 30 measurements — is perfectly separated by some hyperplane. With 30 features and a few hundred rows that is the expected situation, not a fluke: the more features per row, the likelier a separating plane is to exist.
+Every stratified half of the Wisconsin breast cancer data — 284 tumours, 30 measurements — is perfectly separated by some hyperplane. With 30 features this informative that is the expected situation, not a fluke — and it is the informativeness, not the count of features per row, that does it.
 
-Cover counted this in 1965. For points in general position in d dimensions with random labels, a separating hyperplane almost surely exists while there are fewer than about 2d of them, and almost surely does not beyond. Here d is 31 with the intercept and there are 284 rows, far past 2d, so random labels would not be separable. Real labels are not random: the classes differ systematically, and a modest signal in each of 30 features adds up to a margin. The better a feature set predicts, the more likely the textbook estimator is not to exist. That is backwards from the intuition that maximum likelihood fails on hard problems; it fails on easy ones.""")
+Cover counted the count's part in 1965. For points in general position in d dimensions with random labels, a separating hyperplane exists with high probability while there are fewer than about 2d of them, and with high probability does not beyond, the switch growing sharper as d grows. Here d is 31 with the intercept and there are 284 rows, far past 2d, so random labels would not be separable. Real labels are not random: the classes differ systematically, and a modest signal in each of 30 features adds up to a margin. The better a feature set predicts, the more likely the textbook estimator is not to exist. That is backwards from the intuition that maximum likelihood fails on hard problems; it fails on easy ones.""")
 
     post.add(
         "What the library hands back",
@@ -332,7 +345,7 @@ Cover counted this in 1965. For points in general position in d dimensions with 
 
 {snip['tol'].markdown()}
 
-The coefficient norm runs from {first['norm']:.1f} to {last['norm']:,.0f}: a factor of {last['norm'] / first['norm']:.0f}, set entirely by when the optimiser was told it was close enough. At the library's default tolerance the model puts {d['certain']:.0%} of training rows within one in a million of certainty, and on held-out tumours its log loss is {d['test_log_loss']:.2f} against {first['test_log_loss']:.2f} for the loosest tolerance — every mistake it makes, it makes with total confidence. Even its accuracy is lower, {d['test_accuracy']:.3f} against {first['test_accuracy']:.3f}: the loose tolerance stopped early, and early stopping is a regulariser.
+The coefficient norm runs from {first['norm']:.1f} to {last['norm']:,.0f}: a factor of {last['norm'] / first['norm']:.0f}, set entirely by when the optimiser was told it was close enough. At the library's default tolerance the model puts {d['certain']:.0%} of training rows within one in a million of certainty, and on held-out tumours its log loss is {d['test_log_loss']:.2f} against {first['test_log_loss']:.2f} for the loosest tolerance — a log loss that size, from a model that is right {d['test_accuracy']:.1%} of the time, means its mistakes are made with near-total confidence. Even its accuracy is lower, {d['test_accuracy']:.3f} against {first['test_accuracy']:.3f}: the loose tolerance stopped early, and early stopping is a regulariser.
 
 Most people never see this, because scikit-learn's default is not unpenalised. It applies an L2 penalty with C = 1, which makes the optimum exist; the bottom row of the table below is that model, and it is the best of the six on log loss. The sentence is true of what the library does by default and false of what the textbook describes.""",
         figures=[figs["f2"]])
@@ -343,7 +356,7 @@ Most people never see this, because scikit-learn's default is not unpenalised. I
 
 {snip['gd'].markdown()}
 
-The training loss falls towards zero and the weight norm grows by about {res['decade']:.1f} for every tenfold increase in steps — logarithmically, the rate Soudry and colleagues proved. It never stops. What does converge is the *direction*: the angle to the hard-margin SVM falls from {rows[0]['angle']:.0f} degrees to {rows[-1]['angle']:.1f}, and will reach zero, slowly. Unpenalised logistic regression trained by gradient descent is, in the limit, a hard-margin SVM — a fact about the optimiser, not about the likelihood.
+The training loss falls towards zero and the weight norm grows by about {res['decade']:.1f} for every tenfold increase in steps — logarithmically, the rate Soudry and colleagues proved. It never stops. What does converge is the *direction*. The angle to scikit-learn's hard-margin SVM falls from {rows[0]['angle']:.0f} degrees to {rows[-1]['angle']:.1f}, but it will not reach zero. This gradient descent treats the intercept as one more weight, on a column of ones, so the margin it maximises is that of the augmented problem, in which the intercept counts towards the norm; the SVM leaves its intercept free. On these digits the two max-margin directions are {aug:.1f} degrees apart, and that is where the angle is heading, slowly. Unpenalised logistic regression trained by gradient descent is, in the limit, a hard-margin SVM for the problem as the optimiser poses it — a fact about the optimiser, not about the likelihood.
 
 The test set shows the two faces of that. Accuracy improves as the direction approaches the max-margin one, from {rows[0]['test_accuracy']:.3f} to {rows[-1]['test_accuracy']:.3f}. Log loss reaches its minimum, {best['test_log_loss']:.4f}, at step {best['step']:,}, and then rises to {rows[-1]['test_log_loss']:.4f}: the direction gets better, and the confidence gets worse faster.""",
         figures=[figs["f0"], figs["f1"]])
@@ -354,7 +367,7 @@ The test set shows the two faces of that. Accuracy improves as the direction app
 
 {snip['c'].markdown()}
 
-The norm grows with C without limit, roughly logarithmically again, because the unpenalised problem underneath has no ceiling. Test log loss is best at C = {bestc['C']:g} and degrades steadily beyond it. Choosing C by cross-validation, as arc I described, is choosing how far along that unbounded path to stop — the same decision the tolerance made silently, made out loud.
+The norm grows with C without limit, roughly logarithmically again, because the unpenalised problem underneath has no ceiling. Test log loss is best at C = {bestc['C']:g} and degrades steadily beyond it. Choosing C by cross-validation, as is standard, is choosing how far along that unbounded path to stop — the same decision the tolerance made silently, made out loud.
 
 The two curves also say something about how to read a fitted coefficient. Under separation a coefficient's size is not a measurement of an effect; it is a measurement of how long the optimiser ran, or how weak the penalty was. Its sign and its ratio to the other coefficients carry information — that is the direction, and it converges. Its magnitude, and anything computed from it, such as an odds ratio, does not.""")
 
@@ -374,7 +387,7 @@ The two curves also say something about how to read a fitted coefficient. Under 
 
 2. Unpenalised, the coefficients a library returns are set by its stopping rule: norm {first['norm']:.1f} to {last['norm']:,.0f} across tolerances, test log loss {first['test_log_loss']:.2f} to {last['test_log_loss']:.2f}.
 
-3. Gradient descent's norm grows like log t ({res['decade']:.1f} per decade here) and its direction converges to the hard-margin SVM.
+3. Gradient descent's norm grows like log t ({res['decade']:.1f} per decade here) and its direction converges to the max-margin direction of the problem it solves — with the intercept in the norm, {aug:.1f} degrees from scikit-learn's hard-margin SVM here.
 
 4. Along that path test accuracy can improve while test log loss gets worse: the direction improves, the confidence overshoots.
 
