@@ -48,6 +48,10 @@ data/*
 # Measurements only, no weights and no corpus; a few hundred kilobytes.
 !data/ml_grokking/
 !data/ml_scaling/
+# Machine Learning episodes 51 and 52: per-question results of fine-tuning
+# runs of the school-maths model, written by scripts/llm_eval_runs.py.
+# Measurements only, no weights; about 350 kilobytes.
+!data/ml_llmeval/
 
 # Editorial rather than published: which posts are planned, and how their titles
 # were chosen. Not secret, but not part of the record either.

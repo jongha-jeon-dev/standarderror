@@ -398,12 +398,13 @@ is not, and the model either carried or it did not.
 
 ## Machine Learning, Taught Through What Breaks
 
-The longest course here, fifty episodes, and the broadest: the standard
+The longest course here, fifty-five episodes, and the broadest: the standard
 machine-learning curriculum from how a model is scored, through linear models,
 trees and ensembles, reading what a model learned, training a network, and what
 generalisation looks like in one, to the routine steps around a model, where
-the rows came from, how models are combined and compared, and what happens
-when predictions are turned into decisions. Each episode takes **one sentence** that the
+the rows came from, how models are combined and compared, what happens
+when predictions are turned into decisions, and how a language model somebody
+else trained is graded. Each episode takes **one sentence** that the
 curriculum states as fact and measures where it stops being true. Some of those
 sentences will survive measurement; when one does, the episode says so.
 
@@ -411,7 +412,9 @@ The data is either bundled with scikit-learn — the UCI handwritten digits and
 the Wisconsin diagnostic breast cancer set, both CC BY 4.0 — or simulated with a
 known answer, so a reader rebuilds every number offline. The network episodes
 run on a CPU, on models small enough to train many times, because most of their
-claims are about what happens *across* training runs.
+claims are about what happens *across* training runs. The language-model
+episodes use the repository's own small arithmetic transformers, whose every
+answer can be checked exactly.
 
 Each row gives the sentence under test and what measurement did to it. The
 results went in only once they were measured; the last series was a reminder
@@ -517,7 +520,17 @@ of why.
 | 49 | Target the Effect, Not the Risk | *give the intervention to those most at risk*. Offering a retention deal to the highest predicted churners prevented about 21 churns per 1,000 customers, about the same as random targeting; ranking by the predicted effect from a randomised trial's two arms prevented 39 to 50, against a best possible 55. 11% of the highest-risk fifth were made more likely to leave, against 6% overall |
 | 50 | A Rule That Chooses Its Own Data Learns Its Own Choices | *a model retrained on the data it collects corrects itself*. Inspectors sent where most violations had been found ended all in one district in 500 of 500 simulated years, the lower-rate one in 46%. Splitting by violations found was within 0.1 of the truth in 21%; dividing by visits made, in every run. Greedy on the per-visit rate ended in the worse district in 30%, and in 8% with 10% exploration |
 
-All ten arcs are published. Several episodes changed shape while being measured:
+### Arc XI — Grading a language model
+
+| # | Episode | The sentence under test |
+|---|---|---|
+| 51 | A Benchmark Is a Sample of Questions | *the model with the higher benchmark score is the better model*. Ten small arithmetic transformers on benchmarks drawn from a 2,500-question pool: the models' 95% intervals covered their true scores about 95% of the time on average, and on 100 questions the best model still came first in half of the benchmarks. A real 0.038 gap was found by the paired test in 60% of 300-question benchmarks and by the unpaired one in 2%; five prompts per question gave a standard error 2.1 times the naive one |
+| 52 | A Leaked Benchmark Shows in the Set, Not in the Item | *if a model has memorised a benchmark, its likelihood on the benchmark's items will show it*. Inserting 300 benchmark problems into training raised their score from a control mean of 0.551 to 0.800 at 32 insertions, with fresh problems unmoved. Item by item the model's likelihood caught 3% of leaked problems at 5% false flags; compared as a set with fresh problems, every run from two insertions on stood out from all five controls |
+| 53 | The Prompt Is Part of the Score | *a benchmark score measures the model*. The main model multiplied correctly 0.735 of the time after twelve ordinary lines of context and 0.500 after none; the twin's lead on three-digit carries was 0.127 under one context and about zero under another; wrong answers in the examples changed nothing. The best of sixteen prompts on one set of problems scored below the prompts' average on a second set, except where the prompts really differed |
+| 54 | Multiple Choice Grades the Wrong Answers You Offered | *scoring by the likeliest option measures the same thing as asking for the answer*. Three models that generated no four-digit sum correctly picked it from four options 0.79 to 0.98 of the time against random numbers; the main model scored 0.955, 0.395 or 0.315 depending on the distractors, and a 0.105 generation lead between two models on multiplication vanished under near-miss options |
+| 55 | Every Judge Ranked Itself First | *a model can grade other models' answers in place of people*. Each of three models, judging all three by its own likelihood with a threshold calibrated on the truth, ranked itself first on every task, 9 of 9; the weakest, right on 1.3% of carries, passed 73% of its own. Forty labels with prediction-powered inference covered the truth about 94% of the time, where the judge alone covered it at most 66% |
+
+All eleven arcs are published. Several episodes changed shape while being measured:
 episode 1's repeated splits turned out to measure the pool rather than the
 training sets, and episode 3's feature-selection leak, enormous on noise,
 vanished on real data where the true features win the selection anyway — which
@@ -557,4 +570,9 @@ costs, an AUC that chose the wrong model where the decision was made, a
 feature importance that pointed at consequences rather than causes, a risk
 ranking that did no better than random at finding the people a treatment
 would help, and a rule that
-learned its own choices back from the data they produced.
+learned its own choices back from the data they produced. Arc XI graded
+language models somebody else trained and found the series' oldest problems
+in new clothes: a leaderboard that misread overlapping error bars, a leaked
+benchmark that a fresh set exposed and a per-item scan did not, a prompt that
+was part of the score, a multiple-choice format that graded the distractors,
+and a judge that preferred its own answers.

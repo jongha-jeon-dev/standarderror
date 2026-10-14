@@ -80,6 +80,21 @@ metrics measured at every checkpoint. Each checkpoint is verified on load by
 - `small_final.pt` (step 6,000): sha256 `1f1e6c5e5a101e1d1d56246a465a425ef256d14550866d51f4a0402d5aa0b191`
 - `small_best.pt` (step 1,250): sha256 `210792ded6dee89739dae0797cc25902519b719e71384207e4db2efdb4139e7f`
 
+### `schoolmath/family/` — snapshots of a second school-maths run
+
+Three float16 checkpoints (`s1_3000`, `s1_4500`, `s1_6000`) of a 6,000-step,
+seed-1 run of `scripts/train_schoolmath.py --family s1 --snapshot ...` on the
+same generated corpus as `schoolmath.pt`; about 1.6 MB each. Machine Learning
+episodes 51, 54 and 55 use them as weaker models to grade. Our own weights.
+
+### `ml_llmeval/` — per-question results of our own fine-tuning runs
+
+`runs.json` is written by `scripts/llm_eval_runs.py`: for the committed
+school-maths model and twelve 600-step continuations of it (some with
+benchmark lines inserted into the stream), right/wrong and answer
+log-likelihood per question. No weights and no corpus. Machine Learning
+episodes 51 and 52 read it.
+
 ### `ml_grokking/` and `ml_scaling/` — our own training curves
 
 Measurements, not weights. `ml_grokking/results.json` holds the accuracy and

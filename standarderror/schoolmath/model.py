@@ -50,6 +50,31 @@ def adjacent_path() -> Path:
             / "schoolmath_adjacent.pt")
 
 
+def family_path(name: str) -> Path:
+    return (Path(se.SETTINGS.repo_root) / "data" / "schoolmath" / "family"
+            / f"{name}.pt")
+
+
+def load_member(name: str):
+    """One snapshot from `scripts/train_schoolmath.py --family`.
+
+    Stored in float16 and cast back to float32 here; the evaluation episodes
+    that use these models compare them with each other, and every number they
+    quote is measured on exactly these cast weights.
+    """
+    import torch
+    blob = torch.load(family_path(name), map_location="cpu",
+                      weights_only=False)
+    chars = blob["chars"]
+    model = tiny.build(len(chars))
+    model.load_state_dict({k: v.float() for k, v in blob["model"].items()})
+    model.eval()
+    return {"model": model, "chars": chars,
+            "stoi": {c: i for i, c in enumerate(chars)}, "vocab": len(chars),
+            "steps": blob["steps"], "name": name,
+            "parameters": sum(p.numel() for p in model.parameters())}
+
+
 def encode(text: str, stoi: dict) -> list[int]:
     return [stoi[c] for c in text]
 

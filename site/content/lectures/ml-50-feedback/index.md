@@ -112,7 +112,7 @@ If almost none did, compare the model's estimates for the units it rarely select
 
 ## Next
 
-Arc X ends here, at fifty episodes. The series began with a test score's error bar and ends with a rule that learns from what its own decisions show it; between them, every sentence was measured, and the ones that survived are listed with the ones that did not on the syllabus page.
+Arc X ends here, at fifty episodes, with models the reader trained and decisions the reader made. Arc XI turns to models somebody else trained: language models, graded on benchmarks somebody else wrote. Episode 51 goes back to where the series began, a test score's error bar, and finds it correct for one model and misleading for a leaderboard.
 
 ---
 

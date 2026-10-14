@@ -65,6 +65,22 @@ def _accuracy(model, chars, seed=11):
     return out
 
 
+def _save_member(model, chars, args, step: int) -> None:
+    """One member of a model family, halved to float16 to keep the repo small.
+
+    The evaluation episodes need several models of different ability, and
+    snapshots of one run are the cheapest honest way to get them: same data,
+    same architecture, different amounts of training.
+    """
+    out = sm.family_path(f"{args.family}_{step}")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    state = {k: v.detach().clone().half() for k, v in model.state_dict().items()}
+    torch.save({"model": state, "chars": chars, "steps": step,
+                "of": args.steps, "seed": args.seed}, out)
+    print(f"saved {out}  sha256 {hashlib.sha256(out.read_bytes()).hexdigest()}",
+          flush=True)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--steps", type=int, default=STEPS)
@@ -73,9 +89,18 @@ def main() -> None:
                          "every reversed line directly beneath its own "
                          "forward twin. Trains the leaky model episode 1 "
                          "compares against; everything else is identical.")
+    ap.add_argument("--seed", type=int, default=0,
+                    help="torch seed for initialisation and batch draws")
+    ap.add_argument("--family", default="",
+                    help="write a model family instead of the main "
+                         "checkpoint: data/schoolmath/family/<name>_<step>.pt "
+                         "at every --snapshot step, weights in float16")
+    ap.add_argument("--snapshot", default="",
+                    help="comma-separated steps to save, with --family")
     args = ap.parse_args()
+    snaps = {int(s) for s in args.snapshot.split(",") if s}
 
-    torch.manual_seed(0)
+    torch.manual_seed(args.seed)
     chars = list(cur.ALPHABET)
     stoi = {c: i for i, c in enumerate(chars)}
     train = _pack("train", stoi, shuffle=not args.adjacent)
@@ -109,6 +134,8 @@ def main() -> None:
         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
         opt.step()
         sched.step()
+        if args.family and step + 1 in snaps:
+            _save_member(model, chars, args, step + 1)
         if step % 500 == 0 or step == args.steps - 1:
             model.eval()
             with torch.no_grad():
@@ -122,6 +149,8 @@ def main() -> None:
                   f"test {vl:.4f}  {time.time() - start:7.1f}s\n"
                   f"          {shown}", flush=True)
 
+    if args.family:
+        return
     model.eval()
     out = sm.adjacent_path() if args.adjacent else sm.checkpoint_path()
     out.parent.mkdir(parents=True, exist_ok=True)

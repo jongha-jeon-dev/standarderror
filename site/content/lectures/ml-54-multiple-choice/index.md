@@ -1,0 +1,144 @@
+---
+title: "ML 54: Multiple Choice Grades the Wrong Answers You Offered"
+date: 2026-10-14
+slug: "ml-54-multiple-choice"
+draft: false
+description: "Ranking answer options by likelihood is a different test from asking for the answer. A model that never produced a four-digit sum picked it out of four options 95.5% of the time, or 32%, depending on the options."
+author: "Jongha Jeon"
+tags: ["machine-learning", "llm-evaluation", "language-models", "benchmarks", "evaluation", "lectures"]
+series: ["Machine Learning, Taught Through What Breaks"]
+weight: 54
+images: ["ml154-hero.png"]
+---
+
+Disclosure: this post was written with the assistance of an AI system (Claude), which wrote the analysis code, ran the experiments and drafted the text. The topic, the constraints, the data choices and the final review are the author's.
+
+*Three small arithmetic transformers, the same problems in the same contexts, two ways of scoring. On four-digit sums none of them generated a single right answer in 200; asked to pick the likeliest of four options, they scored 0.955, 0.98 and 0.79 against random numbers. The main model's score on the same sums was 0.395 against one-digit slips and 0.315 against options of different lengths, close to the 0.25 of guessing. On multiplication the main model generated 0.755 to its twin's 0.650; under near-miss multiple choice the two were level, 0.880 and 0.895. Averaging likelihood per character moved no score by more than 0.040.*
+
+Episode 54 of *Machine Learning, Taught Through What Breaks*. The syllabus and the other episodes: https://jongha-jeon-dev.github.io/standarderror/lectures/
+
+## Two ways to ask
+
+There are two common ways to score a language model on a question with one right answer. The first asks it: generate a continuation and check whether it matches. The second offers it options: compute how likely the model finds each candidate answer, and count the item right if the true answer is the likeliest. The second is cheap, needs no parsing of free text, and is how many multiple-choice benchmarks are commonly scored; evaluation harnesses report it with and without dividing each option's log-likelihood by its length. It is usually treated as the same measurement in a more convenient form, the sentence under test: *scoring a model by which answer option it finds likeliest measures the same thing as asking it for the answer*.
+
+This arc evaluates models the reader did not train, and the models here are the arithmetic transformers of the school-maths series: four blocks, 804,096 parameters, trained on generated sums with held-out probes. They are tiny, and that is the reason to use them: every answer can be checked exactly, so each evaluation habit can be compared with the truth rather than with another score. Three of them are used: the main model, its leaky twin from episode 1 of that series (same data, unshuffled), and a 6,000-step snapshot of a separate, shorter run, which is much weaker.
+
+Four-digit sums are the length probe: the models saw operands of up to three digits.
+
+```python
+import numpy as np
+from standarderror.ml import llmeval as le
+from standarderror.schoolmath import arithmetic as ar
+from standarderror.schoolmath import model as sm
+
+model = sm.load()                      # the main arithmetic model
+sums = le.items("probe_length", "add", 200)     # four-digit operands
+fills = ar.fillers(len(sums), seed=9)  # one fresh context per problem
+rows = ar.graded(model, sums, filler=fills)
+for r in rows[:4]:
+    print(f"{r['prompt']:12s} want {r['want']:6s} got {r['got']}")
+print("exact:", np.mean([r["ok"] for r in rows]),
+      " shorter than the answer:",
+      np.mean([len(r["got"]) < len(r["want"]) for r in rows]))
+```
+
+```text
+7755+2656=   want 10411  got 1030
+2216+1490=   want 3706   got 769
+2669+5296=   want 7965   got 795
+8625+8412=   want 17037  got 1603
+exact: 0.0  shorter than the answer: 0.995
+```
+
+All three models generated **no** right answer to 200 four-digit sums; 99.5% of the main model's answers were shorter than the truth, typically a truncated version of roughly the right number: the first digit was right in 90% of them, the first two in 61%, and 25.5% were an exact prefix of the answer.
+
+![Grouped bars for four tasks. On four-digit sums generation is zero, multiple choice against random numbers is near one, against near misses about 0.4, against different lengths about 0.3.](ml154-f0-scores.png)
+
+*Four-digit sums: generated correctly **0.00**, picked from random options 0.955, from near misses 0.395, from different lengths 0.315.*
+
+## Picking what it cannot produce
+
+Offer the same model the same sums as four options, the right answer and three random numbers with as many digits, and it picks the right one 0.955 of the time. Its twin scores 0.980 and the short run, which generates far less correctly than either (0.205 on multiplication), 0.790. Nothing about the models changed between the two columns, only the question asked of them.
+
+The reason is visible in the generations. A model that writes a truncated version of nearly the right number has most of its probability on strings that start with the right digits. A random four- or five-digit number almost never shares them, so the true answer wins the comparison without the model ever being able to finish it. Multiple choice measures whether the model prefers the right answer to the wrong ones offered; that is a real ability, closer to recognition than to production, and it is a different one.
+
+```python
+rng = np.random.default_rng(2)
+p = sums[0]
+for kind in ("random", "near", "length"):
+    options = [p.answer] + le.distractors(p.answer, kind, rng)
+    lp = le.answer_logp(model, [p.prompt] * 4, options, [fills[0]] * 4)
+    pick = options[int(np.argmax(lp))]
+    print(f"{kind:6s} options {options}  picked {pick}")
+```
+
+```text
+random options ['10411', '19837', '33545', '85381']  picked 10411
+near   options ['10411', '10410', '10421', '19411']  picked 10411
+length options ['10411', '1041', '110411', '910411']  picked 1041
+```
+
+So the score is set by the wrong answers. Against one-digit slips, the errors a person or a model actually makes, the main model's score on the same sums fell to 0.395. Against options that differ in length, a digit dropped, appended or prepended, it fell to 0.315, barely above the 0.25 of guessing, and in 68% of items the option it preferred was shorter than the answer: the same truncation it generates. Three numbers anyone could publish, 0.955, 0.395 and 0.315, for one model on one set of questions.
+
+## Which model is better depends on the options
+
+Within the training lengths the gap between the two scoring rules is smaller but still not a constant. On multiplication the main model generated 0.755 of answers correctly and its leaky twin 0.650, a clear lead. Against near-miss options the twin scored 0.895 and the main model 0.880: a lead of 0.105, more than two standard errors, became a difference well inside one. On problems mixing addition and multiplication, generation put the two models level (0.410 and 0.400) and multiple choice put the twin ahead by 0.050, about one standard error. On three-digit carries both rules agreed that the twin was better. Neither rule's ranking is noise-free on 200 problems; what is not noise is the size of the multiplication gap under one rule and its absence under the other.
+
+Against random distractors every model scored 0.99 or more on multiplication and mixed operations (and the short run 0.97 on three-digit carries), including the short run, which generates 0.205 of multiplications correctly. A benchmark scored that way cannot tell the three models apart. Schaeffer and colleagues made the related point about apparent "emergent" abilities: a discontinuous metric such as exact match can make smooth improvement look sudden. Here the arrow runs the other way, and a lenient metric made a large real gap look like none. Episode 47 found the same pattern for classifiers: a summary that does not match the use can rank models in the opposite order to the decision they serve.
+
+![A twelve-row table. Generation ranges from 0 to 0.755; multiple choice against random numbers is 0.79 or higher everywhere.](ml154-f1-table.png)
+
+*Each block of three rows is one task; MC = multiple choice among four options.*
+
+## Length normalisation did nothing here
+
+The usual worry about likelihood scoring is length: a longer option multiplies more probabilities together and so looks less likely, and harnesses offer a per-character or per-byte average to correct for it. Here the correction moved no score by more than 0.040, and every score but one by 0.010 or less. Most option sets had a single length, so there was nothing to correct. In the length-varied set, a likely reason is that each option is scored with its closing newline, which charges a short option for stopping early; that was not tested separately.
+
+That is a result about these options, not a reassurance in general. Benchmarks whose options are sentences of different lengths are exactly where the two versions are known to disagree, which is why harnesses report both. The point that does generalise is that the choice between them is one more scoring decision, made before any model is run, that the headline number depends on.
+
+## Where this breaks
+
+**Arithmetic, not language.** Real multiple-choice benchmarks such as MMLU (Hendrycks and colleagues, 2021) have options written by people, and are often scored by the letter the model picks rather than by the likelihood of the answer text. Scoring the letter is a third rule, with its own failure modes, and it was not measured.
+
+**Small models.** Large models can be asked to choose explicitly and may reason before answering, and the gap between recognising and producing may be smaller for them. The mechanism shown here, a partial answer that still beats unrelated options, is not specific to small models, though how often it operates in a large one was not measured.
+
+**Distractors of three invented kinds.** A benchmark's distractors are usually chosen to be plausible to people, which is closer to the near-miss column than to the random one; how close is a property of each benchmark.
+
+**200 problems per cell.** Differences of a few points between models under near-miss multiple choice sit within about one standard error; the large gaps between scoring rules do not.
+
+## What to keep
+
+1. Three models that generated no four-digit sum correctly picked it from four options 0.955, 0.980 and 0.790 of the time against random distractors.
+
+2. The main model's score on the same sums was 0.955, 0.395 or 0.315 depending only on the kind of wrong options offered.
+
+3. The main model's 0.105 lead over its twin in generating multiplications disappeared under near-miss multiple choice; against random options every model scored at least 0.99 on multiplication and mixed operations.
+
+4. Treat a multiple-choice score as accuracy against those particular distractors. Report generation where the use is generation, and state the distractors and the normalisation along with the number.
+
+## Exercise
+
+For a multiple-choice benchmark you rely on, take fifty items and replace the wrong options with ones written to be plausible near misses, keeping the right answer. Score your model on both versions.
+
+If the score barely moves, the original distractors were already doing their job. If it drops a lot, the published number was measuring how easy the wrong answers were to reject, and comparisons with other models on it are comparisons on that.
+
+## Next
+
+Every score in this arc so far has been checked against an exact answer. Open-ended outputs have no exact answer, and the common substitute is to ask another model which answer is better. Episode 55 gives each of these three models the job of grading all three, and measures whose answers each one prefers.
+
+---
+
+### Data
+
+- Models: the 804k-parameter arithmetic transformers of the school-maths series (`data/schoolmath/schoolmath.pt`, its leaky twin, and the 6,000-step snapshot of a separate run, `data/schoolmath/family/s1_6000.pt`), all trained by this repository on generated arithmetic.
+- Problems: 200 drawn at random per task from the held-out test split (multiplication, order of operations), the three-digit carry probe and the four-digit length probe of `standarderror/schoolmath/curriculum.py`. One context of twelve random training lines per problem, shared by both scoring rules. Three distractors per problem (seed 2).
+- Machinery: `standarderror/ml/llmeval.py`, tested in `tests/test_ml.py`.
+- Where this stops: Gao et al., *A framework for few-shot language model evaluation* (the lm-evaluation-harness, 2021 onward), for accuracy with and without length normalisation; Hendrycks et al., "Measuring massive multitask language understanding", *ICLR* (2021); Schaeffer, Miranda and Koyejo, "Are emergent abilities of large language models a mirage?", *NeurIPS* (2023); episode 47 of this series.
+
+### Reproducibility
+
+- **environment**: standarderror=0.1.0, python=3.13.16, numpy=2.4.4
+- **code blocks**: executed at build time; the values the prose quotes are pinned, so drift fails the build
+- **determinism**: committed weights, seeded draws; about three minutes of CPU
+
+Code: <https://github.com/jongha-jeon-dev/standarderror>

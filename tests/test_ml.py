@@ -535,3 +535,67 @@ class TestPredictionToDecision:
         r = decide.feedback_loop(days=60, runs=40)
         assert r["greedy"]["locked"] == 1.0
         assert r["per visit"]["within_10"] > 0.8
+
+
+class TestGradingALanguageModel:
+
+    def test_paired_se_uses_only_disagreements(self):
+        from standarderror.ml import llmeval as le
+        g = np.random.default_rng(0)
+        a = g.random(400) < 0.7
+        b = a.copy()
+        b[:10] = ~b[:10]
+        r = le.paired_difference(a, b)
+        assert r["only_a"] + r["only_b"] == 10
+        assert r["se_paired"] < r["se_unpaired"] / 3
+
+    def test_cluster_se_counts_questions(self):
+        from standarderror.ml import llmeval as le
+        g = np.random.default_rng(1)
+        q = g.random(400) < 0.5
+        mat = np.repeat(q[:, None], 5, 1)          # five identical answers
+        r = le.cluster_study(mat, questions=50, draws=800)
+        assert r["icc"] == pytest.approx(1.0)
+        assert r["empirical"] > 2 * r["naive"]
+        assert r["robust"] == pytest.approx(r["empirical"], rel=0.15)
+
+    def test_ppi_removes_a_known_bias(self):
+        from standarderror.ml import llmeval as le
+        g = np.random.default_rng(2)
+        y = g.random(2000) < 0.5
+        judge = y | (g.random(2000) < 0.3)          # passes 30% of wrong ones
+        r = le.ppi_study(judge, y, labeled=80, draws=600)
+        assert r["judge"]["bias"] > 0.1
+        assert abs(r["ppi"]["bias"]) < 0.01 and r["ppi"]["coverage"] > 0.9
+        assert r["tuned"]["width"] <= r["labels"]["width"] + 0.01
+
+    def test_distractors_are_wrong_and_of_their_kind(self):
+        from standarderror.ml import llmeval as le
+        rng = np.random.default_rng(3)
+        for ans in ("1712", "-36", "8"):
+            for kind in le.DISTRACTORS:
+                d = le.distractors(ans, kind, rng)
+                assert len(d) == 3 and ans not in d
+                if kind in ("random", "near"):
+                    assert all(len(x) == len(ans) for x in d)
+
+    def test_contexts_of_each_kind(self):
+        from standarderror.ml import llmeval as le
+        for kind in le.FORMATS:
+            c = le.contexts(kind, "mul", 3, seed=0)
+            assert len(c) == 3
+            lines = [x for x in c[0].split("\n") if x]
+            assert len(lines) == {"empty": 0, "two": 2}.get(kind, 12)
+            if kind == "same":
+                assert all("*" in x and "=" in x for x in lines)
+
+    def test_logp_prefers_the_right_sum(self):
+        from standarderror.ml import llmeval as le
+        from standarderror.schoolmath import model as sm
+        b = sm.load()
+        p = le.items("test", "add", 5)
+        lp_right = le.answer_logp(b, [x.prompt for x in p],
+                                  [x.answer for x in p], [""] * 5)
+        lp_wrong = le.answer_logp(b, [x.prompt for x in p],
+                                  [x.answer + "1" for x in p], [""] * 5)
+        assert (lp_right > lp_wrong).all() and (lp_right <= 0).all()
