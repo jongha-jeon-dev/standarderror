@@ -599,3 +599,49 @@ class TestGradingALanguageModel:
         lp_wrong = le.answer_logp(b, [x.prompt for x in p],
                                   [x.answer + "1" for x in p], [""] * 5)
         assert (lp_right > lp_wrong).all() and (lp_right <= 0).all()
+
+
+class TestWithoutLabels:
+
+    def test_noise_points_count_as_singletons(self):
+        from standarderror.ml import unsup
+        y = np.repeat([0, 1], 50)
+        assert unsup.noise_ari(y, y) == pytest.approx(1.0)
+        lab = y.copy()
+        lab[50:] = -1                               # a whole cluster as noise
+        from sklearn.metrics import adjusted_rand_score
+        assert adjusted_rand_score(y, lab) == pytest.approx(1.0)
+        assert unsup.noise_ari(y, lab) < 0.55
+
+    def test_bic_keeps_one_gaussian_and_icl_one_square(self):
+        from standarderror.ml import unsup
+        rng = np.random.default_rng(0)
+        b, _ = unsup._picks(unsup._bic_icl(rng.normal(size=(500, 2)),
+                                           range(1, 5)))
+        assert b == 1
+        rows = unsup._bic_icl(rng.random((2000, 2)), range(1, 8))
+        b, i = unsup._picks(rows)
+        assert b > 2 and i == 1
+
+    def test_knee_lies_on_the_k_distance_curve(self):
+        from sklearn.datasets import make_moons
+
+        from standarderror.ml import unsup
+        X, _ = make_moons(300, noise=0.05, random_state=0)
+        e = unsup.knee_eps(X)
+        assert 0 < e < 0.5
+
+    def test_stability_and_gap_on_three_blobs(self):
+        from standarderror.ml import unsup
+        rng = np.random.default_rng(1)
+        X = np.r_[rng.normal(size=(150, 2)), rng.normal(size=(150, 2)) + [8, 0],
+                  rng.normal(size=(150, 2)) + [4, 7]]
+        assert unsup.stability(X, 3, pairs=5) > 0.95
+        g = unsup.gap(X, ks=range(1, 6), refs=4)
+        assert g["argmax"] == 3
+
+    def test_contamination_is_a_quantile(self):
+        from standarderror.ml import unsup
+        r = unsup.anomaly_contamination(rates=(0.02,), settings=(0.05,),
+                                        n=1000)
+        assert r[0]["0.05"]["flagged"] == pytest.approx(0.05, abs=1e-3)

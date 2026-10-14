@@ -398,13 +398,13 @@ is not, and the model either carried or it did not.
 
 ## Machine Learning, Taught Through What Breaks
 
-The longest course here, fifty-five episodes, and the broadest: the standard
+The longest course here, sixty episodes, and the broadest: the standard
 machine-learning curriculum from how a model is scored, through linear models,
 trees and ensembles, reading what a model learned, training a network, and what
 generalisation looks like in one, to the routine steps around a model, where
 the rows came from, how models are combined and compared, what happens
-when predictions are turned into decisions, and how a language model somebody
-else trained is graded. Each episode takes **one sentence** that the
+when predictions are turned into decisions, how a language model somebody
+else trained is graded, and what unsupervised methods find without labels. Each episode takes **one sentence** that the
 curriculum states as fact and measures where it stops being true. Some of those
 sentences will survive measurement; when one does, the episode says so.
 
@@ -530,7 +530,17 @@ of why.
 | 54 | Multiple Choice Grades the Wrong Answers You Offered | *scoring by the likeliest option measures the same thing as asking for the answer*. Three models that generated no four-digit sum correctly picked it from four options 0.79 to 0.98 of the time against random numbers; the main model scored 0.955, 0.395 or 0.315 depending on the distractors, and a 0.105 generation lead between two models on multiplication vanished under near-miss options |
 | 55 | Every Judge Ranked Itself First | *a model can grade other models' answers in place of people*. Each of three models, judging all three by its own likelihood with a threshold calibrated on the truth, ranked itself first on every task, 9 of 9; the weakest, right on 1.3% of carries, passed 73% of its own. Forty labels with prediction-powered inference covered the truth about 94% of the time, where the judge alone covered it at most 66% |
 
-All eleven arcs are published. Several episodes changed shape while being measured:
+### Arc XII — Without labels
+
+| # | Episode | The sentence under test |
+|---|---|---|
+| 56 | A t-SNE Picture Keeps the Neighbours and Loses the Map | *a t-SNE plot shows the data's clusters, how big they are and how far apart*. A cluster with ten times another's spread came out the same size (radius ratio 0.99 to 1.01), and a gap 9.8 times another came out 0.98 to 1.45 times as wide. On the digits t-SNE kept 59% of each point's ten nearest neighbours against PCA's 12%; started at random it ranked the distances between classes less faithfully than PCA and seeds agreed on them as little as 0.50, while a PCA start fixed the layout |
+| 57 | The BIC Counts Gaussians, Not Clusters | *the BIC tells you how many clusters a Gaussian mixture should have*. For one uniform square it chose 2, 7, 14 and 18 components as the sample grew from 200 to 20,000 points; for one Gaussian, one throughout. Three squares got 9 from the BIC and 3 from ICL; the digits got 11 or 28 depending on the covariance shape allowed |
+| 58 | DBSCAN's Radius Is a Density, and It Gets Only One | *DBSCAN finds clusters of any shape without being told how many*. True of two half-moons, at radii within a factor of 2.9; the k-distance knee fell outside them. Beside a cluster with eight times the spread, no radius scored 0.9 in six draws and the best called 77% of it noise; on the digits the knee's radius put 96% of the images in one cluster |
+| 59 | An Anomaly Score Ranks; the Contamination Setting Only Cuts | *an anomaly detector finds the anomalies in your data*. The ranking scored AUC 0.99 or more and the flag followed the contamination setting, with 'auto' flagging 10.5-13.4% at true rates from 0.5% to 10%. Fifty grouped anomalies looked normal to local scores until the neighbourhood exceeded the group; anomalous in 2 of 200 features, the isolation forest's AUC fell to 0.58 on average |
+| 60 | The Most Stable k Is Not the Number of Clusters | *the right number of clusters is the one whose clustering is most stable under resampling*. Stability chose k = 2 for one elongated Gaussian (0.92) and 4 for a uniform square (0.94), and cannot answer one; the gap statistic said one for both. On the digits stability peaked at 10 or 9 depending on the resampling seed, and the gap's rule found no stopping point up to 15 |
+
+All twelve arcs are published. Several episodes changed shape while being measured:
 episode 1's repeated splits turned out to measure the pool rather than the
 training sets, and episode 3's feature-selection leak, enormous on noise,
 vanished on real data where the true features win the selection anyway — which
@@ -575,4 +585,9 @@ language models somebody else trained and found the series' oldest problems
 in new clothes: a leaderboard that misread overlapping error bars, a leaked
 benchmark that a fresh set exposed and a per-item scan did not, a prompt that
 was part of the score, a multiple-choice format that graded the distractors,
-and a judge that preferred its own answers.
+and a judge that preferred its own answers. Arc XII took the labels away and found each
+unsupervised method answering a narrower question than the one it is asked:
+a picture that kept neighbours and invented sizes and gaps, a criterion that
+counted Gaussians rather than clusters, a radius that was one density, a
+detector whose flag was a quantile, and a stability that measured a unique
+optimum rather than real groups.
