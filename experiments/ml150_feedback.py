@@ -256,7 +256,7 @@ def build() -> Post:
             "`tests/test_ml.py`; numpy only.",
             "Where this stops: Ensign, Friedler, Neville, Scheidegger and "
             "Venkatasubramanian, \"Runaway feedback loops in predictive "
-            "policing\", *FAT** (2018); Lum and Isaac, \"To predict and "
+            "policing\", FAT\\* (2018); Lum and Isaac, \"To predict and "
             "serve?\", *Significance* (2016); Sutton and Barto, "
             "*Reinforcement Learning: An Introduction* (2018), on "
             "exploration; episode 39 of this series.",

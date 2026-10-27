@@ -284,7 +284,8 @@ def build() -> Post:
             f"the rest, and all five have best splits within "
             f"{1 - min(gains):.0%} of each other. The {b['boots']} resamples "
             f"put {b['distinct_sets']} different sets of features in the top "
-            f"three levels, none of them the full-data tree's, and "
+            f"three levels, none of them the full-data tree's (episode 66 "
+            f"found 3 of 200 in another split), and "
             f"{b['any_disagree']:.0%} of test tumours get a different "
             f"diagnosis from at least one tree."),
         tags=["machine-learning", "data-science", "statistics",

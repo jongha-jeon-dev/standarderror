@@ -346,7 +346,7 @@ Two checks that it is right. For a linear model the answer is known in closed fo
 
 {snip['cmp'].markdown()}
 
-Against benign tumours only, the feature with the largest attribution is a different feature for **{ben['top_differs']:.0%}** of the tumours explained, and {ben['sign_flips']:.0%} of all individual attributions change sign. Against malignant tumours, {mal['top_differs']:.0%} and {mal['sign_flips']:.0%}.
+Against benign tumours only, the feature with the largest attribution is a different feature for **{ben['top_differs']:.0%}** of the tumours explained, and {ben['sign_flips']:.0%} of all individual attributions change sign. Against malignant tumours, {mal['top_differs']:.0%} and {mal['sign_flips']:.0%}. (Episode 66 reran this comparison on five other train-test splits: the benign background changed the top feature for 33% to 53% of tumours, so "most" belongs to this split; "a large share" is what survived.)
 
 The feature-means background is the most instructive. Its base value, {mea['base']:+.2f}, is close to the all-rows one, {ref['base']:+.2f}, so it looks like a harmless approximation. It flips the sign of **{mea['sign_flips']:.0%}** of attributions — more than either class-specific background. A boosted model is far from linear, and the model's prediction *at* the average tumour is not the average of its predictions *over* tumours. Every coalition is evaluated with the missing features fixed at one artificial point instead of spread across real ones.
 

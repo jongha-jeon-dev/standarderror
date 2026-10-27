@@ -88,7 +88,7 @@ malignant only     base  -8.50  top feature changes  30%  signs flip  16%
 feature means      base  +2.49  top feature changes   9%  signs flip  19%
 ```
 
-Against benign tumours only, the feature with the largest attribution is a different feature for **58%** of the tumours explained, and 15% of all individual attributions change sign. Against malignant tumours, 30% and 16%.
+Against benign tumours only, the feature with the largest attribution is a different feature for **58%** of the tumours explained, and 15% of all individual attributions change sign. Against malignant tumours, 30% and 16%. (Episode 66 reran this comparison on five other train-test splits: the benign background changed the top feature for 33% to 53% of tumours, so "most" belongs to this split; "a large share" is what survived.)
 
 The feature-means background is the most instructive. Its base value, +2.49, is close to the all-rows one, +2.13, so it looks like a harmless approximation. It flips the sign of **19%** of attributions — more than either class-specific background. A boosted model is far from linear, and the model's prediction *at* the average tumour is not the average of its predictions *over* tumours. Every coalition is evaluated with the missing features fixed at one artificial point instead of spread across real ones.
 

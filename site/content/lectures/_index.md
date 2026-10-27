@@ -398,13 +398,14 @@ is not, and the model either carried or it did not.
 
 ## Machine Learning, Taught Through What Breaks
 
-The longest course here, sixty episodes, and the broadest: the standard
+The longest course here, seventy episodes, and the broadest: the standard
 machine-learning curriculum from how a model is scored, through linear models,
 trees and ensembles, reading what a model learned, training a network, and what
 generalisation looks like in one, to the routine steps around a model, where
 the rows came from, how models are combined and compared, what happens
 when predictions are turned into decisions, how a language model somebody
-else trained is graded, and what unsupervised methods find without labels. Each episode takes **one sentence** that the
+else trained is graded, what unsupervised methods find without labels, what
+happens after a model ships, and finally the course's own claims, measured. Each episode takes **one sentence** that the
 curriculum states as fact and measures where it stops being true. Some of those
 sentences will survive measurement; when one does, the episode says so.
 
@@ -456,7 +457,7 @@ of why.
 |---|---|---|
 | 16 | Permutation Importance Measures the Model, Not What the Data Need | *permutation importance measures how much a model needs a feature*. Shuffling bmi cost 0.168 of R²; refitting without it cost 0.043. With an exact copy the two columns' importances summed to a quarter of bmi's alone. Shuffling s1 put 29% of rows outside the region holding 99% of real (s1, s2) pairs |
 | 17 | Partial Dependence Asks the Model About Rows That Do Not Exist | *a partial dependence plot shows a feature's effect*. With y = x1 + 2x2² and x2 a noisy copy of x1, a forest's PDP slope for x1 fell from 0.98 with independent inputs to 0.30 at correlation 0.985 (truth 1); ALE stayed between 0.92 and 1.03 for both forest and boosting |
-| 18 | A SHAP Value Is an Answer to "Compared With What?" | *SHAP values attribute a prediction to its features*. Exact Shapley values for a boosted model on five breast-cancer features: switching the background from all tumours to benign ones changed the top feature for 58% of tumours, and the feature-means shortcut flipped 19% of signs with nearly the same base value |
+| 18 | A SHAP Value Is an Answer to "Compared With What?" | *SHAP values attribute a prediction to its features*. Exact Shapley values for a boosted model on five breast-cancer features: switching the background from all tumours to benign ones changed the top feature for 58% of tumours (33-53% on five other splits), and the feature-means shortcut flipped 19% of signs with nearly the same base value |
 | 19 | A Planted Shortcut Wins the Test Set and Loses Everywhere Else | *the model with the better test score learned the task better*. A marker pixel on 90% of four digit classes: the shortcut model beat a clean one on a test set built the same way (0.986 against 0.971), fell to 0.947 on clean images and 0.663 with the markers moved. Permutation importance ranked the marker first of 64 |
 | 20 | Same Accuracy, Different Answers | *two models with the same accuracy make the same predictions*. On a task where the Bayes rule errs on 27.6% of the test rows, five networks differing only in seed spanned one point of accuracy and disagreed on up to 22.5% of rows; 43% got both labels from some seed. On breast cancer, with errors near 2%, near-equal models disagreed on 1.4%: disagreement is bounded by the sum of error rates |
 
@@ -536,11 +537,31 @@ of why.
 |---|---|---|
 | 56 | A t-SNE Picture Keeps the Neighbours and Loses the Map | *a t-SNE plot shows the data's clusters, how big they are and how far apart*. A cluster with ten times another's spread came out the same size (radius ratio 0.99 to 1.01), and a gap 9.8 times another came out 0.98 to 1.45 times as wide. On the digits t-SNE kept 59% of each point's ten nearest neighbours against PCA's 12%; started at random it ranked the distances between classes less faithfully than PCA and seeds agreed on them as little as 0.50, while a PCA start fixed the layout |
 | 57 | The BIC Counts Gaussians, Not Clusters | *the BIC tells you how many clusters a Gaussian mixture should have*. For one uniform square it chose 2, 7, 14 and 18 components as the sample grew from 200 to 20,000 points; for one Gaussian, one throughout. Three squares got 9 from the BIC and 3 from ICL; the digits got 11 or 28 depending on the covariance shape allowed |
-| 58 | DBSCAN's Radius Is a Density, and It Gets Only One | *DBSCAN finds clusters of any shape without being told how many*. True of two half-moons, at radii within a factor of 2.9; the k-distance knee fell outside them. Beside a cluster with eight times the spread, no radius scored 0.9 in six draws and the best called 77% of it noise; on the digits the knee's radius put 96% of the images in one cluster |
+| 58 | DBSCAN's Radius Is a Density, and It Gets Only One | *DBSCAN finds clusters of any shape without being told how many*. True of two half-moons, at radii within a factor of 2.9; the k-distance knee fell just outside them in this draw and inside in five others. Beside a cluster with eight times the spread, no radius scored 0.9 in six draws and the best called 77% of it noise; on the digits the knee's radius put 96% of the images in one cluster |
 | 59 | An Anomaly Score Ranks; the Contamination Setting Only Cuts | *an anomaly detector finds the anomalies in your data*. The ranking scored AUC 0.99 or more and the flag followed the contamination setting, with 'auto' flagging 10.5-13.4% at true rates from 0.5% to 10%. Fifty grouped anomalies looked normal to local scores until the neighbourhood exceeded the group; anomalous in 2 of 200 features, the isolation forest's AUC fell to 0.58 on average |
 | 60 | The Most Stable k Is Not the Number of Clusters | *the right number of clusters is the one whose clustering is most stable under resampling*. Stability chose k = 2 for one elongated Gaussian (0.92) and 4 for a uniform square (0.94), and cannot answer one; the gap statistic said one for both. On the digits stability peaked at 10 or 9 depending on the resampling seed, and the gap's rule found no stopping point up to 15 |
 
-All twelve arcs are published. Several episodes changed shape while being measured:
+### Arc XIII — After the model ships
+
+| # | Episode | The sentence under test |
+|---|---|---|
+| 61 | An Alarm on the Inputs Cannot See the Outcome | *a drift alarm on a model's inputs tells you when the model has stopped working*. When the inputs moved one standard deviation the alarm fired on every batch and accuracy rose from 0.771 to 0.80; when the relation between inputs and outcome reversed, accuracy fell to 0.466 and the alarm fired on 2% of batches, while the label-free estimate still said 0.771. With nothing wrong, uncorrected tests on 100 features alarmed on 99% of batches |
+| 62 | A Prediction Interval Is Right on Average and Wrong Where It Matters | *a prediction plus or minus 1.96 residual standard deviations covers 95% of new outcomes*. With noise growing across the input's range, the training-residual band covered 0.908 overall and 0.705 in the noisiest tenth; split conformal reached 0.951 overall and 0.809 there. Conformalised quantile regression covered at least 0.932 in every tenth with a narrower average band. On diabetes, split conformal covered 0.972 of the lowest third and 0.863 of the highest |
+| 63 | Calibrated in Every Group, Unequal in Every Error Rate | *a model that is calibrated within every group treats the groups the same*. Calibrated to within 0.004 in both groups, with base rates 0.31 and 0.46, it raised false alarms at 0.106 and 0.269 and missed at 0.605 and 0.353. Dropping the group left the score predicting it (AUC 0.633) and loosened calibration to 0.02-0.03; equalising false positive rates made a flag mean 0.518 in one group and 0.674 in the other |
+| 64 | How Much History to Retrain On Depends on How Fast the World Moves | *retrain regularly on the most recent data and the model stays current*. In a world that never changed, retraining on the latest period alone scored 0.729 against all history's 0.779; under fast drift a four-period window was best. Labels eight periods late cut the gain of retraining over a frozen model from 0.168 to 0.096, and a backtest chose the wrong window in two of four worlds |
+| 65 | Four Simulated Verdicts, Retried on Real Data | *a finding measured on a simulation tells you what will happen on real data*. On the bundled data, resampling again left the AUC unchanged and inflated probabilities 1.6 to 1.9 times rather than eleven; tuning optimism shrank to 0.005; a cost threshold still helped every model, but 0.5 beat flagging everyone for five of six. Directions replicated; sizes often did not |
+
+### Arc XIV — The course, measured
+
+| # | Episode | The sentence under test |
+|---|---|---|
+| 66 | The Series, Rerun With Five More Seeds | *a verdict measured once, and pinned so the build fails if it drifts, will hold on the next draw*. Of twelve verdicts that rested on one draw, seven held on five new seeds and two on four. Three did not hold as written, episodes 18, 58 and 59, which now say so |
+| 67 | Five Defensible Choices Turned Coin Flips Into 89% | *if every choice in an analysis is defensible, so is its result*. On coin-flip labels an honest plan reported 0.484; five choices, each the best-scoring option, reported 0.888, and the final pipeline scored 0.501 on fresh rows. On breast cancer the walk reported 0.977 and delivered 0.965, below the honest plan's 0.974 on the same tumours |
+| 68 | More Data Cures the Noise, Not the Design | *with enough data, these problems go away*. From 200 to 3,200 rows, four problems shrank: a standard error, tuning optimism, a feature-selection leak (24.7 to 7.1 points) and a target-encoding leak. Selective labels stayed 45 to 48 points wrong and row-level CV with 20 people grew from 13 to 16 points optimistic; the BIC's components for one square went from 4 to 8 |
+| 69 | One Project, Every Check, and the Threshold Mattered More Than the Model | *the main decision in a project is which model to use*. On breast cancer, cross-validation preferred logistic regression (corrected p 0.11) and the test set boosted trees (McNemar p 0.5). A threshold from a 10:1 cost cut missed malignancies from 4 to 1 and the cost from 0.257 to 0.140; the models' best costs spanned 0.140 to 0.175 |
+| 70 | Sixty-Nine Sentences, Measured, and One Held as Written | no new sentence. By the author's reading of each episode, 38 sentences failed as stated, 30 held only under conditions, and one held as written: fit every preprocessing step inside the folds |
+
+All fourteen arcs are published, and the series is complete. Several episodes changed shape while being measured:
 episode 1's repeated splits turned out to measure the pool rather than the
 training sets, and episode 3's feature-selection leak, enormous on noise,
 vanished on real data where the true features win the selection anyway — which
@@ -590,4 +611,14 @@ unsupervised method answering a narrower question than the one it is asked:
 a picture that kept neighbours and invented sizes and gaps, a criterion that
 counted Gaussians rather than clusters, a radius that was one density, a
 detector whose flag was a quantile, and a stability that measured a unique
-optimum rather than real groups.
+optimum rather than real groups. Arc XIII followed a model into production and
+found each safeguard watching something next to the failure: an input alarm
+blind to a reversed relation, a fixed interval right on average and wrong where
+the noise was, calibration within groups alongside unequal error rates, a
+retraining window that was a fact about the world, and simulated verdicts that
+replicated in direction and not in size. Arc XIV turned the method on the
+series: three of twelve single-draw verdicts did not survive five more seeds,
+five defensible choices made 89% out of coin flips, more data cured the noise
+and not the design, and one project run through every check was decided by its
+threshold rather than its model. Of the sixty-nine sentences, one held as
+written.

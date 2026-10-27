@@ -645,3 +645,59 @@ class TestWithoutLabels:
         r = unsup.anomaly_contamination(rates=(0.02,), settings=(0.05,),
                                         n=1000)
         assert r[0]["0.05"]["flagged"] == pytest.approx(0.05, abs=1e-3)
+
+
+class TestAfterShipping:
+    def test_drift_world_moves_inputs_or_relation(self):
+        from standarderror.ml import deploy
+        rng = np.random.default_rng(0)
+        X, _ = deploy.drift_world(20_000, rng, shift=1.0)
+        assert X[:, 0].mean() == pytest.approx(1.0, abs=0.03)
+        X, y = deploy.drift_world(20_000, rng, flip=1.0)
+        assert abs(X[:, 0].mean()) < 0.03
+        assert np.corrcoef(X[:, 0], y)[0, 1] < -0.2      # the sign reversed
+
+    def test_domain_weights_are_flat_without_shift(self):
+        from standarderror.ml import deploy
+        rng = np.random.default_rng(1)
+        w = deploy._domain_weights(rng.normal(size=(2000, 3)),
+                                   rng.normal(size=(2000, 3)))
+        assert w.mean() == pytest.approx(1.0, abs=0.05) and w.std() < 0.2
+
+    def test_bonferroni_alarms_less_than_uncorrected(self):
+        from standarderror.ml import deploy
+        r = deploy.drift_false_alarms(features=(20,), batch=200, batches=30)[0]
+        assert r["bonferroni"] <= r["uncorrected"]
+        assert r["uncorrected"] > 0.3
+
+    def test_calibrated_groups_with_unequal_error_rates(self):
+        from standarderror.ml import deploy
+        r = deploy.fairness_study(n=8000)
+        m = r["models"]["with group"] if "models" in r else r["with group"]
+        assert abs(m["A"]["calibration_gap"]) < 0.03
+        assert abs(m["B"]["calibration_gap"]) < 0.03
+        assert m["B"]["fpr"] > m["A"]["fpr"] and m["A"]["fnr"] > m["B"]["fnr"]
+
+
+class TestCourseMeasured:
+    def test_design_problems_do_not_shrink(self):
+        from standarderror.ml import course
+        a = course._selection_bias(400, reps=3)
+        b = course._selection_bias(3200, reps=3)
+        assert a < -0.3 and b < -0.3 and abs(a - b) < 0.05
+
+    def test_noise_problems_shrink(self):
+        from standarderror.ml import course
+        assert course._encoding_leak(200, reps=3) > 2 * course._encoding_leak(
+            3200, reps=3) > 0
+
+    def test_census_counts_every_episode(self):
+        from standarderror.ml import course
+        c = course.assert_census()
+        assert c["episodes"] >= 69 and c["asserts"] > 10 * c["episodes"]
+        assert set(range(1, 70)) <= set(c["per_episode"])
+
+    def test_claims_are_twelve_and_seeded(self):
+        from standarderror.ml import course
+        assert len(course.CLAIMS) == 12
+        assert len({c[0] for c in course.CLAIMS}) == 12

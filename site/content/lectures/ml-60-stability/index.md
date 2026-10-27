@@ -101,7 +101,7 @@ If the clustering of the shuffled data is about as stable, or scores about as we
 
 ## Next
 
-Arc XII ends here, at sixty episodes. The plan continues with the gaps a practitioner meets after deployment: data that drift, intervals for regression predictions, fairness trade-offs and the replication of results on real data.
+Arc XII ends here, at sixty episodes. Arc XIII, from episode 61, takes up the gaps a practitioner meets after deployment: data that drift, intervals for regression predictions, fairness trade-offs, retraining and the replication of results on real data.
 
 ---
 

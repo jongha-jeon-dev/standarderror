@@ -13,7 +13,7 @@ images: ["ml111-hero.png"]
 
 Disclosure: this post was written with the assistance of an AI system (Claude), which wrote the analysis code, ran the experiments and drafted the text. The topic, the constraints, the data choices and the final review are the author's.
 
-*Two hundred depth-3 trees fitted to bootstrap resamples of a breast-cancer training set score 0.914 on the same held-out tumours, with a standard deviation of 0.015. Their structure is another matter. The full-data tree's root feature, worst perimeter, is the root in 50% of resamples; four other features take the rest, and all five have best splits within 5% of each other. The 200 resamples put 194 different sets of features in the top three levels, none of them the full-data tree's, and 36% of test tumours get a different diagnosis from at least one tree.*
+*Two hundred depth-3 trees fitted to bootstrap resamples of a breast-cancer training set score 0.914 on the same held-out tumours, with a standard deviation of 0.015. Their structure is another matter. The full-data tree's root feature, worst perimeter, is the root in 50% of resamples; four other features take the rest, and all five have best splits within 5% of each other. The 200 resamples put 194 different sets of features in the top three levels, none of them the full-data tree's (episode 66 found 3 of 200 in another split), and 36% of test tumours get a different diagnosis from at least one tree.*
 
 Episode 11 of *Machine Learning, Taught Through What Breaks*. The syllabus and the other episodes: https://jongha-jeon-dev.github.io/standarderror/lectures/
 

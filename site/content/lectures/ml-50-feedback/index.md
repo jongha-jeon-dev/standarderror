@@ -120,7 +120,7 @@ Arc X ends here, at fifty episodes, with models the reader trained and decisions
 
 - Simulated: two districts with violation rates per inspection of 0.10 and 0.10, or 0.10 and 0.12; ten inspections a day for 365 days, split binomially by the rule's share; every rule starts from one violation found and one visit made in each district. 500 runs per rule and world (seed 0).
 - Machinery: `standarderror/ml/decide.py`, tested in `tests/test_ml.py`; numpy only.
-- Where this stops: Ensign, Friedler, Neville, Scheidegger and Venkatasubramanian, "Runaway feedback loops in predictive policing", *FAT** (2018); Lum and Isaac, "To predict and serve?", *Significance* (2016); Sutton and Barto, *Reinforcement Learning: An Introduction* (2018), on exploration; episode 39 of this series.
+- Where this stops: Ensign, Friedler, Neville, Scheidegger and Venkatasubramanian, "Runaway feedback loops in predictive policing", FAT\* (2018); Lum and Isaac, "To predict and serve?", *Significance* (2016); Sutton and Barto, *Reinforcement Learning: An Introduction* (2018), on exploration; episode 39 of this series.
 
 ### Reproducibility
 

@@ -1,0 +1,119 @@
+---
+title: "ML 70: Sixty-Nine Sentences, Measured, and One Held as Written"
+date: 2026-10-27
+slug: "ml-70-verdicts"
+draft: false
+description: "The series' last episode sorts what measurement did to each sentence it tested. Thirty-eight failed as stated, thirty held only under conditions, and one held as written."
+author: "Jongha Jeon"
+tags: ["machine-learning", "evaluation", "reproducibility", "statistics", "curriculum", "lectures"]
+series: ["Machine Learning, Taught Through What Breaks"]
+weight: 70
+images: ["ml170-hero.png"]
+---
+
+Disclosure: this post was written with the assistance of an AI system (Claude), which wrote the analysis code, ran the experiments and drafted the text. The topic, the constraints, the data choices and the final review are the author's.
+
+*Sixty-nine episodes each measured one sentence the curriculum states as fact. By the author's reading of each episode's verdict, 38 failed as stated in the setting measured, 30 held only under conditions the sentence does not state, and 1 held as written: fit every preprocessing step inside the folds. The builds behind the 70 episodes carry 936 assert statements, a median of 13 per episode. Of twelve verdicts that rested on one random draw, seven held on five new seeds, two on four, and three did not hold as written and were revised.*
+
+Episode 70 of *Machine Learning, Taught Through What Breaks*. The syllabus and the other episodes: https://jongha-jeon-dev.github.io/standarderror/lectures/
+
+## Sixty-nine sentences
+
+This series took one sentence per episode from the standard machine-learning curriculum, the kind of sentence a textbook, a course or a senior colleague states as fact, and measured where it stopped being true. The sentences ran from how a score is read (*the model with the higher test score is better*) through models, training, the rows, decisions and language models, to a model in production and the series itself (*a verdict measured once will hold on the next draw*). This last episode tests no new sentence. It sorts what happened to the sixty-nine, and counts the checks that kept the numbers honest.
+
+Every number in an episode came from code that ran when the page was built, and the numbers the prose quotes are pinned by assertions: if the code stops producing it, the build fails and the page does not publish. Those assertions can be counted.
+
+```python
+from standarderror.ml import course
+
+c = course.assert_census()       # counts `assert` lines in every build
+print(c["episodes"], "episodes,", c["asserts"], "assert statements")
+print("median per episode:", c["median"], " most:", c["most"])
+```
+
+```text
+70 episodes, 936 assert statements
+median per episode: 13.0  most: (29, 21)
+```
+
+The 936 statements are the series' working evidence. They guard against a number going stale when the code or a library changes; episode 66 showed what they do not guard against, a number that was lucky.
+
+![Seventy bars between about 6 and 21, with a dotted median line at 13.](ml170-f1-census.png)
+
+*A count of statements, not of claims: one assert can pin several values, and some claims are pinned by more than one.*
+
+## What measurement did to the sentences
+
+Sorting a verdict needs a rule, and this is the one used: a sentence **failed** if it was false in the setting the episode measured; it **held under conditions** if it was true in some measured settings and false in others, or true for one half of a two-part sentence; it **held** if it was true in every setting measured. The classification is the author's reading of each episode's own conclusion, and some calls are close; the list is in the episode's code for anyone who would sort differently.
+
+By that rule, 38 sentences failed as stated, 30 held under conditions, and 1 held as written. The one that held was episode 3's: *fit every preprocessing step inside the folds*. Even that came with a measured scale, since violations ranged from nothing on real data with strong features to coin flips scored at 0.88 on noise, but no measured setting made the rule wrong.
+
+The failures were spread across the course. Every arc had at least one, and three had four or more of five: what a score means (I), turning predictions into decisions (X, all five) and grading a language model (XI). Those are the arcs whose sentences are rules for reading a number or acting on it: the higher score is better, the threshold is 0.5, the benchmark measures the model. Such a rule compresses a judgement into a default, and a default is what a measurement in a new setting tends to break. The arc with the fewest failures was trees and ensembles (III), with one: its sentences, about forests, boosting and out-of-bag error, were mostly true within limits the curriculum seldom states.
+
+![A grid of 69 numbered squares, five per arc, coloured by verdict. Failed and conditional verdicts are spread across every arc; one square, episode 3, held.](ml170-f0-verdicts.png)
+
+*Episode 70, this one, tests no sentence of its own.*
+
+## What the broken sentences had in common
+
+Read together, the failures and the conditional verdicts fall into a few families, and each family is a single habit worth unlearning.
+
+**A score answers a narrower question than the one asked of it.** Cross-validation estimates a procedure, not the fitted model (episode 2). A test score has an error bar wider than most gains (1). The best of a search is the search's luck (35, 67). A benchmark score includes its prompt and its distractors (53, 54). An AUC ranks; it does not decide (47).
+
+**A method reports on the model or its assumptions, not on the data.** Importance measures what a model uses, not what matters (16, 48). Partial dependence and SHAP answer questions about rows that do not exist or a background someone chose (17, 18). The BIC counts Gaussians and t-SNE keeps neighbours (56, 57).
+
+**The rows are not what they seem.** Rows from the same people, applicants who were refused, a category's own labels and a time series' remembered errors (episodes 36, 37, 39 and 40) all make the data say more than they hold, and episode 68 showed that more rows of the same kind did not fix the first two.
+
+**A prediction is not a decision.** The threshold, the cost of a mistake, who is helped by an intervention, and what a deployed rule does to the data it later learns from (46 to 50, 63) are not in the predictions, and in episode 69 the threshold mattered more than the choice of model.
+
+## What the series got wrong about itself
+
+The series held itself to the same standard, and did not fully meet it. Episode 66 reran the twelve verdicts that had rested on a single random draw, with five new seeds each. Seven held every time and two held four times in five, where a threshold written into the prose was tighter than the evidence. Three did not hold as written: a heuristic radius that missed in the published draw and hit in five others (episode 58), a share described as "most" that was 33% to 53% on other splits (18), and an anomaly score's AUC that crossed the round threshold its assertion wrote down (59). Those episodes, and the syllabus rows that summarise them, now say so.
+
+Episode 65 took four of the series' simulated findings to real data and found the directions replicated while the sizes often did not, and episode 67 showed how a sequence of defensible choices can produce a number nobody chose. Both apply to this series too: its sentences were chosen by one author, and its settings were chosen to make each effect visible.
+
+## Where this breaks
+
+**The sentences were chosen to break.** Each was picked because it is stated as fact and could be tested on a laptop; the count of failures says how often such sentences stop short, not how often the curriculum is wrong.
+
+**One author's classification.** The line between "failed" and "held under conditions" is a judgement. A different reader would move a handful of episodes, and the code lists every call so that they can.
+
+**Small data and simulations.** Most episodes used data sets of hundreds to a few thousand rows, or simulations built to show an effect. Episodes 65 and 68 measured how far such findings travel; the answer was: in direction, usually; in size, not always.
+
+**Assertions pin what was measured.** They cannot catch a mistake in the code that produced the number, only a change in it.
+
+## What to keep
+
+1. Of sixty-nine sentences, 38 failed as stated, 30 held under conditions and 1 held as written. Most of the curriculum is true somewhere; the work is finding where.
+
+2. The failures clustered in three arcs: how a score is read, how a prediction becomes a decision, and how a language model is graded.
+
+3. 936 assertions kept the numbers from going stale, and five extra seeds showed three of twelve single-draw verdicts were luckier than the words chosen for them.
+
+4. Before acting on a sentence about machine learning, ask what setting it was measured in, and measure it in yours.
+
+## Exercise
+
+Pick a sentence your team repeats about its models: a rule about thresholds, features, retraining or evaluation. Write it down exactly as people say it.
+
+Design the smallest measurement that could show it false in your setting, run it, and classify the result by this episode's rule. If it held, write down the conditions you tested; if it held only under some, rewrite the sentence so that it says which.
+
+## The end of the series
+
+This is the last episode of *Machine Learning, Taught Through What Breaks*. The series index lists all seventy, each with its sentence and what measurement did to it, and the code behind every number is in the repository. The checklist in episode 69 is the shortest way to use it on a project; the rest is there for the day one of its sentences matters.
+
+---
+
+### Data
+
+- The 69 earlier episodes of this series and their builds, `experiments/ml101_*.py` to `experiments/ml169_*.py`; the verdicts are the author's classification of each episode's own conclusion, by the rule stated in the post, and are listed in `experiments/ml170_verdicts.py`.
+- Machinery: `standarderror/ml/course.py` (`assert_census`), tested in `tests/test_ml.py`.
+- Where this stops: the series index, which gives each sentence and its measurement in one row; episode 66 for the reruns.
+
+### Reproducibility
+
+- **environment**: standarderror=0.1.0, python=3.13.16, numpy=2.4.4
+- **code blocks**: executed at build time; the values the prose quotes are pinned, so drift fails the build
+- **determinism**: a count of files; under a second
+
+Code: <https://github.com/jongha-jeon-dev/standarderror>

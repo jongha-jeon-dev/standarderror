@@ -7,7 +7,8 @@ on the digits:
 
 * On the half-moons DBSCAN scored 0.95 or more (ARI; k-means 0.25) for
   radii from 0.071 to 0.206, and 1.00 from 0.116; the radius read off the
-  k-distance plot's knee was 0.061, and scored 0.57.
+  k-distance plot's knee was 0.061, and scored 0.57 (in five other draws
+  of the moons, 0.80 to 0.96).
 * Beside two tight clusters, a third whose spread grew from equal to eight
   times theirs left fewer and fewer of 150 radii scoring at least 0.9, and
   none at eightfold in any of six draws; HDBSCAN, which needs no radius,
@@ -217,7 +218,8 @@ def build() -> Post:
             f"from {pf[0]:.3f}, where k-means scored "
             f"{mo['kmeans_ari']:.2f}; the radius at the knee of the "
             f"k-distance plot, {mo['knee']:.3f}, scored "
-            f"{mo['knee_score']:.2f}. Beside two tight clusters, a third whose "
+            f"{mo['knee_score']:.2f} in this draw and 0.80 to 0.96 in five "
+            f"others. Beside two tight clusters, a third whose "
             f"spread grew from equal to eight times theirs left "
             f"{', '.join(str(g) for g in good)} of 150 radii scoring at "
             f"least 0.9; at eight times the spread, no radius reached 0.9 in "
@@ -283,7 +285,7 @@ Throughout, agreement with the true groups is the adjusted Rand index with every
 
 k-means, asked for two clusters, cut the moons in half (ARI {mo['kmeans_ari']:.2f}). DBSCAN scored 0.95 or more at every radius between {w[0]:.3f} and {w[1]:.3f}, and separated the moons perfectly from {pf[0]:.3f} to {pf[1]:.3f}. Outside that window, smaller radii shatter each moon into fragments and noise, and larger ones join the two moons where they come close.
 
-The good window is about a factor of {w[1] / w[0]:.1f} wide, the perfect one {pf[1] / pf[0]:.1f}, and something has to find it. Ester and colleagues suggested sorting every point's distance to its k-th nearest neighbour and reading the radius off the knee of that curve, where the distances start to climb. Found as the point farthest below the chord of the sorted curve, the knee was at {mo['knee']:.3f}, just below the window, and that radius scored {mo['knee_score']:.2f}.
+The good window is about a factor of {w[1] / w[0]:.1f} wide, the perfect one {pf[1] / pf[0]:.1f}, and something has to find it. Ester and colleagues suggested sorting every point's distance to its k-th nearest neighbour and reading the radius off the knee of that curve, where the distances start to climb. Found as the point farthest below the chord of the sorted curve, the knee was at {mo['knee']:.3f}, just below the window, and that radius scored {mo['knee_score']:.2f}. That miss belonged to this draw of the moons: episode 66 reran it on five other draws, and the knee fell inside the good window every time, scoring 0.80 to 0.96. The heuristic is a reasonable start on data like the moons and, as the digits below show, can still land in the wrong place.
 
 The other setting moves the window more than it widens it. With `min_samples` at 3 or 5 the good radii ran from {mo['windows'][3][0]:.3f} to {mo['windows'][3][1]:.3f}; at 10, from {mo['windows'][10][0]:.3f}; at 20, from {mo['windows'][20][0]:.3f} to {mo['windows'][20][1]:.3f}; at 40, from {mo['windows'][40][0]:.3f} to {mo['windows'][40][1]:.3f}. Requiring more neighbours raises the density a core point needs, so the same moons need a larger radius to reach it: the two settings act roughly as one density threshold written two ways, and fixing either leaves the other to be tuned. scikit-learn's defaults, a radius of 0.5 with 5 points, put both moons into one cluster and scored {mo['default_score']:.2f}; the default radius is a number, not a property of anyone's data.
 
@@ -318,7 +320,7 @@ HDBSCAN did not rescue it here. It scored {dg['hdbscan']:.2f} and called {dg['hd
 
     post.add(
         "What to keep",
-        f"""1. At the right radius DBSCAN separated two half-moons where k-means scored {mo['kmeans_ari']:.2f}; radii scoring 0.95 or more spanned a factor of {w[1] / w[0]:.1f}, and the k-distance knee fell outside them.
+        f"""1. At the right radius DBSCAN separated two half-moons where k-means scored {mo['kmeans_ari']:.2f}; radii scoring 0.95 or more spanned a factor of {w[1] / w[0]:.1f}, and in this draw the k-distance knee fell just outside them (in five other draws, inside).
 
 2. With one cluster eight times the spread of its neighbours, no radius scored 0.9 in any of six draws; the best in the first called {worst['wide_noise']:.0%} of the wide cluster noise. HDBSCAN scored {min(worst['reps_hdbscan'] + [worst['hdbscan']]):.2f} to {max(worst['reps_hdbscan'] + [worst['hdbscan']]):.2f}.
 
