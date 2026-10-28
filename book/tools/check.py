@@ -2,7 +2,8 @@
 
 Usage: python book/tools/check.py [NN ...]   (default: every chapter written)
 
-For each chapter it reports
+Chapter NN is checked against the source episodes of all its sections
+(book/tools/structure.py). For each chapter it reports
   * numbers in the prose that do not appear in the source (allowing the same
     value rounded to fewer decimals, or the same value as a percentage or a
     proportion); integers below 13 and chapter/part references are skipped;
@@ -19,7 +20,7 @@ BOOK = Path(__file__).resolve().parents[1]
 NUM = re.compile(r"(?<![\w.\-])-?\d[\d,]*(?:\.\d+)?|(?<![\w.])\.\d+")
 CODE = re.compile(r"```[^\n]*\n(.*?)```", re.S)
 REF = re.compile(r"\b(?:Chapters?|Parts?|Figure|Figures|Table|Appendix|Exercise|"
-                 r"Exercises|Section|step|steps|Step|Steps)\s+[\dA-Z]+(?:[.\-–]\d+)?"
+                 r"Exercises|Sections?|step|steps|Step|Steps)\s+[\dA-Z]+(?:[.\-–]\d+)?"
                  r"(?:(?:,\s*|\s+and\s+|\s+to\s+|\s*[–-]\s*|\s+or\s+)\d+(?:\.\d+)?)*")
 
 
@@ -49,8 +50,12 @@ def allowed(tok, x, src_vals):
 
 
 def check(n):
-    src = (BOOK / f"src/ch{n:02d}.md").read_text()
-    src += (BOOK / f"src/ch{n:02d}.data.md").read_text()
+    sys.path.insert(0, str(BOOK / "tools"))
+    from structure import CHAPTERS
+    src = ""
+    for ep in CHAPTERS[n][1]:
+        src += (BOOK / f"src/ch{ep:02d}.md").read_text()
+        src += (BOOK / f"src/ch{ep:02d}.data.md").read_text()
     ch = (BOOK / f"chapters/ch{n:02d}.md").read_text()
     issues = []
     sc = [c.strip() for c in CODE.findall(src)]

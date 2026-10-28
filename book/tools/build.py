@@ -23,45 +23,61 @@ SUBTITLE = "Seventy sentences from the curriculum, measured"
 AUTHOR = "Jongha Jeon"
 YEAR = "2026"
 
-ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI",
-         "XII", "XIII", "XIV"]
+sys.path.insert(0, str(BOOK / "tools"))
+from structure import CHAPTERS, PARTS, WHERE  # noqa: E402
+
+CLOSING = ("In practice", "Limits of the evidence", "Key points", "Exercises",
+           "Further reading")
 
 
 def parts():
+    """[(roman, title, intro, [chapter numbers])] from structure.py and the
+    part openers in front/parts.md."""
     text = (BOOK / "front/parts.md").read_text()
-    out = []
+    intros = {}
     for block in re.split(r"^## ", text, flags=re.M)[1:]:
         head, _, body = block.partition("\n")
-        num, title = [s.strip() for s in head.split("|")]
-        out.append((num, title, body.strip()))
-    assert [p[0] for p in out] == ROMAN
-    return out
+        intros[head.split("|")[0].strip()] = body.strip()
+    return [(num, title, intros[num], [c for c, _, _ in chs])
+            for num, title, chs in PARTS]
+
+
+def _fig(name: str) -> str:
+    return f"figures/ch{int(name[2:5]) - 100:02d}/{name}"
 
 
 def chapter(n: int, target: str) -> str:
     s = (BOOK / f"chapters/ch{n:02d}.md").read_text()
-    hero = re.search(r"hero: (\S+?\.png)", s).group(1)
-    s = re.sub(r"<!--.*?-->\s*", "", s, count=1, flags=re.S)
-    s = s.replace("# episode 4's task", "# Chapter 4's task")
+    s = s.replace("# episode 4's task", "# Section 5.1's task")
     s = _typeset_prose(s)
-    figdir = f"figures/ch{n:02d}"
-    s = re.sub(r"\]\((ml\d+-[\w-]+\.png)\)", lambda m: f"]({figdir}/{m.group(1)})", s)
-    # Hero: an unnumbered summary picture right under the chapter title.
+    s = re.sub(r"\]\((ml\d+-[\w-]+\.png)\)", lambda m: f"]({_fig(m.group(1))})", s)
+
+    # Each section's summary picture goes where its source comment is.
+    def hero(m):
+        h = _fig(m.group(1))
+        if target == "pdf":
+            return ("```{=latex}\n\\begin{center}\\includegraphics[width=0.92\\linewidth]"
+                    f"{{{h}}}\\end{{center}}\n```")
+        return f'<p class="hero"><img src="{h}" alt="The section at a glance"/></p>'
+    s = re.sub(r"<!-- source: [^;]+; hero: (\S+?\.png) -->", hero, s)
+    s = re.sub(r"<!--.*?-->\s*", "", s, flags=re.S)
     lines = s.split("\n")
-    i = next(k for k, ln in enumerate(lines) if ln.startswith("# "))
-    if target == "pdf":
-        hero_md = ("\n```{=latex}\n\\begin{center}\\includegraphics[width=\\linewidth]"
-                   f"{{{figdir}/{hero}}}\\end{{center}}\n```\n")
-    else:
-        hero_md = f'\n<p class="hero"><img src="{figdir}/{hero}" alt="Chapter {n} at a glance"/></p>\n'
-    lines.insert(i + 1, hero_md)
-    if target == "epub":                    # number chapters only, as in the PDF
-        fence = False
-        for k, ln in enumerate(lines):
-            if ln.startswith("```"):
-                fence = not fence
-            elif not fence and re.match(r"#{2,6} ", ln) and not ln.rstrip().endswith("}"):
-                lines[k] = ln.rstrip() + " {-}"
+    fence = False
+    for k, ln in enumerate(lines):
+        if ln.startswith("```"):
+            fence = not fence
+            continue
+        if fence or ln.rstrip().endswith("}"):
+            continue
+        m = re.match(r"(#{2,6}) (.+)$", ln)
+        if not m:
+            continue
+        closing = len(m.group(1)) == 2 and m.group(2).strip() in CLOSING
+        deep = len(m.group(1)) >= 3
+        if closing:
+            lines[k] = ln.rstrip() + " {.unnumbered .unlisted}"
+        elif target == "epub" and deep:
+            lines[k] = ln.rstrip() + " {-}"
     return "\n".join(lines)
 
 
@@ -78,22 +94,31 @@ def _typeset_prose(s: str) -> str:
 
 # ----------------------------------------------------------------- appendices
 
+def _title(n: int) -> str:
+    return re.search(r"^# (.+)$", (BOOK / f"chapters/ch{n:02d}.md").read_text(),
+                     re.M).group(1)
+
+
+def _section_title(ep: int) -> str:
+    return re.search(r"^# (.+)$", (BOOK / f"sections/s{ep:02d}.md").read_text(),
+                     re.M).group(1)
+
+
 def appendix_practice() -> str:
     """Every chapter's 'In practice' section, grouped by part."""
     out = ["# Practice, Chapter by Chapter\n",
            "This appendix collects the *In practice* section of every chapter, "
            "grouped by part, as a reference to use on a project. Each list is "
            "the chapter's own; the chapter gives the evidence behind it.\n"]
-    for k, (num, title, _) in enumerate(parts()):
-        out.append(f"## Part {num}: {title}\n")
-        for n in range(5 * k + 1, min(5 * k + 6, 71)):
+    for num, title, _, chs in parts():
+        out.append(f"## Part {num}: {title} {{-}}\n")
+        for n in chs:
             s = (BOOK / f"chapters/ch{n:02d}.md").read_text()
-            t = re.search(r"^# (.+)$", s, re.M).group(1)
-            m = re.search(r"^## In practice\n(.*?)(?=^## )", s, re.M | re.S)
+            m = re.search(r"^## In practice[^\n]*\n(.*?)(?=^## )", s, re.M | re.S)
             if not m:
                 continue
             body = re.sub(r"^### ", "#### ", m.group(1).strip(), flags=re.M)
-            out.append(f"### Chapter {n}: {t}\n\n{body}\n")
+            out.append(f"### Chapter {n}: {_title(n)} {{-}}\n\n{body}\n")
     return "\n".join(out)
 
 
@@ -102,31 +127,38 @@ def appendix_verdicts() -> str:
     idx = idx.split("## Machine Learning, Taught Through What Breaks", 1)[1]
     sentences = {}
     for m in re.finditer(r"^\| (\d+) \| [^|]+ \| (.*) \|$", idx, re.M):
-        n = int(m.group(1))
         sm = re.match(r"\*(.+?)\*", m.group(2))
         if sm:
-            sentences[n] = sm.group(1)
+            sentences[int(m.group(1))] = sm.group(1)
     src = (ROOT / "experiments/ml170_verdicts.py").read_text()
-    failed = set(map(int, re.search(r"FAILED = \{([^}]*)\}", src).group(1).replace("\n", " ").split(",")))
+    failed = set(map(int, re.search(r"FAILED = \{([^}]*)\}", src).group(1)
+                     .replace("\n", " ").split(",")))
     held = set(map(int, re.search(r"HELD = \{([^}]*)\}", src).group(1).split(",")))
     assert len(sentences) == 69 and len(failed) == 38 and held == {3}
     out = ["# The Sixty-Nine Sentences\n",
-           "Each chapter from 1 to 69 tested one sentence. This appendix lists "
-           "them with the verdict Chapter 70 assigns: *failed* if the sentence "
-           "was false in the setting the chapter measured, *conditions* if it "
-           "held in some measured settings and not others, *held* if it held "
-           "in every setting measured. The classification is the author's "
-           "reading of each chapter's conclusion.\n"]
-    for k, (num, title, _) in enumerate(parts()):
-        rng = range(5 * k + 1, min(5 * k + 6, 70))
-        if not len(rng):
-            continue
+           "Sixty-nine sections of this book each test one sentence from the "
+           "curriculum. This appendix lists them, by chapter, with the verdict "
+           "Section 22.3 assigns: *failed* if the sentence was false in the "
+           "setting the section measured, *conditions* if it held in some "
+           "measured settings and not others, *held* if it held in every "
+           "setting measured. The classification is the author's reading of "
+           "each section's conclusion.\n",
+           "The sections began as episodes of a series, and a few figures, "
+           "chiefly in Chapter 22, identify results by episode number; the "
+           "*Ep.* column gives each section's episode number.\n"]
+    for num, title, _, chs in parts():
         out.append("```{=latex}\n\\needspace{10\\baselineskip}\n```\n")
-        out.append(f"## Part {num}: {title}\n")
-        out.append("| Ch. | The sentence | Verdict |\n|----:|:" + "-" * 70 + "|:-----------|")
-        for n in rng:
-            v = "failed" if n in failed else "held" if n in held else "conditions"
-            out.append(f"| {n} | {sentences[n][0].upper() + sentences[n][1:]} | {v} |")
+        out.append(f"## Part {num}: {title} {{-}}\n")
+        out.append("| Sec. | Ep. | The sentence | Verdict |\n|----:|----:|:"
+                   + "-" * 66 + "|:-----------|")
+        for c in chs:
+            for k, ep in enumerate(CHAPTERS[c][1], 1):
+                if ep not in sentences:
+                    continue
+                v = ("failed" if ep in failed else "held" if ep in held
+                     else "conditions")
+                t = sentences[ep][0].upper() + sentences[ep][1:]
+                out.append(f"| {c}.{k} | {ep} | {t} | {v} |")
         out.append("")
     return "\n".join(out)
 
@@ -134,23 +166,30 @@ def appendix_verdicts() -> str:
 def appendix_data() -> str:
     out = ["# Data and Code\n",
            "All code is in the repository at "
-           "<https://github.com/jongha-jeon-dev/standarderror>. Each chapter "
-           "is built by one module in `experiments/` (Chapter N by "
-           "`ml1NN_*.py`, Chapter 70 by `ml170_verdicts.py`) from the "
-           "machinery in `standarderror/ml/`, which is tested in "
-           "`tests/test_ml.py`. The data are bundled with scikit-learn or "
-           "simulated, so every result can be rebuilt offline. Below, each "
-           "chapter's data and machinery.\n"]
-    for n in range(1, 71):
-        s = (BOOK / f"src/ch{n:02d}.data.md").read_text()
-        data = s.split("### Data", 1)[1].split("### Reproducibility", 1)[0].strip()
-        data = re.sub(r"^- Where this stops:.*$", "", data, flags=re.M).strip()
-        data = data.replace("of the school-maths series", "trained in this repository")
-        data = data.replace("The 69 earlier episodes of this series", "The 69 earlier chapters")
-        data = data.replace("by the rule stated in the post", "by the rule stated in Chapter 70")
-        data = data.replace("episode", "chapter").replace("Episode", "Chapter")
-        t = re.search(r"^# (.+)$", (BOOK / f"chapters/ch{n:02d}.md").read_text(), re.M).group(1)
-        out.append(f"### Chapter {n}: {t}\n\n{data}\n")
+           "<https://github.com/jongha-jeon-dev/standarderror>. Each section "
+           "is built by one module in `experiments/` (the section of episode "
+           "N by `ml1NN_*.py`; Appendix B gives each section's episode "
+           "number) from the machinery in `standarderror/ml/`, which is "
+           "tested in `tests/test_ml.py`. The data are bundled with "
+           "scikit-learn or simulated, so every result can be rebuilt "
+           "offline. Below, each section's data and machinery.\n"]
+    for c, (_, eps) in CHAPTERS.items():
+        out.append(f"## Chapter {c}: {_title(c)} {{-}}\n")
+        for k, ep in enumerate(eps, 1):
+            s = (BOOK / f"src/ch{ep:02d}.data.md").read_text()
+            data = s.split("### Data", 1)[1].split("### Reproducibility", 1)[0].strip()
+            data = re.sub(r"^- Where this stops:.*$", "", data, flags=re.M).strip()
+            data = data.replace("of the school-maths series", "trained in this repository")
+            data = data.replace("The 69 earlier episodes of this series",
+                                "The 69 earlier sections")
+            data = data.replace("by the rule stated in the post",
+                                "by the rule stated in Section 22.3")
+            data = re.sub(r"\b[Ee]pisode (\d+)",
+                          lambda m: "Section {}.{}".format(*WHERE[int(m.group(1))]), data)
+            data = re.sub(r"\b[Ee]pisodes (\d+(?:(?:, | and | to )\d+)*)",
+                          lambda m: "the series' episodes " + m.group(1), data)
+            data = data.replace("episode", "section").replace("Episode", "Section")
+            out.append(f"### {c}.{k} {_section_title(ep)} {{-}}\n\n{data}\n")
     return "\n".join(out)
 
 
@@ -165,12 +204,12 @@ def assemble(target: str) -> str:
         md.append("```{=latex}\n\\mainmatter\n```\n")
     else:
         md.append(pre)
-    for k, (num, title, intro) in enumerate(parts()):
+    for num, title, intro, chs in parts():
         if target == "pdf":
             md.append(f"```{{=latex}}\n\\part{{{title}}}\n```\n\n{intro}\n")
         else:
             md.append(f"# Part {num}: {title} {{.unnumbered .part}}\n\n{intro}\n")
-        for n in range(5 * k + 1, min(5 * k + 6, 71)):
+        for n in chs:
             md.append(chapter(n, target))
     apps = [appendix_practice(), appendix_verdicts(), appendix_data()]
     if target == "pdf":
@@ -224,7 +263,7 @@ LATEX_HEADER = r"""
 \makeatletter
 \def\@endpart{\vspace{2.5em}}
 \makeatother
-\setcounter{tocdepth}{0}
+\setcounter{tocdepth}{1}
 \usepackage{newunicodechar}
 \newunicodechar{≈}{\ensuremath{\approx}}
 \newunicodechar{≤}{\ensuremath{\leq}}
@@ -255,7 +294,7 @@ def build_pdf():
            "-V", "geometry:top=2cm,bottom=2.2cm,inner=2.2cm,outer=1.8cm",
            "-V", "fontfamily=fontspec", "-V", "mainfont=TeX Gyre Pagella", "-V", "monofont=DejaVu Sans Mono",
            "-V", "monofontoptions=Scale=0.86", "-V", "mathfont=Latin Modern Math",
-           "-V", "secnumdepth=0", "-V", "colorlinks=true", "-V", "linkcolor=black",
+           "-V", "secnumdepth=1", "-V", "colorlinks=true", "-V", "linkcolor=black",
            "-V", "urlcolor=blue!50!black", "-V", "toccolor=black",
            "-V", f"title-meta={TITLE}", "-V", f"author-meta={AUTHOR}",
            "--highlight-style", "tango"]
@@ -308,6 +347,11 @@ def _small_figures(sub: str = "epubfig", width: int = 1100):
             continue
         q.parent.mkdir(parents=True, exist_ok=True)
         im = Image.open(p).convert("RGB")
+        if p.name.endswith("-hero.png"):     # drop the series tag ("ML · N")
+            from PIL import ImageDraw
+            w, h = im.size
+            ImageDraw.Draw(im).rectangle([int(0.86 * w), 0, w, int(0.12 * h)],
+                                         fill=im.getpixel((w - 3, 3)))
         if im.width > width:
             im = im.resize((width, round(im.height * width / im.width)), Image.LANCZOS)
         im = im.quantize(colors=128, method=Image.Quantize.MEDIANCUT,
